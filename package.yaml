@@ -1,2 +1,2 @@
-name: arguments
-description: Argument parser for command-line applications.
+name: cli
+description: Tools, like an argument parser, to create command-line applications.
