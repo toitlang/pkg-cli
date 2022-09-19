@@ -257,7 +257,7 @@ test_usage:
   expect_equals expected_usage actual_usage
 
   cmd = cli.Command "root"
-      --use="overridden use line"
+      --usage="overridden use line"
       --run=:: unreachable
   expected_usage = """
     Usage:

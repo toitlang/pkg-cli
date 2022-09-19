@@ -100,21 +100,21 @@ class HelpGenerator:
     if help := command_.long_help:
       ensure_vertical_space_
       writeln_ (help.trim --right)
-    else if help := command_.short_help:
+    else if short_help := command_.short_help:
       ensure_vertical_space_
-      writeln_ (help.trim --right)
+      writeln_ (short_help.trim --right)
 
   /**
   Builds the usage section.
 
-  If the command has a $Command.use line, then that one is used. Otherwise the
+  If the command has a $Command.usage line, then that one is used. Otherwise the
     usage line is built from the available options or subcommands.
   */
   build_usage -> none:
     ensure_vertical_space_
     writeln_ "Usage:"
-    if command_.use:
-      writeln_ command_.use --indentation=2
+    if command_.usage:
+      writeln_ command_.usage --indentation=2
       return
 
     // We want to construct a usage line like
@@ -187,13 +187,13 @@ class HelpGenerator:
       help_str := ?
       if help := subcommand.short_help:
         help_str = help
-      else if help := subcommand.long_help:
+      else if long_help := subcommand.long_help:
         // Take the first paragraph (potentially multiple lines) of the long help.
-        paragraph_index := help.index_of "\n\n"
+        paragraph_index := long_help.index_of "\n\n"
         if paragraph_index == -1:
-          help_str = help
+          help_str = long_help
         else:
-          help_str = help[..paragraph_index]
+          help_str = long_help[..paragraph_index]
       else:
         help_str = ""
       commands_and_help.add [subcommand.name, help_str]
@@ -461,9 +461,9 @@ class HelpGenerator:
     // commands that defined them.
     full_command := []
     parsed_path.do: | current_command |
-      current_command := parsed_path[j]
       full_command.add current_command.name
-      if command_options := options_for_command.get current_command:
+      command_options := options_for_command.get current_command
+      if command_options:
         command_options.do: | option/string |
           full_command.add option
 

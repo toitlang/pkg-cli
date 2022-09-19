@@ -31,7 +31,7 @@ class Command:
   Usually constructed from the name and the arguments of the command. However, in
     some cases, a different (shorter) usage string is desired.
   */
-  use/string?
+  usage/string?
 
   /** A short (one line) description of the command. */
   short_help/string?
@@ -72,14 +72,14 @@ class Command:
   The $name is only optional for the root command, which represents the program. All
     subcommands must have a name.
 
-  The $use is usually constructed from the name and the arguments of the command, but can
+  The $usage is usually constructed from the name and the arguments of the command, but can
     be provided explicitly if a different usage string is desired.
 
   The $short_help is a short (one line) description of the command.
 
   The $long_help is a longer description of the command that can span multiple lines.
   */
-  constructor .name --.use=null --.short_help=null --.long_help=null --.examples=[] \
+  constructor .name --.usage=null --.short_help=null --.long_help=null --.examples=[] \
       --.aliases=[] --.options=[] --.rest=[] --.subcommands=[] --hidden/bool=false \
       --run/Lambda?=null:
     run_callback = run
