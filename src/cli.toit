@@ -27,9 +27,9 @@ class Command:
   name/string
 
   /**
-  The use string of this command.
+  The usage string of this command.
   Usually constructed from the name and the arguments of the command. However, in
-    some cases, a different (shorter) use string is desired.
+    some cases, a different (shorter) usage string is desired.
   */
   use/string?
 
@@ -62,7 +62,7 @@ class Command:
 
   /**
   The function to invoke when this command is executed.
-  May be null, in which case a subcommand must be specified.
+  May be null, in which case at least one subcommand must be specified.
   */
   run_callback/Lambda?
 
@@ -73,7 +73,7 @@ class Command:
     subcommands must have a name.
 
   The $use is usually constructed from the name and the arguments of the command, but can
-    be provided explicitly if a different use string is desired.
+    be provided explicitly if a different usage string is desired.
 
   The $short_help is a short (one line) description of the command.
 
@@ -192,8 +192,8 @@ class Command:
           --outer_long_options=outer_long_options
           --outer_short_options=outer_short_options
 
-    // We allow a command with not run callback if all subcommands are hidden.
-    // As such, we could also all commands without either. If desired, it should be
+    // We allow a command with a run callback if all subcommands are hidden.
+    // As such, we could also allow commands without either. If desired, it should be
     // safe to remove the following check.
     if subcommands.is_empty and not run_callback:
       throw "Command '$(path.join " ")' has no subcommands and no run callback."

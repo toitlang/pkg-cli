@@ -20,7 +20,7 @@ help_command_ path/List arguments/List --invoked_command/string --ui/Ui:
     argument := arguments[i]
     if argument == "--": break
 
-  // Simply drop all options.
+    // Simply drop all options.
     if argument.starts_with "-":
       continue
 
@@ -97,12 +97,12 @@ class HelpGenerator:
     $Command.short_help is used. If none exists, no description is built.
   */
   build_description -> none:
-    if command_.long_help:
+    if help := command_.long_help:
       ensure_vertical_space_
-      writeln_ (command_.long_help.trim --right)
-    else if command_.short_help:
+      writeln_ (help.trim --right)
+    else if help := command_.short_help:
       ensure_vertical_space_
-      writeln_ (command_.short_help.trim --right)
+      writeln_ (help.trim --right)
 
   /**
   Builds the usage section.
@@ -185,15 +185,15 @@ class HelpGenerator:
       if subcommand.is_hidden: continue.do
 
       help_str := ?
-      if subcommand.short_help:
-        help_str = subcommand.short_help
-      else if subcommand.long_help:
+      if help := subcommand.short_help:
+        help_str = help
+      else if help := subcommand.long_help:
         // Take the first paragraph (potentially multiple lines) of the long help.
-        paragraph_index := subcommand.long_help.index_of "\n\n"
+        paragraph_index := help.index_of "\n\n"
         if paragraph_index == -1:
-          help_str = subcommand.long_help
+          help_str = help
         else:
-          help_str = subcommand.long_help[..paragraph_index]
+          help_str = help[..paragraph_index]
       else:
         help_str = ""
       commands_and_help.add [subcommand.name, help_str]
@@ -459,17 +459,15 @@ class HelpGenerator:
 
     // Reconstruct the full command line, but now with the options next to the
     // commands that defined them.
-    full_command := ""
-    for j := 0; j < parsed_path.size; j++:
+    full_command := []
+    parsed_path.do: | current_command |
       current_command := parsed_path[j]
-      if j != 0: full_command += " "
-      full_command += current_command.name
-      command_options := options_for_command.get current_command
-      if command_options:
+      full_command.add current_command.name
+      if command_options := options_for_command.get current_command:
         command_options.do: | option/string |
-          full_command += " $option"
+          full_command.add option
 
-    writeln_ full_command --indentation=2
+    writeln_ (full_command.join " ") --indentation=2
 
   /**
   Splits a string into individual arguments.
