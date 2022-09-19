@@ -105,6 +105,7 @@ fleet_status parsed/cli.Parsed:
 
 create_device_command -> cli.Command:
   device_cmd := cli.Command "device"
+      // Aliases can be used to invoke this command.
       --aliases=[
         "dev",
         "thingy",
@@ -115,7 +116,6 @@ create_device_command -> cli.Command:
         Use the '--device' option to specify a specific device. Otherwise, the
           last used device is used.
         """
-      // Aliases can be used to invoke this command.
       --options=[
         cli.OptionString "device" --short_name="d"
             --short_help="The device to operate on"
