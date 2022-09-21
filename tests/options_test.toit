@@ -31,8 +31,8 @@ test_string:
   option = cli.OptionString "foo" --short_name="f"
   expect_equals "f" option.short_name
 
-  option = cli.OptionString "foo" --short_help="some_help"
-  expect_equals "some_help" option.short_help
+  option = cli.OptionString "foo" --short_help="Some_help."
+  expect_equals "Some_help." option.short_help
 
   option = cli.OptionString "foo" --required
   expect option.is_required
@@ -47,12 +47,12 @@ test_string:
   expect option.should_split_commas
 
   option = cli.OptionString "foo" --short_name="f" \
-      --short_help="baz" --required --multi \
+      --short_help="Baz." --required --multi \
       --split_commas --type="some_type"
   expect_equals option.name "foo"
   expect_equals "some_type" option.type
   expect_equals option.short_name "f"
-  expect_equals option.short_help "baz"
+  expect_equals option.short_help "Baz."
   expect option.is_required
   expect_not option.is_hidden
   expect option.is_multi

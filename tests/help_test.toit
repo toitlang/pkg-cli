@@ -37,12 +37,12 @@ test_combination:
           """
         --short_help="Root command."  // Should not be visible.
         --examples= subcommands.is_empty ? [
-          cli.Example "Example 1" --arguments="--option1 foo rest"
+          cli.Example "Example 1:" --arguments="--option1 foo rest"
         ]: [
-          cli.Example "Full example" --arguments="sub --option1 root"
+          cli.Example "Full example:" --arguments="sub --option1 root"
         ]
         --options=[
-          cli.OptionString "option1" --short_help="Option 1",
+          cli.OptionString "option1" --short_help="Option 1.",
         ]
         --rest= subcommands.is_empty ? [
           cli.OptionString "rest1" --short_help="Rest 1" --type="rest_type" --required,
@@ -60,11 +60,11 @@ test_combination:
       root [<options>] [--] <rest1:rest_type>
 
     Options:
-      -h, --help            Show help for this command
-          --option1 string  Option 1
+      -h, --help            Show help for this command.
+          --option1 string  Option 1.
 
     Examples:
-      # Example 1
+      # Example 1:
       root --option1 foo rest
     """
   check_output cmd_help: | ui/cli.Ui |
@@ -72,17 +72,17 @@ test_combination:
 
   sub := cli.Command "sub"
       --aliases=["sss"]
-      --long_help="Long sub"
-      --short_help="Short sub"
+      --long_help="Long sub."
+      --short_help="Short sub."
       --examples=[
-        cli.Example "Sub Example 1" --arguments="",
-        cli.Example "Sub Example 2"
+        cli.Example "Sub Example 1:" --arguments="",
+        cli.Example "Sub Example 2:"
             --arguments="--option1 foo --option_sub1='xyz'"
             --global_priority=5,
       ]
       --options=[
-        cli.OptionString "option_sub1" --short_help="Option 1",
-        cli.OptionInt "option_sub2" --short_help="Option 2" --default=42,
+        cli.OptionString "option_sub1" --short_help="Option 1.",
+        cli.OptionInt "option_sub2" --short_help="Option 2." --default=42,
       ]
       --run=:: null
 
@@ -101,25 +101,25 @@ test_combination:
       root <command> [<options>]
 
     Commands:
-      help  Show help for a command
-      sub   Short sub
+      help  Show help for a command.
+      sub   Short sub.
 
     Options:
-      -h, --help            Show help for this command
-          --option1 string  Option 1
+      -h, --help            Show help for this command.
+          --option1 string  Option 1.
 
     Examples:
-      # Full example
+      # Full example:
       root --option1 root sub
 
-      # Sub Example 2
+      # Sub Example 2:
       root --option1 foo sub --option_sub1='xyz'
     """
   check_output cmd_help: | ui/cli.Ui |
     cmd.run ["--help"] --ui=ui --invoked_command="root"
 
   sub_help := """
-    Long sub
+    Long sub.
 
     Usage:
       root sub [<options>]
@@ -128,18 +128,18 @@ test_combination:
       sss
 
     Options:
-      -h, --help                Show help for this command
-          --option_sub1 string  Option 1
-          --option_sub2 int     Option 2 (default: 42)
+      -h, --help                Show help for this command.
+          --option_sub1 string  Option 1.
+          --option_sub2 int     Option 2. (default: 42)
 
     Global options:
-          --option1 string  Option 1
+          --option1 string  Option 1.
 
     Examples:
-      # Sub Example 1
+      # Sub Example 1:
       root sub
 
-      # Sub Example 2
+      # Sub Example 2:
       root --option1 foo sub --option_sub1='xyz'
     """
 
@@ -154,14 +154,14 @@ test_usage:
 
   cmd := cli.Command "root"
       --options=[
-        cli.OptionString "option1" --short_help="Option 1" --required,
-        cli.OptionEnum "option2" ["bar", "baz"] --short_help="Option 2" --required,
+        cli.OptionString "option1" --short_help="Option 1." --required,
+        cli.OptionEnum "option2" ["bar", "baz"] --short_help="Option 2." --required,
         cli.Flag "optional"
       ]
       --rest=[
-        cli.OptionString "rest1" --short_help="Rest 1" --required,
-        cli.OptionString "rest2" --short_help="Rest 2",
-        cli.OptionString "rest3" --short_help="Rest 3" --multi,
+        cli.OptionString "rest1" --short_help="Rest 1." --required,
+        cli.OptionString "rest2" --short_help="Rest 2.",
+        cli.OptionString "rest3" --short_help="Rest 3." --multi,
       ]
       --run=:: unreachable
 
@@ -175,13 +175,13 @@ test_usage:
   // Test different types.
   cmd = cli.Command "root"
       --options=[
-        cli.OptionString "option7" --short_help="Option 7" --hidden,
-        cli.OptionString "option6" --short_help="Option 6",
-        cli.OptionString "option5" --short_help="Option 5" --required --type="my_type",
-        cli.Flag "option4" --short_help="Option 4" --required,
-        cli.OptionEnum "option3" ["bar", "baz"] --short_help="Option 3" --required,
-        cli.OptionInt "option2" --short_help="Option 2" --required,
-        cli.OptionString "option1" --short_help="Option 1" --required,
+        cli.OptionString "option7" --short_help="Option 7." --hidden,
+        cli.OptionString "option6" --short_help="Option 6.",
+        cli.OptionString "option5" --short_help="Option 5." --required --type="my_type",
+        cli.Flag "option4" --short_help="Option 4." --required,
+        cli.OptionEnum "option3" ["bar", "baz"] --short_help="Option 3." --required,
+        cli.OptionInt "option2" --short_help="Option 2." --required,
+        cli.OptionString "option1" --short_help="Option 1." --required,
       ]
       --run=:: unreachable
 
@@ -197,8 +197,8 @@ test_usage:
 
   cmd = cli.Command "root"
       --options=[
-        cli.OptionString "option1" --short_help="Option 1" --required,
-        cli.OptionString "option2" --short_help="Option 2" --required,
+        cli.OptionString "option1" --short_help="Option 1." --required,
+        cli.OptionString "option2" --short_help="Option 2." --required,
       ]
       --run=:: unreachable
 
@@ -213,13 +213,13 @@ test_usage:
   // Test the same options as rest arguments.
   cmd = cli.Command "root"
       --rest=[
-        cli.OptionString "option9" --short_help="Option 9" --required,
-        cli.OptionInt "option2" --short_help="Option 2" --required,
-        cli.OptionEnum "option3" ["bar", "baz"] --short_help="Option 3" --required,
-        cli.Flag "option4" --short_help="Option 4" --required,
-        cli.OptionString "option5" --short_help="Option 5" --required --type="my_type",
-        cli.OptionString "option6" --short_help="Option 6" --required,
-        cli.OptionString "option7" --short_help="Option 7",
+        cli.OptionString "option9" --short_help="Option 9." --required,
+        cli.OptionInt "option2" --short_help="Option 2." --required,
+        cli.OptionEnum "option3" ["bar", "baz"] --short_help="Option 3." --required,
+        cli.Flag "option4" --short_help="Option 4." --required,
+        cli.OptionString "option5" --short_help="Option 5." --required --type="my_type",
+        cli.OptionString "option6" --short_help="Option 6." --required,
+        cli.OptionString "option7" --short_help="Option 7.",
       ]
       --run=:: unreachable
 
@@ -234,15 +234,15 @@ test_usage:
 
   cmd = cli.Command "root"
       --options=[
-        cli.Flag "option3" --short_help="Option 3" --required,
-        cli.OptionString "option2" --short_help="Option 2",
-        cli.OptionString "option1" --short_help="Option 1" --required,
+        cli.Flag "option3" --short_help="Option 3." --required,
+        cli.OptionString "option2" --short_help="Option 2.",
+        cli.OptionString "option1" --short_help="Option 1." --required,
       ]
   sub := cli.Command "sub"
       --options=[
-        cli.Flag "sub_option3" --short_help="Option 3" --required,
-        cli.OptionString "sub_option2" --short_help="Option 2",
-        cli.OptionString "sub_option1" --short_help="Option 1" --required,
+        cli.Flag "sub_option3" --short_help="Option 3." --required,
+        cli.OptionString "sub_option2" --short_help="Option 2.",
+        cli.OptionString "sub_option1" --short_help="Option 1." --required,
       ]
       --run=:: unreachable
   cmd.add sub
@@ -320,40 +320,40 @@ test_commands:
 
   expected := """
     Commands:
-      help  Show help for a command
+      help  Show help for a command.
       sub
     """
   expect_equals expected (build_commands.call [cmd])
 
   cmd = cli.Command "root"
   sub = cli.Command "sub"
-      --short_help="Subcommand"
+      --short_help="Subcommand."
       --run=:: unreachable
   cmd.add sub
 
   expected = """
     Commands:
-      help  Show help for a command
-      sub   Subcommand
+      help  Show help for a command.
+      sub   Subcommand.
     """
   expect_equals expected (build_commands.call [cmd])
 
   sub2 := cli.Command "sub2"
-      --short_help="Subcommand 2"
+      --short_help="Subcommand 2."
       --run=:: unreachable
   cmd.add sub2
   sub3 := cli.Command "asub3"
-      --short_help="Subcommand 3"
+      --short_help="Subcommand 3."
       --run=:: unreachable
   cmd.add sub3
 
   // Commands are sorted.
   expected = """
     Commands:
-      asub3  Subcommand 3
-      help   Show help for a command
-      sub    Subcommand
-      sub2   Subcommand 2
+      asub3  Subcommand 3.
+      help   Show help for a command.
+      sub    Subcommand.
+      sub2   Subcommand 2.
     """
   expect_equals expected (build_commands.call [cmd])
 
@@ -361,10 +361,10 @@ test_commands:
   sub = cli.Command "sub"
       --long_help="""
         First
-        paragraph
+        paragraph.
 
         Second
-        paragraph
+        paragraph.
         """
       --run=:: unreachable
   cmd.add sub
@@ -372,9 +372,9 @@ test_commands:
   // If a command has only a long help text, show the first paragraph.
   expected = """
     Commands:
-      help  Show help for a command
+      help  Show help for a command.
       sub   First
-            paragraph
+            paragraph.
     """
   expect_equals expected (build_commands.call [cmd])
 
@@ -383,53 +383,53 @@ test_commands:
       --run=:: unreachable
   cmd.add sub
   sub2 = cli.Command "sub2"
-      --long_help="unused"
+      --long_help="unused."
       --short_help="""
       Long
-      shorthelp
+      shorthelp.
       """
       --run=:: unreachable
   cmd.add sub2
   sub3 = cli.Command "sub3"
-      --long_help="unused"
-      --short_help="Short help3"
+      --long_help="unused."
+      --short_help="Short help3."
       --run=:: unreachable
   cmd.add sub3
 
   expected = """
     Commands:
-      help  Show help for a command
+      help  Show help for a command.
       sub
       sub2  Long
-            shorthelp
-      sub3  Short help3
+            shorthelp.
+      sub3  Short help3.
     """
   expect_equals expected (build_commands.call [cmd])
 
   cmd = cli.Command "root"
   sub = cli.Command "help"
-      --short_help="My own help"
+      --short_help="My own help."
       --run=:: unreachable
   cmd.add sub
 
   // The automatically added help command is not added.
   expected = """
     Commands:
-      help  My own help
+      help  My own help.
     """
   expect_equals expected (build_commands.call [cmd])
 
   cmd = cli.Command "root"
   sub = cli.Command "sub"
       --aliases=["help"]
-      --short_help="Sub with 'help' alias"
+      --short_help="Sub with 'help' alias."
       --run=:: unreachable
   cmd.add sub
 
   // The automatically added help command is not added.
   expected = """
     Commands:
-      sub  Sub with 'help' alias
+      sub  Sub with 'help' alias.
     """
   expect_equals expected (build_commands.call [cmd])
 
@@ -448,32 +448,32 @@ test_options:
   // Try different flags, like --required, --short_help, --type, --default, multi.
   cmd := cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short_help="Option 1" --default=42,
-        cli.OptionString "option2" --short_help="Option 2" --default="foo",
-        cli.OptionEnum "option3" ["bar", "baz"] --short_name="x" --short_help="Option 3" --default="bar",
-        cli.Flag "option4" --short_name="4" --short_help="Option 4" --default=false,
-        cli.Flag "option5" --short_help="Option 5" --default=true,
+        cli.OptionInt "option1" --short_help="Option 1." --default=42,
+        cli.OptionString "option2" --short_help="Option 2." --default="foo",
+        cli.OptionEnum "option3" ["bar", "baz"] --short_name="x" --short_help="Option 3." --default="bar",
+        cli.Flag "option4" --short_name="4" --short_help="Option 4." --default=false,
+        cli.Flag "option5" --short_help="Option 5." --default=true,
 
-        cli.OptionInt "option6" --short_help="Option 6" --required,
-        cli.OptionString "option7" --short_help="Option 7" --required,
-        cli.OptionEnum "option8" ["bar", "baz"] --short_help="Option 8" --required,
-        cli.Flag "option9" --short_help="Option 9" --required,
+        cli.OptionInt "option6" --short_help="Option 6." --required,
+        cli.OptionString "option7" --short_help="Option 7." --required,
+        cli.OptionEnum "option8" ["bar", "baz"] --short_help="Option 8." --required,
+        cli.Flag "option9" --short_help="Option 9." --required,
 
-        cli.OptionInt "option10" --short_help="Option 10" --multi,
-        cli.OptionString "option11" --short_help="Option 11" --multi,
-        cli.OptionEnum "option12" ["bar", "baz"] --short_help="Option 12" --multi,
-        cli.Flag "option13" --short_help="Option 13" --multi,
+        cli.OptionInt "option10" --short_help="Option 10." --multi,
+        cli.OptionString "option11" --short_help="Option 11." --multi,
+        cli.OptionEnum "option12" ["bar", "baz"] --short_help="Option 12." --multi,
+        cli.Flag "option13" --short_help="Option 13." --multi,
 
-        cli.OptionInt "option14" --short_help="Option 14" --multi --required,
-        cli.OptionString "option15" --short_help="Option 15" --multi --required,
-        cli.OptionEnum "option16" ["bar", "baz"] --short_help="Option 16" --multi --required,
-        cli.Flag "option17" --short_help="Option 17" --multi --required,
+        cli.OptionInt "option14" --short_help="Option 14." --multi --required,
+        cli.OptionString "option15" --short_help="Option 15." --multi --required,
+        cli.OptionEnum "option16" ["bar", "baz"] --short_help="Option 16." --multi --required,
+        cli.Flag "option17" --short_help="Option 17." --multi --required,
 
-        cli.OptionInt "option18" --short_help="Option 18" --type="my_int_type",
-        cli.OptionString "option19" --short_help="Option 19" --short_name="y" --type="my_string_type",
-        cli.OptionEnum "option20" ["bar", "baz"] --short_help="Option 20" --type="my_enum_type",
+        cli.OptionInt "option18" --short_help="Option 18." --type="my_int_type",
+        cli.OptionString "option19" --short_help="Option 19." --short_name="y" --type="my_string_type",
+        cli.OptionEnum "option20" ["bar", "baz"] --short_help="Option 20." --type="my_enum_type",
 
-        cli.OptionInt "option21" --short_help="Option 21\nmulti_line_help",
+        cli.OptionInt "option21" --short_help="Option 21\nmulti_line_help.",
       ]
   sub := cli.Command "sub" --run=:: unreachable
   cmd.add sub
@@ -482,29 +482,29 @@ test_options:
   // Note that all required arguments are in the usage line.
   expected_options := """
     Options:
-      -h, --help                     Show help for this command
-          --option1 int              Option 1 (default: 42)
-          --option10 int             Option 10 (multi)
-          --option11 string          Option 11 (multi)
-          --option12 bar|baz         Option 12 (multi)
-          --option13                 Option 13 (multi)
-          --option14 int             Option 14 (multi, required)
-          --option15 string          Option 15 (multi, required)
-          --option16 bar|baz         Option 16 (multi, required)
-          --option17                 Option 17 (multi, required)
-          --option18 my_int_type     Option 18
-      -y, --option19 my_string_type  Option 19
-          --option2 string           Option 2 (default: foo)
-          --option20 my_enum_type    Option 20
+      -h, --help                     Show help for this command.
+          --option1 int              Option 1. (default: 42)
+          --option10 int             Option 10. (multi)
+          --option11 string          Option 11. (multi)
+          --option12 bar|baz         Option 12. (multi)
+          --option13                 Option 13. (multi)
+          --option14 int             Option 14. (multi, required)
+          --option15 string          Option 15. (multi, required)
+          --option16 bar|baz         Option 16. (multi, required)
+          --option17                 Option 17. (multi, required)
+          --option18 my_int_type     Option 18.
+      -y, --option19 my_string_type  Option 19.
+          --option2 string           Option 2. (default: foo)
+          --option20 my_enum_type    Option 20.
           --option21 int             Option 21
-                                     multi_line_help
-      -x, --option3 bar|baz          Option 3 (default: bar)
-      -4, --option4                  Option 4
-          --option5                  Option 5 (default: true)
-          --option6 int              Option 6 (required)
-          --option7 string           Option 7 (required)
-          --option8 bar|baz          Option 8 (required)
-          --option9                  Option 9 (required)
+                                     multi_line_help.
+      -x, --option3 bar|baz          Option 3. (default: bar)
+      -4, --option4                  Option 4.
+          --option5                  Option 5. (default: true)
+          --option6 int              Option 6. (required)
+          --option7 string           Option 7. (required)
+          --option8 bar|baz          Option 8. (required)
+          --option9                  Option 9. (required)
     """
   actual_options := build_local_options.call [cmd]
   expect_equals expected_options actual_options
@@ -517,28 +517,28 @@ test_options:
   // Title changes and the `--help` flag is gone.
   expected_options = """
     Global options:
-          --option1 int              Option 1 (default: 42)
-          --option10 int             Option 10 (multi)
-          --option11 string          Option 11 (multi)
-          --option12 bar|baz         Option 12 (multi)
-          --option13                 Option 13 (multi)
-          --option14 int             Option 14 (multi, required)
-          --option15 string          Option 15 (multi, required)
-          --option16 bar|baz         Option 16 (multi, required)
-          --option17                 Option 17 (multi, required)
-          --option18 my_int_type     Option 18
-      -y, --option19 my_string_type  Option 19
-          --option2 string           Option 2 (default: foo)
-          --option20 my_enum_type    Option 20
+          --option1 int              Option 1. (default: 42)
+          --option10 int             Option 10. (multi)
+          --option11 string          Option 11. (multi)
+          --option12 bar|baz         Option 12. (multi)
+          --option13                 Option 13. (multi)
+          --option14 int             Option 14. (multi, required)
+          --option15 string          Option 15. (multi, required)
+          --option16 bar|baz         Option 16. (multi, required)
+          --option17                 Option 17. (multi, required)
+          --option18 my_int_type     Option 18.
+      -y, --option19 my_string_type  Option 19.
+          --option2 string           Option 2. (default: foo)
+          --option20 my_enum_type    Option 20.
           --option21 int             Option 21
-                                     multi_line_help
-      -x, --option3 bar|baz          Option 3 (default: bar)
-      -4, --option4                  Option 4
-          --option5                  Option 5 (default: true)
-          --option6 int              Option 6 (required)
-          --option7 string           Option 7 (required)
-          --option8 bar|baz          Option 8 (required)
-          --option9                  Option 9 (required)
+                                     multi_line_help.
+      -x, --option3 bar|baz          Option 3. (default: bar)
+      -4, --option4                  Option 4.
+          --option5                  Option 5. (default: true)
+          --option6 int              Option 6. (required)
+          --option7 string           Option 7. (required)
+          --option8 bar|baz          Option 8. (required)
+          --option9                  Option 9. (required)
     """
   actual_options = build_global_options.call [cmd, sub]
   expect_equals expected_options actual_options
@@ -546,24 +546,24 @@ test_options:
   // Test global options.
   cmd = cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short_help="Option 1" --default=42,
+        cli.OptionInt "option1" --short_help="Option 1." --default=42,
       ]
 
   sub = cli.Command "sub"
       --options=[
-        cli.OptionInt "option_sub1" --short_help="Option 1" --default=42,
+        cli.OptionInt "option_sub1" --short_help="Option 1." --default=42,
       ]
       --run=:: unreachable
   cmd.add sub
 
   sub_local_expected := """
     Options:
-      -h, --help             Show help for this command
-          --option_sub1 int  Option 1 (default: 42)
+      -h, --help             Show help for this command.
+          --option_sub1 int  Option 1. (default: 42)
     """
   sub_global_expected := """
     Global options:
-          --option1 int  Option 1 (default: 42)
+          --option1 int  Option 1. (default: 42)
     """
   sub_local_actual := build_local_options.call [cmd, sub]
   sub_global_actual := build_global_options.call [cmd, sub]
@@ -572,28 +572,28 @@ test_options:
 
   cmd = cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short_name="h" --short_help="Option 1" --default=42,
+        cli.OptionInt "option1" --short_name="h" --short_help="Option 1." --default=42,
       ]
       --run=:: unreachable
   expected := """
     Options:
-          --help         Show help for this command
-      -h, --option1 int  Option 1 (default: 42)
+          --help         Show help for this command.
+      -h, --option1 int  Option 1. (default: 42)
     """
   actual := build_local_options.call [cmd]
   expect_equals expected actual
 
   cmd = cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short_help="Option 1" --default=42,
-        cli.OptionEnum "help" ["bar", "baz"] --short_help="Own help"
+        cli.OptionInt "option1" --short_help="Option 1." --default=42,
+        cli.OptionEnum "help" ["bar", "baz"] --short_help="Own help."
       ]
       --run=:: unreachable
   // No automatic help. Not even `-h`.
   expected = """
     Options:
-          --help bar|baz  Own help
-          --option1 int   Option 1 (default: 42)
+          --help bar|baz  Own help.
+          --option1 int   Option 1. (default: 42)
     """
   actual = build_local_options.call [cmd]
   expect_equals expected actual
@@ -606,13 +606,13 @@ test_examples:
 
   cmd := cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short_help="Option 1" --default=42,
+        cli.OptionInt "option1" --short_help="Option 1." --default=42,
       ]
       --examples=[
-        cli.Example "Example 1" --arguments="--option1=499",
+        cli.Example "Example 1:" --arguments="--option1=499",
         cli.Example """
             Example 2
-            over multiple lines
+            over multiple lines:
             """
             --arguments="""
               --option1=1
@@ -623,11 +623,11 @@ test_examples:
 
   expected := """
     Examples:
-      # Example 1
+      # Example 1:
       root --option1=499
 
       # Example 2
-      # over multiple lines
+      # over multiple lines:
       root --option1=1
       root --option1=2
     """
@@ -654,23 +654,23 @@ test_examples:
         cli.OptionString "rest" --multi
       ]
       --examples=[
-        cli.Example "Example 1" --arguments="--option1=499",
-        cli.Example "Example 2" --arguments="--option_sub1=499",
-        cli.Example "Example 3" --arguments="--option_subsub1=499",
-        cli.Example "Example 4"
+        cli.Example "Example 1:" --arguments="--option1=499",
+        cli.Example "Example 2:" --arguments="--option_sub1=499",
+        cli.Example "Example 3:" --arguments="--option_subsub1=499",
+        cli.Example "Example 4:"
             --arguments="--option_subsub1=499 --option_sub1=499 --option1=499",
-        cli.Example "Example 5"
+        cli.Example "Example 5:"
             --arguments="--option_subsub1 499 --option_sub1 499 --option1 499",
-        cli.Example "Example 6 with rest"
+        cli.Example "Example 6 with rest:"
             --arguments="--option_subsub1 499 --option_sub1 499 --option1 499 rest1 rest2",
-        cli.Example "Clusters go to the first that accepts all"
+        cli.Example "Clusters go to the first that accepts all:"
             --arguments="""
               -ab -c
               -c -b -a
               -ca -b
               -bc -a
               """,
-        cli.Example "short_names can also have additional params"
+        cli.Example "short_names can also have additional params:"
             --arguments="""
               -ay 33 -c
               -cx 42 -b
@@ -684,31 +684,31 @@ test_examples:
 
   expected = """
     Examples:
-      # Example 1
+      # Example 1:
       root --option1=499 sub subsub
 
-      # Example 2
+      # Example 2:
       root sub --option_sub1=499 subsub
 
-      # Example 3
+      # Example 3:
       root sub subsub --option_subsub1=499
 
-      # Example 4
+      # Example 4:
       root --option1=499 sub --option_sub1=499 subsub --option_subsub1=499
 
-      # Example 5
+      # Example 5:
       root --option1 499 sub --option_sub1 499 subsub --option_subsub1 499
 
-      # Example 6 with rest
+      # Example 6 with rest:
       root --option1 499 sub --option_sub1 499 subsub --option_subsub1 499 rest1 rest2
 
-      # Clusters go to the first that accepts all
+      # Clusters go to the first that accepts all:
       root sub -ab subsub -c
       root -a sub -b subsub -c
       root sub -b subsub -ca
       root -a sub subsub -bc
 
-      # short_names can also have additional params
+      # short_names can also have additional params:
       root sub -ay 33 subsub -c
       root sub -b subsub -cx 42
       root -a sub subsub -bz 55
@@ -721,14 +721,14 @@ test_examples:
 
   cmd = cli.Command "root"
       --examples=[
-        cli.Example "Root example 1" --arguments="sub",
-        cli.Example "Root example 2" --arguments="sub2",
+        cli.Example "Root example 1:" --arguments="sub",
+        cli.Example "Root example 2:" --arguments="sub2",
       ]
   sub = cli.Command "sub"
       --examples=[
-        cli.Example "Example 1" --arguments="global3" --global_priority=3,
-        cli.Example "Example 2" --arguments="no_global",
-        cli.Example "Example 3" --arguments="global1" --global_priority=1,
+        cli.Example "Example 1:" --arguments="global3" --global_priority=3,
+        cli.Example "Example 2:" --arguments="no_global",
+        cli.Example "Example 3:" --arguments="global1" --global_priority=1,
       ]
       --rest=[
         cli.OptionString "rest"
@@ -737,9 +737,9 @@ test_examples:
   cmd.add sub
   sub2 = cli.Command "sub2"
       --examples=[
-        cli.Example "Example 4" --arguments="no_global",
-        cli.Example "Example 5" --arguments="global5" --global_priority=5,
-        cli.Example "Example 6" --arguments="global1" --global_priority=1,
+        cli.Example "Example 4:" --arguments="no_global",
+        cli.Example "Example 5:" --arguments="global5" --global_priority=5,
+        cli.Example "Example 6:" --arguments="global1" --global_priority=1,
       ]
       --rest=[
         cli.OptionString "rest"
@@ -749,22 +749,22 @@ test_examples:
 
   expected = """
     Examples:
-      # Root example 1
+      # Root example 1:
       root sub
 
-      # Root example 2
+      # Root example 2:
       root sub2
 
-      # Example 3
+      # Example 3:
       root sub global1
 
-      # Example 6
+      # Example 6:
       root sub2 global1
 
-      # Example 1
+      # Example 1:
       root sub global3
 
-      # Example 5
+      # Example 5:
       root sub2 global5
     """
   actual = build_examples.call [cmd]

@@ -75,9 +75,12 @@ class Command:
   The $usage is usually constructed from the name and the arguments of the command, but can
     be provided explicitly if a different usage string is desired.
 
-  The $short_help is a short (one line) description of the command.
+  The $long_help is a longer description of the command that can span multiple lines. Use
+    indented lines to continue paragraphs (just like toitdoc).
 
-  The $long_help is a longer description of the command that can span multiple lines.
+  The $short_help is a short description of the command. In most cases this help is a single
+    line, but it can span multiple lines/paragraphs if necessary. Use indented lines to
+    continue paragraphs (just like toitdoc).
   */
   constructor .name --.usage=null --.short_help=null --.long_help=null --.examples=[] \
       --.aliases=[] --.options=[] --.rest=[] --.subcommands=[] --hidden/bool=false \
@@ -222,6 +225,29 @@ abstract class Option:
   is_multi/bool
   should_split_commas/bool
 
+  /**
+  Creates an option with the given $name.
+
+  The $name sets the name of the option. It must be unique among all options of a command.
+    It is also used to extract the parsed value from the $Parsed object.
+
+  The $short_name is optional and must be a single-character string when provided.
+
+  The $short_help is optional and is used for help output. It should be a full sentence, starting
+    with a capital letter and ending with a period.
+
+  If $required is true, then the option must be provided. Otherwise, it is optional.
+
+  If $hidden is true, then the option is not shown in help output. Rest arguments must not be
+    hidden.
+
+  If $multi is true, then the option can be provided multiple times. The parsed value will
+    be a list of strings.
+
+  If $split_commas is true, then $multi must be true too. Values given to this option are then
+    split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
+
+  */
   constructor .name --.short_name --.short_help --required --hidden --multi --split_commas:
     is_required = required
     is_hidden = hidden
@@ -277,27 +303,12 @@ class OptionString extends Option:
   /**
   Creates a new string option.
 
-  The $name sets the name of the option. It must be unique among all options of a command.
-    It is also used to extract the parsed value from the $Parsed object.
-
   The $default value is null.
+
   The $type is set to 'string', but can be changed to something else. The $type is
     only used for help output.
 
-  The $short_name is optional and must be a single-character string when provided.
-
-  The $short_help is optional and is used for help output.
-
-  If $required is true, then the option must be provided. Otherwise, it is optional.
-
-  If $hidden is true, then the option is not shown in help output. Rest arguments must not be
-    hidden.
-
-  If $multi is true, then the option can be provided multiple times. The parsed value will
-    be a list of strings.
-
-  If $split_commas is true, then $multi must be true too. Values given to this option are then
-    split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
+  See $Option.constructor for the other parameters.
   */
   constructor name/string
       --.default=null
@@ -337,7 +348,10 @@ class OptionEnum extends Option:
 
   The $values list provides the list of valid values for this option.
 
-  See $OptionString.constructor for the other parameters.
+  The $default value is null.
+  The $type defaults to a string joining all $values with a '|'.
+
+  See $Option.constructor for the other parameters.
   */
   constructor name/string .values/List
       --.default=null
@@ -367,7 +381,6 @@ class OptionEnum extends Option:
 An option that must be an integer value.
 
 The $parse function ensures that the value is an integer.
-The $type defaults to "int".
 */
 class OptionInt extends Option:
   default/int?
@@ -376,7 +389,10 @@ class OptionInt extends Option:
   /**
   Creates a new integer option.
 
-  See $OptionString.constructor for a description of the parameters.
+  The $default value is null.
+  The $type defaults to "int".
+
+  See $Option.constructor for the other parameters.
   */
   constructor name/string
       --.default=null
@@ -414,7 +430,10 @@ class Flag extends Option:
   /**
   Creates a new flag.
 
-  See $OptionString.constructor for a description of the parameters.
+  The $default value is null.
+  The $type is only visible when using this option as a rest argument and is then "true|false"
+
+  See $Option.constructor for the other parameters.
   */
   constructor name/string
       --.default=null
@@ -452,7 +471,9 @@ class Example:
   Creates an example.
 
   The $description should describe the example without any context. This is especially true
-    if the $global_priority is greater than 0 (see below).
+    if the $global_priority is greater than 0 (see below). It should start with a capital
+    letter and finish with a ":". It may contain newlines. Use indentation to group
+    paragraphs (just like toitdoc).
 
   The $arguments is a string containing the arguments to this command (or to super commands).
     The help generator parses the arguments and assigns all options to the corresponding commands.

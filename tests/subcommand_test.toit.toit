@@ -12,8 +12,8 @@ check_arguments expected/Map parsed/cli.Parsed:
 main:
   cmd := cli.Command "root"
       --options=[
-        cli.OptionString "global_string" --short_name="g" --short_help="Global string" --required,
-        cli.OptionString "global_string2" --short_help="Global string2",
+        cli.OptionString "global_string" --short_name="g" --short_help="Global string." --required,
+        cli.OptionString "global_string2" --short_help="Global string2.",
       ]
 
   expected := {:}
@@ -21,7 +21,7 @@ main:
   executed_sub := false
   sub := cli.Command "sub1"
       --options=[
-        cli.OptionString "sub_string" --short_name="s" --short_help="Sub string" --required,
+        cli.OptionString "sub_string" --short_name="s" --short_help="Sub string." --required,
       ]
       --run=:: | arguments |
         executed_sub = true
