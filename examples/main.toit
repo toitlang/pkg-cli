@@ -13,24 +13,25 @@ The command will have the following help:
 ```
 This is an imaginary fleet manager for a fleet of Toit devices.
 
-It can not be used to manage the fleet, for example by adding or removing devices.
+It can not be used to manage the fleet, for example
+  by adding or removing devices.
 
 Usage:
   examples/main.toit <command>
 
 Commands:
   device  Manage a particular device.
-  help    Show help for a command
-  status  Shows the status of the fleet
+  help    Show help for a command.
+  status  Shows the status of the fleet.
 
 Options:
-  -h, --help  Show help for this command
+  -h, --help  Show help for this command.
 
 Examples:
-  # Do a soft-reset of device 'foo'.
+  # Do a soft-reset of device 'foo':
   fleet_manager device --device=foo reset -m soft
 
-  # Show a detailed status of the fleet
+  # Show a detailed status of the fleet:
   fleet_manager status --verbose
 ```
 
@@ -44,18 +45,18 @@ Usage:
   examples/main.toit device reset --mode=<hard|soft> [<options>]
 
 Options:
-  -f, --force           Force the reset even if the device is active
-  -h, --help            Show help for this command
-  -m, --mode hard|soft  The reset mode to use (required)
+  -f, --force           Force the reset even if the device is active.
+  -h, --help            Show help for this command.
+  -m, --mode hard|soft  The reset mode to use. (required)
 
 Global options:
-  -d, --device string  The device to operate on
+  -d, --device string  The device to operate on.
 
 Examples:
-  # Do a soft-reset of device 'foo'.
+  # Do a soft-reset of device 'foo':
   fleet_manager device --device=foo reset -m soft
 
-  # Do a hard-reset
+  # Do a hard-reset:
   fleet_manager device reset --mode=hard
 ```
 */
@@ -67,7 +68,8 @@ main arguments:
       --long_help="""
         This is an imaginary fleet manager for a fleet of Toit devices.
 
-        It can not be used to manage the fleet, for example by adding or removing devices.
+        It can not be used to manage the fleet, for example
+          by adding or removing devices.
         """
 
   root_cmd.add create_status_command
@@ -79,14 +81,14 @@ main arguments:
 
 create_status_command -> cli.Command:
   return cli.Command "status"
-      --short_help="Shows the status of the fleet"
+      --short_help="Shows the status of the fleet:"
       --options=[
         cli.Flag "verbose" --short_name="v" --short_help="Show more details." --multi,
         cli.OptionInt "max-lines" --short_help="Maximum number of lines to show." --default=10,
       ]
       --examples=[
-        cli.Example "Show the status of the fleet" --arguments="",
-        cli.Example "Show a detailed status of the fleet" --arguments="--verbose"
+        cli.Example "Show the status of the fleet:" --arguments="",
+        cli.Example "Show a detailed status of the fleet:" --arguments="--verbose"
             --global_priority=7,  // Show this example for the root command.
       ]
       --run=:: fleet_status it
@@ -118,7 +120,7 @@ create_device_command -> cli.Command:
         """
       --options=[
         cli.OptionString "device" --short_name="d"
-            --short_help="The device to operate on"
+            --short_help="The device to operate on."
       ]
   device_cmd.add create_reset_command
   return device_cmd
@@ -132,19 +134,19 @@ create_reset_command -> cli.Command:
         """
       --options=[
         cli.OptionEnum "mode" ["hard", "soft"]
-            --short_help="The reset mode to use"
+            --short_help="The reset mode to use."
             --short_name="m"
             --required,
         cli.Flag "force" --short_name="f"
-            --short_help="Force the reset even if the device is active",
+            --short_help="Force the reset even if the device is active.",
       ]
       --examples=[
         cli.Example
-            "Do a soft-reset of device 'foo'."
+            "Do a soft-reset of device 'foo':"
             --arguments="--device=foo -m soft"
             --global_priority=5,  // Include this example for super commands.
         cli.Example
-            "Do a hard-reset"
+            "Do a hard-reset:"
             --arguments="--mode=hard",
       ]
       --run=:: reset_device it

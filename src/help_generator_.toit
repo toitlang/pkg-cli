@@ -199,7 +199,7 @@ class HelpGenerator:
       commands_and_help.add [subcommand.name, help_str]
 
     if not has_help_subcommand and is_root_command_:
-      commands_and_help.add ["help", "Show help for a command"]
+      commands_and_help.add ["help", "Show help for a command."]
 
     sorted_commands := commands_and_help.sort: | a/List b/List | a[0].compare_to b[0]
     write_table_ sorted_commands --indentation=2
@@ -236,7 +236,7 @@ class HelpGenerator:
       if not has_help_flag:
         options = options.copy
         short_name := has_short_help_flag ? null : "h"
-        help_flag := Flag "help" --short_name=short_name --short_help="Show help for this command"
+        help_flag := Flag "help" --short_name=short_name --short_help="Show help for this command."
         options.add help_flag
 
     sorted_options := options.sort: | a/Option b/Option | a.name.compare_to b.name
