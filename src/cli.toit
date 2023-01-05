@@ -237,7 +237,7 @@ abstract class Option:
   The $name sets the name of the option. It must be unique among all options of a command.
     It is also used to extract the parsed value from the $Parsed object.
 
-  The $short_name is optional and must be a single-character string when provided.
+  The $short_name is optional and will normally be a single-character string when provided.
 
   The $short_help is optional and is used for help output. It should be a full sentence, starting
     with a capital letter and ending with a period.
