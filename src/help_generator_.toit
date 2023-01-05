@@ -241,6 +241,10 @@ class HelpGenerator:
 
     sorted_options := options.sort: | a/Option b/Option | a.name.compare_to b.name
 
+    max_short_name := 1
+    sorted_options.do:
+      if it.short_name: max_short_name = max max_short_name it.short_name.size
+
     options_type_defaults_and_help := []
 
     sorted_options.do: | option/Option |
@@ -248,6 +252,7 @@ class HelpGenerator:
       option_str/string := ?
       if option.short_name: option_str = "-$option.short_name, "
       else: option_str = "    "
+      option_str = option_str.pad --right (3 + max_short_name) ' '
       option_str += "--$option.name"
       type_str := option.type
       if not option.is_flag:
@@ -508,6 +513,18 @@ class HelpGenerator:
     write_ str --indentation=indentation --indent_first_line=indent_first_line
     buffer_.add "\n"
 
+  count_occurrences_ str/string needle/string -> int:
+    if needle.size == 0: throw "INVALID_ARGUMENT"
+    count := 0
+    index := 0
+    while true:
+      index = str.index_of needle index
+      if index >= 0:
+        count++
+        index += needle.size
+      else:
+        return count
+
   /**
   Writes a table into the buffer.
 
@@ -526,9 +543,7 @@ class HelpGenerator:
         // Remove trailing whitespace.
         trimmed := entry.trim --right
         // Count number of lines in the entry.
-        line_count := 1
-        for i := 0; i < trimmed.size; i++:
-          if trimmed[i] == '\n': line_count++
+        line_count := 1 + (count_occurrences_ trimmed "\n")
         max_line_count = max max_line_count line_count
 
       if max_line_count == 1:

@@ -474,6 +474,8 @@ test_options:
         cli.OptionEnum "option20" ["bar", "baz"] --short_help="Option 20." --type="my_enum_type",
 
         cli.OptionInt "option21" --short_help="Option 21\nmulti_line_help.",
+
+        cli.OptionInt "option22" --short_name="zz" --short_help="Option 22." --default=42,
       ]
   sub := cli.Command "sub" --run=:: unreachable
   cmd.add sub
@@ -482,29 +484,30 @@ test_options:
   // Note that all required arguments are in the usage line.
   expected_options := """
     Options:
-      -h, --help                     Show help for this command.
-          --option1 int              Option 1. (default: 42)
-          --option10 int             Option 10. (multi)
-          --option11 string          Option 11. (multi)
-          --option12 bar|baz         Option 12. (multi)
-          --option13                 Option 13. (multi)
-          --option14 int             Option 14. (multi, required)
-          --option15 string          Option 15. (multi, required)
-          --option16 bar|baz         Option 16. (multi, required)
-          --option17                 Option 17. (multi, required)
-          --option18 my_int_type     Option 18.
-      -y, --option19 my_string_type  Option 19.
-          --option2 string           Option 2. (default: foo)
-          --option20 my_enum_type    Option 20.
-          --option21 int             Option 21
-                                     multi_line_help.
-      -x, --option3 bar|baz          Option 3. (default: bar)
-      -4, --option4                  Option 4.
-          --option5                  Option 5. (default: true)
-          --option6 int              Option 6. (required)
-          --option7 string           Option 7. (required)
-          --option8 bar|baz          Option 8. (required)
-          --option9                  Option 9. (required)
+      -h,  --help                     Show help for this command.
+           --option1 int              Option 1. (default: 42)
+           --option10 int             Option 10. (multi)
+           --option11 string          Option 11. (multi)
+           --option12 bar|baz         Option 12. (multi)
+           --option13                 Option 13. (multi)
+           --option14 int             Option 14. (multi, required)
+           --option15 string          Option 15. (multi, required)
+           --option16 bar|baz         Option 16. (multi, required)
+           --option17                 Option 17. (multi, required)
+           --option18 my_int_type     Option 18.
+      -y,  --option19 my_string_type  Option 19.
+           --option2 string           Option 2. (default: foo)
+           --option20 my_enum_type    Option 20.
+           --option21 int             Option 21
+                                      multi_line_help.
+      -zz, --option22 int             Option 22. (default: 42)
+      -x,  --option3 bar|baz          Option 3. (default: bar)
+      -4,  --option4                  Option 4.
+           --option5                  Option 5. (default: true)
+           --option6 int              Option 6. (required)
+           --option7 string           Option 7. (required)
+           --option8 bar|baz          Option 8. (required)
+           --option9                  Option 9. (required)
     """
   actual_options := build_local_options.call [cmd]
   expect_equals expected_options actual_options
@@ -517,28 +520,29 @@ test_options:
   // Title changes and the `--help` flag is gone.
   expected_options = """
     Global options:
-          --option1 int              Option 1. (default: 42)
-          --option10 int             Option 10. (multi)
-          --option11 string          Option 11. (multi)
-          --option12 bar|baz         Option 12. (multi)
-          --option13                 Option 13. (multi)
-          --option14 int             Option 14. (multi, required)
-          --option15 string          Option 15. (multi, required)
-          --option16 bar|baz         Option 16. (multi, required)
-          --option17                 Option 17. (multi, required)
-          --option18 my_int_type     Option 18.
-      -y, --option19 my_string_type  Option 19.
-          --option2 string           Option 2. (default: foo)
-          --option20 my_enum_type    Option 20.
-          --option21 int             Option 21
-                                     multi_line_help.
-      -x, --option3 bar|baz          Option 3. (default: bar)
-      -4, --option4                  Option 4.
-          --option5                  Option 5. (default: true)
-          --option6 int              Option 6. (required)
-          --option7 string           Option 7. (required)
-          --option8 bar|baz          Option 8. (required)
-          --option9                  Option 9. (required)
+           --option1 int              Option 1. (default: 42)
+           --option10 int             Option 10. (multi)
+           --option11 string          Option 11. (multi)
+           --option12 bar|baz         Option 12. (multi)
+           --option13                 Option 13. (multi)
+           --option14 int             Option 14. (multi, required)
+           --option15 string          Option 15. (multi, required)
+           --option16 bar|baz         Option 16. (multi, required)
+           --option17                 Option 17. (multi, required)
+           --option18 my_int_type     Option 18.
+      -y,  --option19 my_string_type  Option 19.
+           --option2 string           Option 2. (default: foo)
+           --option20 my_enum_type    Option 20.
+           --option21 int             Option 21
+                                      multi_line_help.
+      -zz, --option22 int             Option 22. (default: 42)
+      -x,  --option3 bar|baz          Option 3. (default: bar)
+      -4,  --option4                  Option 4.
+           --option5                  Option 5. (default: true)
+           --option6 int              Option 6. (required)
+           --option7 string           Option 7. (required)
+           --option8 bar|baz          Option 8. (required)
+           --option9                  Option 9. (required)
     """
   actual_options = build_global_options.call [cmd, sub]
   expect_equals expected_options actual_options
