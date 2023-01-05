@@ -56,6 +56,14 @@ ambiguous_option:
   root = cli.Command "root"
       --options=[
         cli.OptionString "foo" --short_name="a",
+        cli.OptionString "bar" --short_name="ab",
+      ]
+      --run=(:: null)
+  expect_throw "Ambiguous option of 'root': -ab.": root.check --invoked_command="root"
+
+  root = cli.Command "root"
+      --options=[
+        cli.OptionString "foo" --short_name="a",
       ]
 
   sub := cli.Command "sub"
@@ -79,6 +87,31 @@ ambiguous_option:
   root.add sub
   expect_throw "Ambiguous option of 'root sub': -a conflicts with global option.":
     root.check --invoked_command="root"
+
+  root = cli.Command "root"
+      --options=[
+        cli.OptionString "foo" --short_name="a",
+      ]
+  sub = cli.Command "sub"
+      --options=[
+        cli.OptionString "bar" --short_name="ab",
+      ]
+      --run=(:: null)
+  root.add sub
+  expect_throw "Ambiguous option of 'root sub': -ab conflicts with global option.":
+    root.check --invoked_command="root"
+
+  root = cli.Command "root"
+      --options=[
+        cli.OptionString "machine_32" --short_name="m32",
+      ]
+  sub = cli.Command "sub"
+      --options=[
+        cli.OptionString "machine_64" --short_name="m64",
+      ]
+      --run=(:: null)
+  root.add sub
+  root.check --invoked_command="root"
 
   root = cli.Command "root"
   sub1 := cli.Command "sub1"

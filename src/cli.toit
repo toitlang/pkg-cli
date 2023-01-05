@@ -132,6 +132,10 @@ class Command:
   check --invoked_command=program_name:
     check_ --path=[invoked_command]
 
+  are_prefix_of_each_other_ str1/string str2/string -> bool:
+    m := min str1.size str2.size
+    return str1[..m] == str2[..m]
+
   /**
   Checks this command and all subcommands.
   The $path, a list of strings, provides the sequence that was used to reach this command.
@@ -152,9 +156,9 @@ class Command:
       long_options.add option.name
 
       if option.short_name:
-        if short_options.contains option.short_name:
+        if (short_options.any: are_prefix_of_each_other_ it option.short_name):
           throw "Ambiguous option of '$(path.join " ")': -$option.short_name."
-        if outer_short_options.contains option.short_name:
+        if (outer_short_options.any: are_prefix_of_each_other_ it option.short_name):
           throw "Ambiguous option of '$(path.join " ")': -$option.short_name conflicts with global option."
         short_options.add option.short_name
 
@@ -231,7 +235,7 @@ abstract class Option:
   The $name sets the name of the option. It must be unique among all options of a command.
     It is also used to extract the parsed value from the $Parsed object.
 
-  The $short_name is optional and must be a single-character string when provided.
+  The $short_name is optional and will normally be a single-character string when provided.
 
   The $short_help is optional and is used for help output. It should be a full sentence, starting
     with a capital letter and ending with a period.
@@ -254,17 +258,20 @@ abstract class Option:
     is_multi = multi
     should_split_commas = split_commas
     if name.contains "=" or name.starts_with "no-": throw "Invalid option name: $name"
-    if short_name and not is_alpha_num_char_ short_name:
+    if short_name and not is_alpha_num_string_ short_name:
       throw "Invalid short option name: '$short_name'"
     if split_commas and not multi:
       throw "--split_commas is only valid for multi options."
     if is_hidden and is_required:
       throw "Option can't be hidden and required."
 
-  static is_alpha_num_char_ str/string -> bool:
-    if str.size != 1: return false
-    c := str[0]
-    return 'a' <= c <= 'z' or 'A' <= c <= 'Z' or '0' <= c <= '9'
+  static is_alpha_num_string_ str/string -> bool:
+    if str.size < 1: return false
+    str.do --runes: | c |
+      if not ('a' <= c <= 'z' or 'A' <= c <= 'Z' or '0' <= c <= '9'):
+        print c
+        return false
+    return true
 
   /**
   The default value of this option, as a string.

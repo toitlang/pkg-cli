@@ -108,19 +108,27 @@ class Parser_:
         // Compute the option and the effective name. We allow short form prefixes to have
         // the value encoded in the same argument like -s"123 + 345", so we have to search
         // for prefixes.
-        for i := 1; i < argument.size; i++:
-          short_name := argument[i..i+1]
-          option := all_short_options.get short_name
+        for i := 1; i < argument.size; :
+          option_length := 1
+          short_name := null
+          option := null
+          while i + option_length <= argument.size:
+            short_name = argument[i..i + option_length]
+            option = all_short_options.get short_name
+            if option: break
+            option_length++
 
           if not option:
             if short_name == "h": return create_help.call []
             fatal path "Unknown option: -$short_name"
 
+          i += option_length
+
           if option is Flag:
             add_option.call option "true"
           else:
-            if i + 1 < argument.size:
-              add_option.call option argument[i + 1 ..]
+            if i < argument.size:
+              add_option.call option argument[i ..]
               break
             else:
               if index >= arguments.size:
