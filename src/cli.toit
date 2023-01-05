@@ -132,11 +132,9 @@ class Command:
   check --invoked_command=program_name:
     check_ --path=[invoked_command]
 
-  have_common_char_ str1/string str2/string -> bool:
-    str1.do --runes: | c1 |
-      str2.do --runes: | c2 |
-        if c1 == c2: return true
-    return false
+  are_prefix_of_each_other_ str1/string str2/string -> bool:
+    m := min str1.size str2.size
+    return str1[..m] == str2[..m]
 
   /**
   Checks this command and all subcommands.
@@ -158,9 +156,9 @@ class Command:
       long_options.add option.name
 
       if option.short_name:
-        if (short_options.any: have_common_char_ it option.short_name):
+        if (short_options.any: are_prefix_of_each_other_ it option.short_name):
           throw "Ambiguous option of '$(path.join " ")': -$option.short_name."
-        if (outer_short_options.any: have_common_char_ it option.short_name):
+        if (outer_short_options.any: are_prefix_of_each_other_ it option.short_name):
           throw "Ambiguous option of '$(path.join " ")': -$option.short_name conflicts with global option."
         short_options.add option.short_name
 

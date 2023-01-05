@@ -102,6 +102,18 @@ ambiguous_option:
     root.check --invoked_command="root"
 
   root = cli.Command "root"
+      --options=[
+        cli.OptionString "machine_32" --short_name="m32",
+      ]
+  sub = cli.Command "sub"
+      --options=[
+        cli.OptionString "machine_64" --short_name="m64",
+      ]
+      --run=(:: null)
+  root.add sub
+  root.check --invoked_command="root"
+
+  root = cli.Command "root"
   sub1 := cli.Command "sub1"
       --options=[
         cli.OptionString "foo" --short_name="a",
