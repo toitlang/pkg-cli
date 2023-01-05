@@ -31,6 +31,9 @@ test_string:
   option = cli.OptionString "foo" --short_name="f"
   expect_equals "f" option.short_name
 
+  option = cli.OptionString "foo" --short_name="foo"
+  expect_equals "foo" option.short_name
+
   option = cli.OptionString "foo" --short_help="Some_help."
   expect_equals "Some_help." option.short_help
 
@@ -115,9 +118,6 @@ test_flag:
 test_bad_combos:
   expect_throw "--split_commas is only valid for multi options.":
     cli.OptionString "foo" --split_commas
-
-  expect_throw "Invalid short option name: 'foo'":
-    cli.OptionString "bar" --short_name="foo"
 
   expect_throw "Invalid short option name: '@'":
     cli.OptionString "bar" --short_name="@"

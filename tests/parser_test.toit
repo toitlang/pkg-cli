@@ -53,21 +53,31 @@ test_options:
       --options=[
         cli.OptionString "foo" --short_name="f" --default="default_foo",
         cli.Flag "bar" --short_name="b",
+        cli.OptionString "fizz" --short_name="iz" --default="default_fizz",
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments expected parsed
 
-  expected = {"foo": "default_foo", "bar": true}
+  expected = {"foo": "default_foo", "bar": true, "fizz": "default_fizz"}
   cmd.run ["-b"]
   cmd.run ["--bar"]
 
-  expected = {"foo": "default_foo", "bar": null}
+  expected = {"foo": "default_foo", "bar": null, "fizz": "default_fizz"}
   cmd.run []
 
-  expected = {"foo": "default_foo", "bar": false}
+  expected = {"foo": "default_foo", "bar": false, "fizz": "default_fizz"}
   cmd.run ["--no-bar"]
 
-  expected = {"foo": "foo_value", "bar": true}
+  expected = {"foo": "foo_value", "bar": true, "fizz": "default_fizz"}
+  cmd.run ["-ffoo_value", "-b"]
+  cmd.run ["-f", "foo_value", "-b"]
+  cmd.run ["-bf", "foo_value"]
+
+  expected = {"foo": "foo_value", "bar": true, "fizz": "fizz_value"}
+  cmd.run ["-ffoo_value", "-b", "-izfizz_value"]
+  cmd.run ["-f", "foo_value", "-b", "-iz", "fizz_value"]
+
+  expected = {"foo": "foo_value", "bar": true, "fizz": "default_fizz"}
   cmd.run ["-f", "foo_value", "-b"]
   cmd.run ["-bf", "foo_value"]
 
