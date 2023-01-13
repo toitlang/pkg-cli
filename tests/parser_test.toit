@@ -22,6 +22,7 @@ main:
   test_missing_args
   test_missing_subcommand
   test_dash_arg
+  test_mixed_rest_named
 
 test_options:
   expected /Map? := null
@@ -374,3 +375,35 @@ test_dash_arg:
         check_arguments {"foo": "-"} parsed
 
   cmd.run ["-f", "-"]
+
+test_mixed_rest_named:
+  // Rest arguments can be mixed with named arguments as long as there isn't a '--'.
+
+  cmd := cli.Command "test"
+      --options=[
+        cli.OptionString "foo" --required,
+        cli.OptionString "bar" --required,
+      ]
+      --rest=[
+        cli.OptionString "baz" --required,
+      ]
+      --run=:: | parsed/cli.Parsed |
+        check_arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} parsed
+
+  cmd.run ["--foo", "foo_value", "--bar", "bar_value", "baz_value"]
+  cmd.run ["baz_value", "--foo", "foo_value", "--bar", "bar_value"]
+  cmd.run ["--foo", "foo_value", "baz_value", "--bar", "bar_value"]
+
+  cmd = cli.Command "test"
+      --options=[
+        cli.OptionString "foo" --required,
+        cli.OptionString "bar" --required,
+      ]
+      --rest=[
+        cli.OptionString "baz" --required,
+      ]
+      --run=:: | parsed/cli.Parsed |
+        check_arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} parsed
+
+  // Because of the '--', the rest argument is not interpreted as a named argument.
+  cmd.run ["--foo", "foo_value", "--bar", "bar_value", "--", "--foo"]
