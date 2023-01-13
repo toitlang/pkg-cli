@@ -129,8 +129,8 @@ test_combination:
 
     Options:
       -h, --help                Show help for this command.
-          --option_sub1 string  Option 1.
-          --option_sub2 int     Option 2. (default: 42)
+          --option-sub1 string  Option 1.
+          --option-sub2 int     Option 2. (default: 42)
 
     Global options:
           --option1 string  Option 1.
@@ -251,7 +251,7 @@ test_usage:
   // All options must still be sorted.
   expected_usage = """
     Usage:
-      root --option1=<string> --option3 sub --sub_option1=<string> --sub_option3 [<options>]
+      root --option1=<string> --option3 sub --sub-option1=<string> --sub-option3 [<options>]
     """
   actual_usage = build_usage.call [cmd, sub]
   expect_equals expected_usage actual_usage
@@ -563,7 +563,7 @@ test_options:
   sub_local_expected := """
     Options:
       -h, --help             Show help for this command.
-          --option_sub1 int  Option 1. (default: 42)
+          --option-sub1 int  Option 1. (default: 42)
     """
   sub_global_expected := """
     Global options:
