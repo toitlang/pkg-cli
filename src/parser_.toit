@@ -68,10 +68,13 @@ class Parser_:
 
     set_command.call root_command
 
+    rest := []
+
     index := 0
     while index < arguments.size:
       argument := arguments[index++]
       if argument == "--":
+        rest.add_all arguments[index ..]
         break  // We're done!
 
       if argument.starts_with "--":
@@ -147,27 +150,26 @@ class Parser_:
         set_command.call subcommand
 
       else:
-        // Make the current argument available as rest option.
-        index--
-        break
+        rest.add argument
 
     all_named_options.do: | name/string option/Option |
       if option.is_required and not seen_options.contains name:
         fatal path "Required option $name is missing."
 
+    rest_index := 0
     command.rest.do: | rest_option/Option |
-      if rest_option.is_required and index >= arguments.size:
+      if rest_option.is_required and rest_index >= rest.size:
         fatal path "Missing required rest argument: '$rest_option.name'."
-      if index >= arguments.size: continue.do
+      if rest_index >= rest.size: continue.do
 
       if rest_option.is_multi:
-        while index < arguments.size:
-          add_option.call rest_option arguments[index++]
+        while rest_index < rest.size:
+          add_option.call rest_option rest[rest_index++]
       else:
-        add_option.call rest_option arguments[index++]
+        add_option.call rest_option rest[rest_index++]
 
-    if index < arguments.size:
-      fatal path "Unexpected rest argument: '$arguments[index]'."
+    if rest_index < rest.size:
+      fatal path "Unexpected rest argument: '$rest[rest_index]'."
 
     if not command.run_callback:
       fatal path "Missing subcommand."
