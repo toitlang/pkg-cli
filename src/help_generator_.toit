@@ -361,7 +361,7 @@ class HelpGenerator:
 
     arguments_strings := example.arguments.split "\n"
     if arguments_strings.size > 1 and arguments_strings.last == "":
-      arguments_strings = arguments_strings[..arguments_strings.size-1]
+      arguments_strings = arguments_strings[..arguments_strings.size - 1]
     arguments_strings.do:
       build_example_command_line_ it --example_path=example_path
 
