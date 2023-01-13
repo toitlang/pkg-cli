@@ -23,6 +23,7 @@ main:
   test_missing_subcommand
   test_dash_arg
   test_mixed_rest_named
+  test_snake_kebab
 
 test_options:
   expected /Map? := null
@@ -407,3 +408,17 @@ test_mixed_rest_named:
 
   // Because of the '--', the rest argument is not interpreted as a named argument.
   cmd.run ["--foo", "foo_value", "--bar", "bar_value", "--", "--foo"]
+
+test_snake_kebab:
+  cmd := cli.Command "test"
+      --options=[
+        cli.OptionString "foo-bar" --short_name="f",
+        cli.OptionString "toto_titi"
+      ]
+      --run=:: | parsed/cli.Parsed |
+        check_arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } parsed
+        check_arguments {"foo_bar": "foo_value", "toto_titi": "toto_value" } parsed
+
+  cmd.run ["--foo-bar", "foo_value", "--toto-titi", "toto_value"]
+  cmd.run ["--foo_bar", "foo_value", "--toto_titi", "toto_value"]
+  cmd.run ["--foo-bar", "foo_value", "--toto_titi", "toto_value"]
