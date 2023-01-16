@@ -13,6 +13,7 @@ main:
   run_and_command
   rest
   hidden_rest
+  snake_kebab
 
 missing_run:
   root := cli.Command "root"
@@ -232,4 +233,16 @@ hidden_rest:
       ]
       --run=(:: null)
   expect_throw "Rest argument 'foo' of 'root' cannot be hidden.":
+    root.check --invoked_command="root"
+
+snake_kebab:
+  // Test that kebab and snake case lead to ambiguous options.
+  root := cli.Command "root"
+      --options=[
+        cli.OptionString "foo-bar",
+        cli.OptionString "foo_bar"
+      ]
+      --run=:: | parsed/cli.Parsed |
+        unreachable
+  expect_throw "Ambiguous option of 'root': --foo-bar.":
     root.check --invoked_command="root"

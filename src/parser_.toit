@@ -4,6 +4,7 @@
 
 import .cli
 import .help_generator_
+import .utils_
 
 class Parser_:
   ui_/Ui
@@ -89,7 +90,9 @@ class Parser_:
           is_inverted = true
           name = name[3..]
 
-        option := all_named_options.get name
+        kebab_name := to_kebab name
+
+        option := all_named_options.get kebab_name
         if not option:
           if name == "help" and not is_inverted: return create_help.call []
           fatal path "Unknown option: --$name"

@@ -4,6 +4,7 @@
 
 import .cli
 import .parser_
+import .utils_
 
 /**
 The 'help' command that can be executed on the root command.
@@ -428,6 +429,7 @@ class HelpGenerator:
           option_name = "--$argument[5..]"
         else:
           option_name = argument
+        option_name = to_kebab option_name
         option_command := option_to_command[option_name]
         is_flag := flags.contains option_name
         options_for_command.update option_command --init=(: []): | list/List |

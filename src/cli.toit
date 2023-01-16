@@ -3,6 +3,7 @@
 // found in the package's LICENSE file.
 
 import .parser_
+import .utils_
 
 /**
 When the arg-parser needs to report an error, or write a help message, it
@@ -233,7 +234,10 @@ abstract class Option:
   Creates an option with the given $name.
 
   The $name sets the name of the option. It must be unique among all options of a command.
-    It is also used to extract the parsed value from the $Parsed object.
+    It is also used to extract the parsed value from the $Parsed object. For multi-word
+    options kebab case ('foo-bar') is recommended. The constructor automatically converts
+    snake case ('foo_bar') to kebab case. This also means, that it's not possible to
+    have two options that only differ in their case (kebab and snake).
 
   The $short_name is optional and will normally be a single-character string when provided.
 
@@ -253,6 +257,7 @@ abstract class Option:
 
   */
   constructor .name --.short_name --.short_help --required --hidden --multi --split_commas:
+    name = to_kebab name
     is_required = required
     is_hidden = hidden
     is_multi = multi
@@ -539,9 +544,13 @@ class Parsed:
   /**
   Returns the value of the option with the given $name.
   The $name must be an option of the command or one of its super commands.
+
+  If the given $name is in snake_case, it is automatically converted
+    to kebab-case.
   */
   operator[] name/string -> any:
-    return options_.get name --if_absent=: throw "No option named '$name'"
+    kebab_name := to_kebab name
+    return options_.get kebab_name --if_absent=: throw "No option named '$name'"
 
   /**
   Whether an option with the given $name was given on the command line.
