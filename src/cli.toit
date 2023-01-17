@@ -230,8 +230,31 @@ abstract class Option:
   is_multi/bool
   should_split_commas/bool
 
+  /** An alias for $OptionString. */
+  constructor name/string
+      --default/string?=null
+      --type/string="string"
+      --short_name/string?=null
+      --short_help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split_commas/bool=false:
+    return OptionString name
+        --default=default
+        --type=type
+        --short_name=short_name
+        --short_help=short_help
+        --required=required
+        --hidden=hidden
+        --multi=multi
+        --split_commas=split_commas
+
   /**
   Creates an option with the given $name.
+
+  This constructor is intended to be called from subclasses. Also see $Option.constructor
+    which is an alias for the $OptionString constructor.
 
   The $name sets the name of the option. It must be unique among all options of a command.
     It is also used to extract the parsed value from the $Parsed object. For multi-word
@@ -254,9 +277,8 @@ abstract class Option:
 
   If $split_commas is true, then $multi must be true too. Values given to this option are then
     split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
-
   */
-  constructor .name --.short_name --.short_help --required --hidden --multi --split_commas:
+  constructor.from_sub .name --.short_name --.short_help --required --hidden --multi --split_commas:
     name = to_kebab name
     is_required = required
     is_hidden = hidden
@@ -333,7 +355,7 @@ class OptionString extends Option:
       --split_commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super name --short_name=short_name --short_help=short_help \
+    super.from_sub name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi \
         --split_commas=split_commas
 
@@ -376,7 +398,7 @@ class OptionEnum extends Option:
       --split_commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super name --short_name=short_name --short_help=short_help \
+    super.from_sub name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi \
         --split_commas=split_commas
     if default and not values.contains default:
@@ -417,7 +439,7 @@ class OptionInt extends Option:
       --split_commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super name --short_name=short_name --short_help=short_help \
+    super.from_sub name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi \
         --split_commas=split_commas
 
@@ -456,7 +478,7 @@ class Flag extends Option:
       --multi/bool=false:
     if multi and default != null: throw "Multi option can't have default value."
     if required and default != null: throw "Option can't have default value and be required."
-    super name --short_name=short_name --short_help=short_help \
+    super.from_sub name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi --no-split_commas
 
   type -> string:
