@@ -33,6 +33,9 @@ Examples:
 
   # Show a detailed status of the fleet:
   fleet_manager status --verbose
+
+  # Uploads the file 'foo.data' to the device 'foo':
+  fleet_manager device --device=foo upload foo.data
 ```
 
 The help for the `reset` command looks as follows:
@@ -123,7 +126,35 @@ create_device_command -> cli.Command:
             --short_help="The device to operate on."
       ]
   device_cmd.add create_reset_command
+  device_cmd.add create_upload_command
   return device_cmd
+
+create_upload_command -> cli.Command:
+  return cli.Command "upload"
+      --long_help="""
+        Uploads the given file to the device.
+
+        Other useful information here.
+        """
+      --rest=[
+        cli.OptionString "data"
+            --type="file"
+            --short_help="The data to upload."
+            --required,
+      ]
+      --examples=[
+        cli.Example
+            "Uploads the file 'foo.data' to the device 'foo':"
+            --arguments="--device=foo foo.data"
+            --global_priority=8,  // Include this example for super commands.
+      ]
+      --run=:: upload_to_device it
+
+upload_to_device parsed/cli.Parsed:
+  device := parsed["device"]
+  data := parsed["data"]
+
+  print "Uploading file '$data' to device '$device'."
 
 create_reset_command -> cli.Command:
   return cli.Command "reset"
