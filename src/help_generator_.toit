@@ -88,34 +88,40 @@ class HelpGenerator:
   global_options_ -> List:
     result := []
     for i := 0; i < path_.size - 1; i++:
-      result.add_all path_[i].options
+      result.add_all path_[i].options_
     return result
 
   /**
   Builds the description.
 
-  If available, the description is the $Command.long_help, otherwise, the
-    $Command.short_help is used. If none exists, no description is built.
+  If available, the description is the $Command.long_help_, otherwise, the
+    $Command.short_help_ is used. If none exists, no description is built.
   */
   build_description -> none:
-    if help := command_.long_help:
+    if help := command_.long_help_:
       ensure_vertical_space_
       writeln_ (help.trim --right)
-    else if short_help := command_.short_help:
+    else if short_help := command_.short_help_:
       ensure_vertical_space_
       writeln_ (short_help.trim --right)
 
   /**
   Builds the usage section.
 
-  If the command has a $Command.usage line, then that one is used. Otherwise the
+  If the command has a $Command.usage_ line, then that one is used. Otherwise the
     usage line is built from the available options or subcommands.
+
+  If $as_section is true, then the section is preceded by a "Usage:" title, indented,
+    and followed by an empty line.
   */
-  build_usage -> none:
+  build_usage --as_section/bool=true -> none:
     ensure_vertical_space_
-    writeln_ "Usage:"
-    if command_.usage:
-      writeln_ command_.usage --indentation=2
+    if as_section:
+      writeln_ "Usage:"
+    indentation := as_section ? 2 : 0
+    if command_.usage_:
+      write_ command_.usage_ --indentation=indentation
+      if as_section: writeln_
       return
 
     // We want to construct a usage line like
@@ -125,12 +131,12 @@ class HelpGenerator:
     // They are sorted by name.
     // For the usage line we don't care for the short names of options.
 
-    write_ invoked_command_ --indentation=2
+    write_ invoked_command_ --indentation=indentation
     has_more_options := false
     for i := 0; i < path_.size; i++:
-      current_command := path_[i]
+      current_command/Command := path_[i]
       if i != 0: write_ " $current_command.name"
-      current_options := current_command.options
+      current_options := current_command.options_
       sorted := current_options.sort: | a/Option b/Option | a.name.compare_to b.name
       sorted.do: | option/Option |
         if option.is_required:
@@ -140,10 +146,10 @@ class HelpGenerator:
         else if not option.is_hidden:
           has_more_options = true
 
-    if not command_.subcommands.is_empty: write_ " <command>"
+    if not command_.subcommands_.is_empty: write_ " <command>"
     if has_more_options: write_ " [<options>]"
-    if not command_.rest.is_empty: write_ " [--]"
-    command_.rest.do: | option/Option |
+    if not command_.rest_.is_empty: write_ " [--]"
+    command_.rest_.do: | option/Option |
       type := option.type
       option_str/string := ?
       if type == "string": option_str = "<$option.name>"
@@ -151,7 +157,7 @@ class HelpGenerator:
       if option.is_multi: option_str = "$option_str..."
       if not option.is_required: option_str = "[$option_str]"
       write_ " $option_str"
-    writeln_
+    if as_section: writeln_
 
   /**
   Builds the aliases section.
@@ -159,10 +165,10 @@ class HelpGenerator:
   Only generates the alias section if the command is not the root command.
   */
   build_aliases -> none:
-    if is_root_command_ or command_.aliases.is_empty: return
+    if is_root_command_ or command_.aliases_.is_empty: return
     ensure_vertical_space_
     writeln_ "Aliases:"
-    writeln_ (command_.aliases.join ", ") --indentation=2
+    writeln_ (command_.aliases_.join ", ") --indentation=2
 
   /**
   Builds the commands section.
@@ -173,22 +179,22 @@ class HelpGenerator:
   If the command is the root-command also adds the 'help' command.
   */
   build_commands -> none:
-    if command_.subcommands.is_empty: return
+    if command_.subcommands_.is_empty: return
     ensure_vertical_space_
     writeln_ "Commands:"
 
     commands_and_help := []
     has_help_subcommand := false
-    command_.subcommands.do: | subcommand/Command |
+    command_.subcommands_.do: | subcommand/Command |
       if subcommand.name == "help": has_help_subcommand = true
-      subcommand.aliases.do: if it == "help": has_help_subcommand = true
+      subcommand.aliases_.do: if it == "help": has_help_subcommand = true
 
-      if subcommand.is_hidden: continue.do
+      if subcommand.is_hidden_: continue.do
 
       help_str := ?
-      if help := subcommand.short_help:
+      if help := subcommand.short_help_:
         help_str = help
-      else if long_help := subcommand.long_help:
+      else if long_help := subcommand.long_help_:
         // Take the first paragraph (potentially multiple lines) of the long help.
         paragraph_index := long_help.index_of "\n\n"
         if paragraph_index == -1:
@@ -211,7 +217,7 @@ class HelpGenerator:
   Automatically adds the help option if it is not already defined.
   */
   build_local_options -> none:
-    build_options_ --title="Options" command_.options --add_help
+    build_options_ --title="Options" command_.options_ --add_help
 
   /**
   Builds the global options section.
@@ -309,7 +315,7 @@ class HelpGenerator:
   build_examples:
     // Get the local examples directly, as we want to keep them on top, and as we
     // don't want to filter them.
-    this_examples := command_.examples.map: | example/Example | [example, path_]
+    this_examples := command_.examples_.map: | example/Example | [example, path_]
     sub_examples := []
     add_global_examples_ command_ sub_examples --path=path_ --skip_first_level
     sub_examples.sort --in_place: | a/List b/List | a[0].global_priority - b[0].global_priority
@@ -338,11 +344,11 @@ class HelpGenerator:
   */
   add_global_examples_ command/Command all_examples/List --path/List --skip_first_level/bool=false -> none:
     if not skip_first_level:
-      global_examples := (command.examples.filter: it.global_priority > 0)
+      global_examples := (command.examples_.filter: it.global_priority > 0)
       all_examples.add_all (global_examples.map: [it, path])
 
-    command.subcommands.do: | subcommand/Command |
-      if subcommand.is_hidden: continue.do
+    command.subcommands_.do: | subcommand/Command |
+      if subcommand.is_hidden_: continue.do
       add_global_examples_ subcommand all_examples --path=(path + [subcommand])
 
   /**
@@ -395,7 +401,7 @@ class HelpGenerator:
     for j := 0; j < parsed_path.size; j++:
       current_command/Command := parsed_path[j]
       command_level[current_command] = j
-      current_command.options.do: | option/Option |
+      current_command.options_.do: | option/Option |
         if not parsed.was_provided option.name: continue.do
         option_to_command["--$option.name"] = current_command
         if option.short_name: option_to_command["-$option.short_name"] = current_command
