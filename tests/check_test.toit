@@ -39,8 +39,8 @@ missing_run:
 ambiguous_option:
   root := cli.Command "root"
       --options=[
-        cli.OptionString "foo" --short_name="a",
-        cli.OptionString "foo" --short_name="b",
+        cli.Option "foo" --short_name="a",
+        cli.Option "foo" --short_name="b",
       ]
       --run=(:: null)
 
@@ -48,28 +48,28 @@ ambiguous_option:
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo" --short_name="a",
-        cli.OptionString "bar" --short_name="a",
+        cli.Option "foo" --short_name="a",
+        cli.Option "bar" --short_name="a",
       ]
       --run=(:: null)
   expect_throw "Ambiguous option of 'root': -a.": root.check --invoked_command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo" --short_name="a",
-        cli.OptionString "bar" --short_name="ab",
+        cli.Option "foo" --short_name="a",
+        cli.Option "bar" --short_name="ab",
       ]
       --run=(:: null)
   expect_throw "Ambiguous option of 'root': -ab.": root.check --invoked_command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo" --short_name="a",
+        cli.Option "foo" --short_name="a",
       ]
 
   sub := cli.Command "sub"
       --options=[
-        cli.OptionString "foo" --short_name="b",
+        cli.Option "foo" --short_name="b",
       ]
       --run=(:: null)
   root.add sub
@@ -78,11 +78,11 @@ ambiguous_option:
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo" --short_name="a",
+        cli.Option "foo" --short_name="a",
       ]
   sub = cli.Command "sub"
       --options=[
-        cli.OptionString "bar" --short_name="a",
+        cli.Option "bar" --short_name="a",
       ]
       --run=(:: null)
   root.add sub
@@ -91,11 +91,11 @@ ambiguous_option:
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo" --short_name="a",
+        cli.Option "foo" --short_name="a",
       ]
   sub = cli.Command "sub"
       --options=[
-        cli.OptionString "bar" --short_name="ab",
+        cli.Option "bar" --short_name="ab",
       ]
       --run=(:: null)
   root.add sub
@@ -104,11 +104,11 @@ ambiguous_option:
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "machine_32" --short_name="m32",
+        cli.Option "machine_32" --short_name="m32",
       ]
   sub = cli.Command "sub"
       --options=[
-        cli.OptionString "machine_64" --short_name="m64",
+        cli.Option "machine_64" --short_name="m64",
       ]
       --run=(:: null)
   root.add sub
@@ -117,13 +117,13 @@ ambiguous_option:
   root = cli.Command "root"
   sub1 := cli.Command "sub1"
       --options=[
-        cli.OptionString "foo" --short_name="a",
+        cli.Option "foo" --short_name="a",
       ]
       --run=(:: null)
   root.add sub1
   sub2 := cli.Command "sub2"
       --options=[
-        cli.OptionString "foo" --short_name="a",
+        cli.Option "foo" --short_name="a",
       ]
       --run=(:: null)
   root.add sub2
@@ -144,7 +144,7 @@ ambiguous_command:
 rest_and_command:
   root := cli.Command "root"
       --rest=[
-        cli.OptionString "rest" --multi,
+        cli.Option "rest" --multi,
       ]
   sub := cli.Command "sub"
       --run=(:: null)
@@ -154,7 +154,7 @@ rest_and_command:
   expect_throw "Cannot have both subcommands and rest arguments.":
     root = cli.Command "root"
         --rest=[
-          cli.OptionString "rest" --multi,
+          cli.Option "rest" --multi,
         ]
         --subcommands=[
           cli.Command "sub" --run=(:: null),
@@ -179,8 +179,8 @@ run_and_command:
 rest:
   root := cli.Command "root"
       --rest=[
-        cli.OptionString "rest" --multi,
-        cli.OptionString "other",
+        cli.Option "rest" --multi,
+        cli.Option "other",
       ]
       --run=(:: null)
   expect_throw "Multi-option 'rest' of 'root' must be the last rest argument.":
@@ -188,8 +188,8 @@ rest:
 
   root = cli.Command "root"
       --rest=[
-        cli.OptionString "foo",
-        cli.OptionString "bar" --required,
+        cli.Option "foo",
+        cli.Option "bar" --required,
       ]
       --run=(:: null)
   expect_throw "Required rest argument 'bar' of 'root' cannot follow optional rest argument.":
@@ -197,29 +197,29 @@ rest:
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo",
+        cli.Option "foo",
       ]
       --rest=[
-        cli.OptionString "foo",
+        cli.Option "foo",
       ]
       --run=(:: null)
   expect_throw "Rest name 'foo' of 'root' already used.": root.check --invoked_command="root"
 
   root = cli.Command "root"
       --rest=[
-        cli.OptionString "foo",
-        cli.OptionString "foo",
+        cli.Option "foo",
+        cli.Option "foo",
       ]
       --run=(:: null)
   expect_throw "Rest name 'foo' of 'root' already used.": root.check --invoked_command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.OptionString "foo",
+        cli.Option "foo",
       ]
   sub := cli.Command "sub"
       --rest=[
-        cli.OptionString "foo",
+        cli.Option "foo",
       ]
       --run=(:: null)
   root.add sub
@@ -229,7 +229,7 @@ rest:
 hidden_rest:
   root := cli.Command "root"
       --rest=[
-        cli.OptionString "foo" --hidden,
+        cli.Option "foo" --hidden,
       ]
       --run=(:: null)
   expect_throw "Rest argument 'foo' of 'root' cannot be hidden.":
@@ -239,8 +239,8 @@ snake_kebab:
   // Test that kebab and snake case lead to ambiguous options.
   root := cli.Command "root"
       --options=[
-        cli.OptionString "foo-bar",
-        cli.OptionString "foo_bar"
+        cli.Option "foo-bar",
+        cli.Option "foo_bar"
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable

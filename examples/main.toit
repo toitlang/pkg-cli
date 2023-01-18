@@ -122,7 +122,7 @@ create_device_command -> cli.Command:
           last used device is used.
         """
       --options=[
-        cli.OptionString "device" --short_name="d"
+        cli.Option "device" --short_name="d"
             --short_help="The device to operate on."
       ]
   device_cmd.add create_reset_command

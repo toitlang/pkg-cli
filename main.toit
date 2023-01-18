@@ -13,7 +13,7 @@ main args:
           --short_name="f"
           --short_help="Output format"
           --default="long",
-        arguments.OptionString "global" --short_help="global required flag" --required,
+        arguments.Option "global" --short_help="global required flag" --required,
       ]
       --examples=[
         arguments.Example "Example of subcommand"
@@ -29,13 +29,13 @@ main args:
         Multiple lines.
         """
       --options=[
-        arguments.OptionString "other" --short_help="other option",
+        arguments.Option "other" --short_help="other option",
         arguments.OptionInt "other_int" --short_help="other int option\ntwo lines" --default=42,
         arguments.OptionInt "other_int2" --required --multi,
       ]
       --rest=[
-        arguments.OptionString "input" --short_help="Input file" --required --type="file",
-        arguments.OptionString "output" --short_help="Output file" --multi --required --type="file",
+        arguments.Option "input" --short_help="Input file" --required --type="file",
+        arguments.Option "output" --short_help="Output file" --multi --required --type="file",
       ]
       --examples=[
         arguments.Example "Use a long output format"
@@ -47,8 +47,8 @@ main args:
       --run=:: | parsed | run_other parsed
       --short_help="""Some short help for the other2 command.\nTwo lines."""
       --rest=[
-        arguments.OptionString "input" --short_help="Input file" --required --type="file",
-        arguments.OptionString "output" --short_help="Output file" --multi --required --type="file",
+        arguments.Option "input" --short_help="Input file" --required --type="file",
+        arguments.Option "output" --short_help="Output file" --multi --required --type="file",
         arguments.Flag "flag_rest"
       ]
       --examples=[

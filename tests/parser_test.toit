@@ -29,8 +29,8 @@ test_options:
   expected /Map? := null
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f" --default="default_foo",
-        cli.OptionString "bar" --short_name="b",
+        cli.Option "foo" --short_name="f" --default="default_foo",
+        cli.Option "bar" --short_name="b",
         cli.OptionInt "gee" --short_name="g",
       ]
       --run=:: | parsed/cli.Parsed |
@@ -53,9 +53,9 @@ test_options:
 
   cmd = cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f" --default="default_foo",
+        cli.Option "foo" --short_name="f" --default="default_foo",
         cli.Flag "bar" --short_name="b",
-        cli.OptionString "fizz" --short_name="iz" --default="default_fizz",
+        cli.Option "fizz" --short_name="iz" --default="default_fizz",
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments expected parsed
@@ -114,8 +114,8 @@ test_multi:
   expected/Map? := null
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f" --multi,
-        cli.OptionString "bar" --short_name="b" --multi --split_commas,
+        cli.Option "foo" --short_name="f" --multi,
+        cli.Option "bar" --short_name="b" --multi --split_commas,
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments expected parsed
@@ -180,7 +180,7 @@ test_rest:
   expected/Map? := null
   cmd := cli.Command "test"
       --rest=[
-        cli.OptionString "foo",
+        cli.Option "foo",
         cli.OptionInt "bar",
       ]
       --run=:: | parsed/cli.Parsed |
@@ -197,7 +197,7 @@ test_rest:
 
   cmd = cli.Command "test"
       --rest=[
-        cli.OptionString "foo" --required,
+        cli.Option "foo" --required,
         cli.OptionInt "bar" --default=42,
       ]
       --run=:: | parsed/cli.Parsed |
@@ -214,8 +214,8 @@ test_rest:
 
   cmd = cli.Command "test"
       --rest=[
-        cli.OptionString "foo" --required,
-        cli.OptionString "bar" --required --multi,
+        cli.Option "foo" --required,
+        cli.Option "bar" --required --multi,
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments expected parsed
@@ -240,13 +240,13 @@ test_subcommands:
       --subcommands=[
         cli.Command "sub1"
             --options=[
-              cli.OptionString "foo" --short_name="f",
+              cli.Option "foo" --short_name="f",
             ]
             --run=:: | parsed/cli.Parsed |
               check_arguments expected parsed,
         cli.Command "sub2"
             --options=[
-              cli.OptionString "bar" --short_name="b",
+              cli.Option "bar" --short_name="b",
             ]
             --run=:: | parsed/cli.Parsed |
               check_arguments expected parsed,
@@ -276,12 +276,12 @@ test_no_option:
 
   cmd = cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f",
+        cli.Option "foo" --short_name="f",
       ]
       --subcommands=[
         cli.Command "sub1"
             --options=[
-              cli.OptionString "bar" --short_name="b",
+              cli.Option "bar" --short_name="b",
             ]
             --run=:: | parsed/cli.Parsed |
               expect_throw "No option named 'gee'": parsed["gee"],
@@ -324,7 +324,7 @@ test_invert_flag:
 test_invert_non_flag:
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f",
+        cli.Option "foo" --short_name="f",
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable
@@ -346,7 +346,7 @@ test_value_for_flag:
 test_missing_args:
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f",
+        cli.Option "foo" --short_name="f",
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable
@@ -370,7 +370,7 @@ test_missing_subcommand:
 test_dash_arg:
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo" --short_name="f",
+        cli.Option "foo" --short_name="f",
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments {"foo": "-"} parsed
@@ -382,11 +382,11 @@ test_mixed_rest_named:
 
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo" --required,
-        cli.OptionString "bar" --required,
+        cli.Option "foo" --required,
+        cli.Option "bar" --required,
       ]
       --rest=[
-        cli.OptionString "baz" --required,
+        cli.Option "baz" --required,
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} parsed
@@ -397,11 +397,11 @@ test_mixed_rest_named:
 
   cmd = cli.Command "test"
       --options=[
-        cli.OptionString "foo" --required,
-        cli.OptionString "bar" --required,
+        cli.Option "foo" --required,
+        cli.Option "bar" --required,
       ]
       --rest=[
-        cli.OptionString "baz" --required,
+        cli.Option "baz" --required,
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} parsed
@@ -412,8 +412,8 @@ test_mixed_rest_named:
 test_snake_kebab:
   cmd := cli.Command "test"
       --options=[
-        cli.OptionString "foo-bar" --short_name="f",
-        cli.OptionString "toto_titi"
+        cli.Option "foo-bar" --short_name="f",
+        cli.Option "toto_titi"
       ]
       --run=:: | parsed/cli.Parsed |
         check_arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } parsed

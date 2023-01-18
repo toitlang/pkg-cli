@@ -13,7 +13,7 @@ main:
   test_bad_combos
 
 test_string:
-  option := cli.OptionString "foo"
+  option := cli.Option "foo"
   expect_equals option.name "foo"
   expect_null option.default
   expect_equals "string" option.type
@@ -25,31 +25,31 @@ test_string:
   expect_not option.should_split_commas
   expect_not option.is_flag
 
-  option = cli.OptionString "foo" --default="some_default"
+  option = cli.Option "foo" --default="some_default"
   expect_equals "some_default" option.default
 
-  option = cli.OptionString "foo" --short_name="f"
+  option = cli.Option "foo" --short_name="f"
   expect_equals "f" option.short_name
 
-  option = cli.OptionString "foo" --short_name="foo"
+  option = cli.Option "foo" --short_name="foo"
   expect_equals "foo" option.short_name
 
-  option = cli.OptionString "foo" --short_help="Some_help."
+  option = cli.Option "foo" --short_help="Some_help."
   expect_equals "Some_help." option.short_help
 
-  option = cli.OptionString "foo" --required
+  option = cli.Option "foo" --required
   expect option.is_required
 
-  option = cli.OptionString "foo" --hidden
+  option = cli.Option "foo" --hidden
   expect option.is_hidden
 
-  option = cli.OptionString "foo" --multi
+  option = cli.Option "foo" --multi
   expect option.is_multi
 
-  option = cli.OptionString "foo" --multi --split_commas
+  option = cli.Option "foo" --multi --split_commas
   expect option.should_split_commas
 
-  option = cli.OptionString "foo" --short_name="f" \
+  option = cli.Option "foo" --short_name="f" \
       --short_help="Baz." --required --multi \
       --split_commas --type="some_type"
   expect_equals option.name "foo"
@@ -117,16 +117,16 @@ test_flag:
 
 test_bad_combos:
   expect_throw "--split_commas is only valid for multi options.":
-    cli.OptionString "foo" --split_commas
+    cli.Option "foo" --split_commas
 
   expect_throw "Invalid short option name: '@'":
-    cli.OptionString "bar" --short_name="@"
+    cli.Option "bar" --short_name="@"
 
   expect_throw "Option can't be hidden and required.":
-    cli.OptionString "foo" --hidden --required
+    cli.Option "foo" --hidden --required
 
   expect_throw "Option can't have default value and be required.":
-    cli.OptionString "foo" --default="bar" --required
+    cli.Option "foo" --default="bar" --required
 
   expect_throw "Option can't have default value and be required.":
     cli.OptionInt "foo" --default=42 --required
@@ -135,7 +135,7 @@ test_bad_combos:
     cli.Flag "foo" --default=false --required
 
   expect_throw "Multi option can't have default value.":
-    cli.OptionString "foo" --default="bar" --multi
+    cli.Option "foo" --default="bar" --multi
 
   expect_throw "Multi option can't have default value.":
     cli.OptionInt "foo" --default=42 --multi
