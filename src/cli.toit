@@ -278,7 +278,7 @@ abstract class Option:
   If $split_commas is true, then $multi must be true too. Values given to this option are then
     split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
   */
-  constructor.from_sub .name --.short_name --.short_help --required --hidden --multi --split_commas:
+  constructor.from_subclass .name --.short_name --.short_help --required --hidden --multi --split_commas:
     name = to_kebab name
     is_required = required
     is_hidden = hidden
@@ -355,7 +355,7 @@ class OptionString extends Option:
       --split_commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from_sub name --short_name=short_name --short_help=short_help \
+    super.from_subclass name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi \
         --split_commas=split_commas
 
@@ -398,7 +398,7 @@ class OptionEnum extends Option:
       --split_commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from_sub name --short_name=short_name --short_help=short_help \
+    super.from_subclass name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi \
         --split_commas=split_commas
     if default and not values.contains default:
@@ -439,7 +439,7 @@ class OptionInt extends Option:
       --split_commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from_sub name --short_name=short_name --short_help=short_help \
+    super.from_subclass name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi \
         --split_commas=split_commas
 
@@ -478,7 +478,7 @@ class Flag extends Option:
       --multi/bool=false:
     if multi and default != null: throw "Multi option can't have default value."
     if required and default != null: throw "Option can't have default value and be required."
-    super.from_sub name --short_name=short_name --short_help=short_help \
+    super.from_subclass name --short_name=short_name --short_help=short_help \
         --required=required --hidden=hidden --multi=multi --no-split_commas
 
   type -> string:
