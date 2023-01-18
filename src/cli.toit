@@ -4,6 +4,7 @@
 
 import .parser_
 import .utils_
+import .help_generator_
 
 /**
 When the arg-parser needs to report an error, or write a help message, it
@@ -32,40 +33,40 @@ class Command:
   Usually constructed from the name and the arguments of the command. However, in
     some cases, a different (shorter) usage string is desired.
   */
-  usage/string?
+  usage_/string?
 
   /** A short (one line) description of the command. */
-  short_help/string?
+  short_help_/string?
 
   /** A longer description of the command. */
-  long_help/string?
+  long_help_/string?
 
   /** Examples of the command. */
-  examples/List
+  examples_/List
 
   /** Aliases of the command. */
-  aliases/List
+  aliases_/List
 
   /** Options to the command. */
-  options/List
+  options_/List
 
   /** The rest arguments. */
-  rest/List
+  rest_/List
 
   /** Whether this command should show up in the help. */
-  is_hidden/bool
+  is_hidden_/bool
 
   /**
   Subcommands.
   Use $add to add new subcommands.
   */
-  subcommands/List
+  subcommands_/List
 
   /**
   The function to invoke when this command is executed.
   May be null, in which case at least one subcommand must be specified.
   */
-  run_callback/Lambda?
+  run_callback_/Lambda?
 
   /**
   Constructs a new command.
@@ -83,11 +84,19 @@ class Command:
     line, but it can span multiple lines/paragraphs if necessary. Use indented lines to
     continue paragraphs (just like toitdoc).
   */
-  constructor .name --.usage=null --.short_help=null --.long_help=null --.examples=[] \
-      --.aliases=[] --.options=[] --.rest=[] --.subcommands=[] --hidden/bool=false \
+  constructor .name --usage/string?=null --short_help/string?=null --long_help/string?=null --examples/List=[] \
+      --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
       --run/Lambda?=null:
-    run_callback = run
-    is_hidden = hidden
+    usage_ = usage
+    short_help_ = short_help
+    long_help_ = long_help
+    examples_ = examples
+    aliases_ = aliases
+    options_ = options
+    rest_ = rest
+    subcommands_ = subcommands
+    run_callback_ = run
+    is_hidden_ = hidden
     if not subcommands.is_empty and not rest.is_empty:
       throw "Cannot have both subcommands and rest arguments."
     if run and not subcommands.is_empty:
@@ -105,11 +114,23 @@ class Command:
   It is an error to add a subcommand to a command that has a run callback.
   */
   add command/Command:
-    if not rest.is_empty:
+    if not rest_.is_empty:
       throw "Cannot add subcommands to a command with rest arguments."
-    if run_callback:
+    if run_callback_:
       throw "Cannot add subcommands to a command with a run callback."
-    subcommands.add command
+    subcommands_.add command
+
+  /** Returns the help string of this command. */
+  help --invoked_command/string=program_name -> string:
+    generator := HelpGenerator [this] --invoked_command=invoked_command
+    generator.build_all
+    return generator.to_string
+
+  /** Returns the usage string of this command. */
+  usage --invoked_command/string=program_name -> string:
+    generator := HelpGenerator [this] --invoked_command=invoked_command
+    generator.build_usage --as_section=false
+    return generator.to_string
 
   /**
   Runs this command.
@@ -125,7 +146,7 @@ class Command:
   run arguments/List --invoked_command=program_name --ui/Ui=Ui_ -> none:
     parser := Parser_ --ui=ui --invoked_command=invoked_command
     parsed := parser.parse this arguments
-    parsed.command.run_callback.call parsed
+    parsed.command.run_callback_.call parsed
 
   /**
   Checks this command and all subcommands for errors.
@@ -144,12 +165,12 @@ class Command:
     available through supercommands.
   */
   check_ --path/List --outer_long_options/Set={} --outer_short_options/Set={}:
-    examples.do: it as Example
-    aliases.do: it as string
+    examples_.do: it as Example
+    aliases_.do: it as string
 
     long_options := {}
     short_options := {}
-    options.do: | option/Option |
+    options_.do: | option/Option |
       if long_options.contains option.name:
         throw "Ambiguous option of '$(path.join " ")': --$option.name."
       if outer_long_options.contains option.name:
@@ -164,9 +185,9 @@ class Command:
         short_options.add option.short_name
 
     have_seen_optional_rest := false
-    for i := 0; i < rest.size; i++:
-      option/Option := rest[i]
-      if option.is_multi and not i == rest.size - 1:
+    for i := 0; i < rest_.size; i++:
+      option/Option := rest_[i]
+      if option.is_multi and not i == rest_.size - 1:
         throw "Multi-option '$option.name' of '$(path.join " ")' must be the last rest argument."
       if long_options.contains option.name:
         throw "Rest name '$option.name' of '$(path.join " ")' already used."
@@ -189,8 +210,8 @@ class Command:
       outer_short_options.add_all short_options
 
     subnames := {}
-    subcommands.do: | command/Command |
-      names := [command.name] + command.aliases
+    subcommands_.do: | command/Command |
+      names := [command.name] + command.aliases_
       names.do: | name/string? |
         if subnames.contains name:
           throw "Ambiguous subcommand of '$(path.join " ")': '$name'."
@@ -203,12 +224,12 @@ class Command:
     // We allow a command with a run callback if all subcommands are hidden.
     // As such, we could also allow commands without either. If desired, it should be
     // safe to remove the following check.
-    if subcommands.is_empty and not run_callback:
+    if subcommands_.is_empty and not run_callback_:
       throw "Command '$(path.join " ")' has no subcommands and no run callback."
 
   find_subcommand_ name/string -> Command?:
-    subcommands.do: | command/Command |
-      if command.name == name or command.aliases.contains name:
+    subcommands_.do: | command/Command |
+      if command.name == name or command.aliases_.contains name:
         return command
     return null
 
@@ -304,6 +325,7 @@ abstract class Option:
     For example, a FileOption would not check that the file exists.
   */
   abstract parse str/string --for_help_example/bool=false -> any
+
 
 /**
 A string option.

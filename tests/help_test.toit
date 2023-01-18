@@ -72,6 +72,7 @@ test_combination:
     """
   check_output cmd_help: | ui/cli.Ui |
     cmd.run ["--help"] --ui=ui --invoked_command="root"
+  expect_equals cmd_help (cmd.help --invoked_command="root")
 
   sub := cli.Command "sub"
       --aliases=["sss"]
@@ -120,6 +121,8 @@ test_combination:
     """
   check_output cmd_help: | ui/cli.Ui |
     cmd.run ["--help"] --ui=ui --invoked_command="root"
+
+  expect_equals cmd_help (cmd.help --invoked_command="root")
 
   sub_help := """
     Long sub.
@@ -174,6 +177,7 @@ test_usage:
     """
   actual_usage := build_usage.call [cmd]
   expect_equals expected_usage actual_usage
+  expect_equals expected_usage "Usage:\n  $(cmd.usage --invoked_command="root")\n"
 
   // Test different types.
   cmd = cli.Command "root"
@@ -197,6 +201,7 @@ test_usage:
     """
   actual_usage = build_usage.call [cmd]
   expect_equals expected_usage actual_usage
+  expect_equals expected_usage "Usage:\n  $(cmd.usage --invoked_command="root")\n"
 
   cmd = cli.Command "root"
       --options=[
@@ -212,6 +217,7 @@ test_usage:
     """
   actual_usage = build_usage.call [cmd]
   expect_equals expected_usage actual_usage
+  expect_equals expected_usage "Usage:\n  $(cmd.usage --invoked_command="root")\n"
 
   // Test the same options as rest arguments.
   cmd = cli.Command "root"
@@ -234,6 +240,7 @@ test_usage:
     """
   actual_usage = build_usage.call [cmd]
   expect_equals expected_usage actual_usage
+  expect_equals expected_usage "Usage:\n  $(cmd.usage --invoked_command="root")\n"
 
   cmd = cli.Command "root"
       --options=[
@@ -259,6 +266,9 @@ test_usage:
   actual_usage = build_usage.call [cmd, sub]
   expect_equals expected_usage actual_usage
 
+  expected_cmd_usage := "sub --sub-option1=<string> --sub-option3 [<options>]"
+  expect_equals expected_cmd_usage (sub.usage --invoked_command="sub")
+
   cmd = cli.Command "root"
       --usage="overridden use line"
       --run=:: unreachable
@@ -268,6 +278,7 @@ test_usage:
     """
   actual_usage = build_usage.call [cmd]
   expect_equals expected_usage actual_usage
+  expect_equals expected_usage "Usage:\n  $(cmd.usage --invoked_command="root")\n"
 
 test_aliases:
   build_aliases := : | path/List |
