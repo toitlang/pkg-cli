@@ -53,12 +53,12 @@ class Parser_:
 
     command/Command? := null
     set_command := : | new_command/Command |
-      new_command.options.do: | option/Option |
+      new_command.options_.do: | option/Option |
         all_named_options[option.name] = option
         if option.short_name: all_short_options[option.short_name] = option
 
       // The rest options are only allowed for the last command.
-      (new_command.options + new_command.rest).do: | option/Option |
+      (new_command.options_ + new_command.rest_).do: | option/Option |
         if option.is_multi:
           options[option.name] = []
         else:
@@ -142,7 +142,7 @@ class Parser_:
               add_option.call option arguments[index++]
               break
 
-      else if not command.run_callback:
+      else if not command.run_callback_:
         subcommand := command.find_subcommand_ argument
         if not subcommand:
           if argument == "help" and command == root_command:
@@ -160,7 +160,7 @@ class Parser_:
         fatal path "Required option $name is missing."
 
     rest_index := 0
-    command.rest.do: | rest_option/Option |
+    command.rest_.do: | rest_option/Option |
       if rest_option.is_required and rest_index >= rest.size:
         fatal path "Missing required rest argument: '$rest_option.name'."
       if rest_index >= rest.size: continue.do
@@ -174,7 +174,7 @@ class Parser_:
     if rest_index < rest.size:
       fatal path "Unexpected rest argument: '$rest[rest_index]'."
 
-    if not command.run_callback:
+    if not command.run_callback_:
       fatal path "Missing subcommand."
 
     return Parsed.private_ path options seen_options
