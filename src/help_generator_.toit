@@ -218,7 +218,7 @@ class HelpGenerator:
   */
   build_local_options -> none:
     build_options_ --title="Options" command_.options_ --add_help
-    build_options_ --title="Rest" command_.rest --rest
+    build_options_ --title="Rest" command_.rest_ --rest
 
   /**
   Builds the global options section.
