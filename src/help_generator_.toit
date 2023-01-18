@@ -218,6 +218,7 @@ class HelpGenerator:
   */
   build_local_options -> none:
     build_options_ --title="Options" command_.options_ --add_help
+    build_options_ --title="Rest" command_.rest --rest
 
   /**
   Builds the global options section.
@@ -227,7 +228,7 @@ class HelpGenerator:
   build_global_options -> none:
     build_options_ --title="Global options" global_options_
 
-  build_options_ --title/string options/List --add_help/bool=false -> none:
+  build_options_ --title/string options/List --add_help/bool=false --rest/bool=false -> none:
     if options.is_empty and not add_help: return
 
     ensure_vertical_space_
@@ -257,13 +258,16 @@ class HelpGenerator:
     sorted_options.do: | option/Option |
       if option.is_hidden: continue.do
       option_str/string := ?
-      if option.short_name: option_str = "-$option.short_name, "
-      else: option_str = "    "
-      option_str = option_str.pad --right (3 + max_short_name) ' '
-      option_str += "--$option.name"
-      type_str := option.type
-      if not option.is_flag:
-        option_str += " $type_str"
+      if rest:
+        option_str = "$option.name $option.type"
+      else:
+        if option.short_name: option_str = "-$option.short_name, "
+        else: option_str = "    "
+        option_str = option_str.pad --right (3 + max_short_name) ' '
+        option_str += "--$option.name"
+        type_str := option.type
+        if not option.is_flag:
+          option_str += " $type_str"
 
       help_str := option.short_help or ""
       additional_info := ""
