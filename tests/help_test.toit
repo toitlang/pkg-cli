@@ -63,6 +63,9 @@ test_combination:
       -h, --help            Show help for this command.
           --option1 string  Option 1.
 
+    Rest:
+      rest1 rest_type  Rest 1 (required)
+
     Examples:
       # Example 1:
       root --option1 foo rest
