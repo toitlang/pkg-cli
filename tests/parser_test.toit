@@ -5,36 +5,36 @@
 import cli
 import expect show *
 
-import .test_ui
+import .test-ui
 
-check_arguments expected/Map parsed/cli.Parsed:
+check-arguments expected/Map parsed/cli.Parsed:
   expected.do: | key value |
-    expect_equals value parsed[key]
+    expect-equals value parsed[key]
 
 main:
-  test_options
-  test_multi
-  test_rest
-  test_no_option
-  test_invert_flag
-  test_invert_non_flag
-  test_value_for_flag
-  test_missing_args
-  test_missing_subcommand
-  test_dash_arg
-  test_mixed_rest_named
-  test_snake_kebab
+  test-options
+  test-multi
+  test-rest
+  test-no-option
+  test-invert-flag
+  test-invert-non-flag
+  test-value-for-flag
+  test-missing-args
+  test-missing-subcommand
+  test-dash-arg
+  test-mixed-rest-named
+  test-snake-kebab
 
-test_options:
+test-options:
   expected /Map? := null
   cmd := cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f" --default="default_foo",
-        cli.Option "bar" --short_name="b",
-        cli.OptionInt "gee" --short_name="g",
+        cli.Option "foo" --short-name="f" --default="default_foo",
+        cli.Option "bar" --short-name="b",
+        cli.OptionInt "gee" --short-name="g",
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": "bar_value", "gee": null}
   cmd.run ["-f", "foo_value", "-b", "bar_value"]
@@ -53,12 +53,12 @@ test_options:
 
   cmd = cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f" --default="default_foo",
-        cli.Flag "bar" --short_name="b",
-        cli.Option "fizz" --short_name="iz" --default="default_fizz",
+        cli.Option "foo" --short-name="f" --default="default_foo",
+        cli.Flag "bar" --short-name="b",
+        cli.Option "fizz" --short-name="iz" --default="default_fizz",
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": "default_foo", "bar": true, "fizz": "default_fizz"}
   cmd.run ["-b"]
@@ -85,10 +85,10 @@ test_options:
 
   cmd = cli.Command "test"
       --options=[
-        cli.Flag "foo" --short_name="f" --default=false,
+        cli.Flag "foo" --short-name="f" --default=false,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": false}
   cmd.run []
@@ -101,24 +101,24 @@ test_options:
 
   cmd = cli.Command "test"
       --options=[
-        cli.Flag "foo" --short_name="f" --default=true,
+        cli.Flag "foo" --short-name="f" --default=true,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": true
   }
   cmd.run []
 
-test_multi:
+test-multi:
   expected/Map? := null
   cmd := cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f" --multi,
-        cli.Option "bar" --short_name="b" --multi --split_commas,
+        cli.Option "foo" --short-name="f" --multi,
+        cli.Option "bar" --short-name="b" --multi --split-commas,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": ["foo_value"], "bar": ["bar_value"]}
   cmd.run ["-f", "foo_value", "-b", "bar_value"]
@@ -145,10 +145,10 @@ test_multi:
 
   cmd = cli.Command "test"
       --options=[
-        cli.OptionInt "foo" --short_name="f" --multi --split_commas,
+        cli.OptionInt "foo" --short-name="f" --multi --split-commas,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": [1, 2, 3]}
   cmd.run ["-f", "1", "-f", "2", "-f", "3"]
@@ -156,10 +156,10 @@ test_multi:
 
   cmd = cli.Command "test"
       --options=[
-        cli.Flag "foo" --short_name="f" --multi,
+        cli.Flag "foo" --short-name="f" --multi,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": [true, true, true]}
   cmd.run ["-f", "-f", "-f"]
@@ -168,15 +168,15 @@ test_multi:
 
   cmd = cli.Command "test"
       --options=[
-        cli.OptionEnum "foo" ["a", "b"] --short_name="f" --multi,
+        cli.OptionEnum "foo" ["a", "b"] --short-name="f" --multi,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": ["a", "b", "a"]}
   cmd.run ["-f", "a", "-f", "b", "-f", "a"]
 
-test_rest:
+test-rest:
   expected/Map? := null
   cmd := cli.Command "test"
       --rest=[
@@ -184,7 +184,7 @@ test_rest:
         cli.OptionInt "bar",
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": 42}
   cmd.run ["foo_value", "42"]
@@ -201,7 +201,7 @@ test_rest:
         cli.OptionInt "bar" --default=42,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": 42}
   cmd.run ["foo_value"]
@@ -209,7 +209,7 @@ test_rest:
   expected = {"foo": "foo_value", "bar": 43}
   cmd.run ["foo_value", "43"]
 
-  expect_abort "Missing required rest argument: 'foo'.": | ui/cli.Ui |
+  expect-abort "Missing required rest argument: 'foo'.": | ui/cli.Ui |
     cmd.run [] --ui=ui
 
   cmd = cli.Command "test"
@@ -218,7 +218,7 @@ test_rest:
         cli.Option "bar" --required --multi,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": ["bar_value"]}
   cmd.run ["foo_value", "bar_value"]
@@ -226,33 +226,33 @@ test_rest:
   expected = {"foo": "foo_value", "bar": ["bar_value", "bar_value2"]}
   cmd.run ["foo_value", "bar_value", "bar_value2"]
 
-  expect_abort "Missing required rest argument: 'bar'.": | ui/cli.Ui |
+  expect-abort "Missing required rest argument: 'bar'.": | ui/cli.Ui |
     cmd.run ["foo_value"] --ui=ui
 
   cmd = cli.Command "test"
       --run=:: null
-  expect_abort "Unexpected rest argument: 'baz'.": | ui/cli.Ui |
+  expect-abort "Unexpected rest argument: 'baz'.": | ui/cli.Ui |
     cmd.run ["baz"] --ui=ui
 
-test_subcommands:
+test-subcommands:
   expected/Map? := null
   cmd := cli.Command "test"
       --subcommands=[
         cli.Command "sub1"
             --options=[
-              cli.Option "foo" --short_name="f",
+              cli.Option "foo" --short-name="f",
             ]
             --run=:: | parsed/cli.Parsed |
-              check_arguments expected parsed,
+              check-arguments expected parsed,
         cli.Command "sub2"
             --options=[
-              cli.Option "bar" --short_name="b",
+              cli.Option "bar" --short-name="b",
             ]
             --run=:: | parsed/cli.Parsed |
-              check_arguments expected parsed,
+              check-arguments expected parsed,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": "foo_value"}
   cmd.run ["sub1", "-f", "foo_value"]
@@ -268,36 +268,36 @@ test_subcommands:
   expected = {"bar": null}
   cmd.run ["sub2"]
 
-test_no_option:
+test-no-option:
   cmd := cli.Command "test"
       --run=:: | parsed/cli.Parsed |
-        expect_throw "No option named 'foo'": parsed["foo"]
+        expect-throw "No option named 'foo'": parsed["foo"]
   cmd.run []
 
   cmd = cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f",
+        cli.Option "foo" --short-name="f",
       ]
       --subcommands=[
         cli.Command "sub1"
             --options=[
-              cli.Option "bar" --short_name="b",
+              cli.Option "bar" --short-name="b",
             ]
             --run=:: | parsed/cli.Parsed |
-              expect_throw "No option named 'gee'": parsed["gee"],
+              expect-throw "No option named 'gee'": parsed["gee"],
       ]
 
   cmd.run ["sub1", "-b", "bar_value"]
   cmd.run ["sub1"]
 
-test_invert_flag:
+test-invert-flag:
   expected/Map? := null
   cmd := cli.Command "test"
       --options=[
-        cli.Flag "foo" --short_name="f",
+        cli.Flag "foo" --short-name="f",
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": null}
   cmd.run []
@@ -310,10 +310,10 @@ test_invert_flag:
 
   cmd = cli.Command "test"
       --options=[
-        cli.Flag "foo" --short_name="f" --default=true,
+        cli.Flag "foo" --short-name="f" --default=true,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments expected parsed
+        check-arguments expected parsed
 
   expected = {"foo": true}
   cmd.run []
@@ -321,63 +321,63 @@ test_invert_flag:
   expected = {"foo": false}
   cmd.run ["--no-foo"]
 
-test_invert_non_flag:
+test-invert-non-flag:
   cmd := cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f",
+        cli.Option "foo" --short-name="f",
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable
 
-  expect_abort "Cannot invert non-boolean flag --foo.": | ui/cli.Ui |
+  expect-abort "Cannot invert non-boolean flag --foo.": | ui/cli.Ui |
     cmd.run ["--no-foo"] --ui=ui
 
-test_value_for_flag:
+test-value-for-flag:
   cmd := cli.Command "test"
       --options=[
-        cli.Flag "foo" --short_name="f",
+        cli.Flag "foo" --short-name="f",
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable
 
-  expect_abort "Cannot specify value for boolean flag --foo.": | ui/cli.Ui |
+  expect-abort "Cannot specify value for boolean flag --foo.": | ui/cli.Ui |
     cmd.run ["--foo=bar"] --ui=ui
 
-test_missing_args:
+test-missing-args:
   cmd := cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f",
+        cli.Option "foo" --short-name="f",
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable
 
-  expect_abort "Option --foo requires an argument.": | ui/cli.Ui |
+  expect-abort "Option --foo requires an argument.": | ui/cli.Ui |
     cmd.run ["--foo"] --ui=ui
 
-  expect_abort "Option -f requires an argument.": | ui/cli.Ui |
+  expect-abort "Option -f requires an argument.": | ui/cli.Ui |
     cmd.run ["-f"] --ui=ui
 
-test_missing_subcommand:
+test-missing-subcommand:
   cmd := cli.Command "test"
       --subcommands=[
         cli.Command "sub1"
             --run=:: unreachable
       ]
 
-  expect_abort "Missing subcommand.": | ui/cli.Ui |
+  expect-abort "Missing subcommand.": | ui/cli.Ui |
     cmd.run [] --ui=ui
 
-test_dash_arg:
+test-dash-arg:
   cmd := cli.Command "test"
       --options=[
-        cli.Option "foo" --short_name="f",
+        cli.Option "foo" --short-name="f",
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments {"foo": "-"} parsed
+        check-arguments {"foo": "-"} parsed
 
   cmd.run ["-f", "-"]
 
-test_mixed_rest_named:
+test-mixed-rest-named:
   // Rest arguments can be mixed with named arguments as long as there isn't a '--'.
 
   cmd := cli.Command "test"
@@ -389,7 +389,7 @@ test_mixed_rest_named:
         cli.Option "baz" --required,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} parsed
+        check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} parsed
 
   cmd.run ["--foo", "foo_value", "--bar", "bar_value", "baz_value"]
   cmd.run ["baz_value", "--foo", "foo_value", "--bar", "bar_value"]
@@ -404,20 +404,20 @@ test_mixed_rest_named:
         cli.Option "baz" --required,
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} parsed
+        check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} parsed
 
   // Because of the '--', the rest argument is not interpreted as a named argument.
   cmd.run ["--foo", "foo_value", "--bar", "bar_value", "--", "--foo"]
 
-test_snake_kebab:
+test-snake-kebab:
   cmd := cli.Command "test"
       --options=[
-        cli.Option "foo-bar" --short_name="f",
+        cli.Option "foo-bar" --short-name="f",
         cli.Option "toto_titi"
       ]
       --run=:: | parsed/cli.Parsed |
-        check_arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } parsed
-        check_arguments {"foo_bar": "foo_value", "toto_titi": "toto_value" } parsed
+        check-arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } parsed
+        check-arguments {"foo_bar": "foo_value", "toto_titi": "toto_value" } parsed
 
   cmd.run ["--foo-bar", "foo_value", "--toto-titi", "toto_value"]
   cmd.run ["--foo_bar", "foo_value", "--toto_titi", "toto_value"]

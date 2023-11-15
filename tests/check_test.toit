@@ -6,130 +6,130 @@ import cli
 import expect show *
 
 main:
-  missing_run
-  ambiguous_option
-  ambiguous_command
-  rest_and_command
-  run_and_command
+  missing-run
+  ambiguous-option
+  ambiguous-command
+  rest-and-command
+  run-and-command
   rest
-  hidden_rest
-  snake_kebab
+  hidden-rest
+  snake-kebab
 
-missing_run:
+missing-run:
   root := cli.Command "root"
-  expect_throw "Command 'root' has no subcommands and no run callback.": root.check --invoked_command="root"
+  expect-throw "Command 'root' has no subcommands and no run callback.": root.check --invoked-command="root"
 
   sub := cli.Command "sub"
   root.add sub
-  expect_throw "Command 'root sub' has no subcommands and no run callback.": root.check --invoked_command="root"
+  expect-throw "Command 'root sub' has no subcommands and no run callback.": root.check --invoked-command="root"
 
   subsub1 := cli.Command "subsub1" --run=(:: null)
   sub.add subsub1
   subsub2 := cli.Command "subsub2"
   sub.add subsub2
-  expect_throw "Command 'root sub subsub2' has no subcommands and no run callback.": root.check --invoked_command="root"
+  expect-throw "Command 'root sub subsub2' has no subcommands and no run callback.": root.check --invoked-command="root"
 
   // Note that hidden subcommands are fine, though.
   root = cli.Command "root"
-  sub_hidden := cli.Command "sub" --hidden --run=(:: null)
-  root.add sub_hidden
+  sub-hidden := cli.Command "sub" --hidden --run=(:: null)
+  root.add sub-hidden
   root.run ["sub"]
 
 
-ambiguous_option:
+ambiguous-option:
   root := cli.Command "root"
       --options=[
-        cli.Option "foo" --short_name="a",
-        cli.Option "foo" --short_name="b",
+        cli.Option "foo" --short-name="a",
+        cli.Option "foo" --short-name="b",
       ]
       --run=(:: null)
 
-  expect_throw "Ambiguous option of 'root': --foo.": root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root': --foo.": root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.Option "foo" --short_name="a",
-        cli.Option "bar" --short_name="a",
+        cli.Option "foo" --short-name="a",
+        cli.Option "bar" --short-name="a",
       ]
       --run=(:: null)
-  expect_throw "Ambiguous option of 'root': -a.": root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root': -a.": root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.Option "foo" --short_name="a",
-        cli.Option "bar" --short_name="ab",
+        cli.Option "foo" --short-name="a",
+        cli.Option "bar" --short-name="ab",
       ]
       --run=(:: null)
-  expect_throw "Ambiguous option of 'root': -ab.": root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root': -ab.": root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.Option "foo" --short_name="a",
+        cli.Option "foo" --short-name="a",
       ]
 
   sub := cli.Command "sub"
       --options=[
-        cli.Option "foo" --short_name="b",
+        cli.Option "foo" --short-name="b",
       ]
       --run=(:: null)
   root.add sub
-  expect_throw "Ambiguous option of 'root sub': --foo conflicts with global option.":
-    root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root sub': --foo conflicts with global option.":
+    root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.Option "foo" --short_name="a",
+        cli.Option "foo" --short-name="a",
       ]
   sub = cli.Command "sub"
       --options=[
-        cli.Option "bar" --short_name="a",
+        cli.Option "bar" --short-name="a",
       ]
       --run=(:: null)
   root.add sub
-  expect_throw "Ambiguous option of 'root sub': -a conflicts with global option.":
-    root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root sub': -a conflicts with global option.":
+    root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.Option "foo" --short_name="a",
+        cli.Option "foo" --short-name="a",
       ]
   sub = cli.Command "sub"
       --options=[
-        cli.Option "bar" --short_name="ab",
+        cli.Option "bar" --short-name="ab",
       ]
       --run=(:: null)
   root.add sub
-  expect_throw "Ambiguous option of 'root sub': -ab conflicts with global option.":
-    root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root sub': -ab conflicts with global option.":
+    root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
-        cli.Option "machine_32" --short_name="m32",
+        cli.Option "machine_32" --short-name="m32",
       ]
   sub = cli.Command "sub"
       --options=[
-        cli.Option "machine_64" --short_name="m64",
+        cli.Option "machine_64" --short-name="m64",
       ]
       --run=(:: null)
   root.add sub
-  root.check --invoked_command="root"
+  root.check --invoked-command="root"
 
   root = cli.Command "root"
   sub1 := cli.Command "sub1"
       --options=[
-        cli.Option "foo" --short_name="a",
+        cli.Option "foo" --short-name="a",
       ]
       --run=(:: null)
   root.add sub1
   sub2 := cli.Command "sub2"
       --options=[
-        cli.Option "foo" --short_name="a",
+        cli.Option "foo" --short-name="a",
       ]
       --run=(:: null)
   root.add sub2
   root.run ["sub1"]  // No error.
 
-ambiguous_command:
+ambiguous-command:
   root := cli.Command "root"
   sub1 := cli.Command "sub"
       --run=(:: null)
@@ -138,20 +138,20 @@ ambiguous_command:
       --run=(:: null)
   root.add sub2
 
-  expect_throw "Ambiguous subcommand of 'root': 'sub'.":
-    root.check --invoked_command="root"
+  expect-throw "Ambiguous subcommand of 'root': 'sub'.":
+    root.check --invoked-command="root"
 
-rest_and_command:
+rest-and-command:
   root := cli.Command "root"
       --rest=[
         cli.Option "rest" --multi,
       ]
   sub := cli.Command "sub"
       --run=(:: null)
-  expect_throw "Cannot add subcommands to a command with rest arguments.":
+  expect-throw "Cannot add subcommands to a command with rest arguments.":
     root.add sub
 
-  expect_throw "Cannot have both subcommands and rest arguments.":
+  expect-throw "Cannot have both subcommands and rest arguments.":
     root = cli.Command "root"
         --rest=[
           cli.Option "rest" --multi,
@@ -161,15 +161,15 @@ rest_and_command:
         ]
         --run=(:: null)
 
-run_and_command:
+run-and-command:
   root := cli.Command "root"
       --run=(:: null)
   sub := cli.Command "sub"
       --run=(:: null)
-  expect_throw "Cannot add subcommands to a command with a run callback.":
+  expect-throw "Cannot add subcommands to a command with a run callback.":
     root.add sub
 
-  expect_throw "Cannot have both a run callback and subcommands.":
+  expect-throw "Cannot have both a run callback and subcommands.":
     root = cli.Command "root"
         --subcommands=[
           cli.Command "sub" --run=(:: null),
@@ -183,8 +183,8 @@ rest:
         cli.Option "other",
       ]
       --run=(:: null)
-  expect_throw "Multi-option 'rest' of 'root' must be the last rest argument.":
-    root.check --invoked_command="root"
+  expect-throw "Multi-option 'rest' of 'root' must be the last rest argument.":
+    root.check --invoked-command="root"
 
   root = cli.Command "root"
       --rest=[
@@ -192,8 +192,8 @@ rest:
         cli.Option "bar" --required,
       ]
       --run=(:: null)
-  expect_throw "Required rest argument 'bar' of 'root' cannot follow optional rest argument.":
-    root.check --invoked_command="root"
+  expect-throw "Required rest argument 'bar' of 'root' cannot follow optional rest argument.":
+    root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
@@ -203,7 +203,7 @@ rest:
         cli.Option "foo",
       ]
       --run=(:: null)
-  expect_throw "Rest name 'foo' of 'root' already used.": root.check --invoked_command="root"
+  expect-throw "Rest name 'foo' of 'root' already used.": root.check --invoked-command="root"
 
   root = cli.Command "root"
       --rest=[
@@ -211,7 +211,7 @@ rest:
         cli.Option "foo",
       ]
       --run=(:: null)
-  expect_throw "Rest name 'foo' of 'root' already used.": root.check --invoked_command="root"
+  expect-throw "Rest name 'foo' of 'root' already used.": root.check --invoked-command="root"
 
   root = cli.Command "root"
       --options=[
@@ -223,19 +223,19 @@ rest:
       ]
       --run=(:: null)
   root.add sub
-  expect_throw "Rest name 'foo' of 'root sub' already a global option.":
-    root.check --invoked_command="root"
+  expect-throw "Rest name 'foo' of 'root sub' already a global option.":
+    root.check --invoked-command="root"
 
-hidden_rest:
+hidden-rest:
   root := cli.Command "root"
       --rest=[
         cli.Option "foo" --hidden,
       ]
       --run=(:: null)
-  expect_throw "Rest argument 'foo' of 'root' cannot be hidden.":
-    root.check --invoked_command="root"
+  expect-throw "Rest argument 'foo' of 'root' cannot be hidden.":
+    root.check --invoked-command="root"
 
-snake_kebab:
+snake-kebab:
   // Test that kebab and snake case lead to ambiguous options.
   root := cli.Command "root"
       --options=[
@@ -244,5 +244,5 @@ snake_kebab:
       ]
       --run=:: | parsed/cli.Parsed |
         unreachable
-  expect_throw "Ambiguous option of 'root': --foo-bar.":
-    root.check --invoked_command="root"
+  expect-throw "Ambiguous option of 'root': --foo-bar.":
+    root.check --invoked-command="root"

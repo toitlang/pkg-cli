@@ -67,71 +67,71 @@ Examples:
 main arguments:
   // Creates a root command.
   // The name of the root command is not used.
-  root_cmd := cli.Command "fleet_manager"
-      --long_help="""
+  root-cmd := cli.Command "fleet_manager"
+      --long-help="""
         This is an imaginary fleet manager for a fleet of Toit devices.
 
         It can not be used to manage the fleet, for example
           by adding or removing devices.
         """
 
-  root_cmd.add create_status_command
-  root_cmd.add create_device_command
+  root-cmd.add create-status-command
+  root-cmd.add create-device-command
 
-  root_cmd.run arguments
+  root-cmd.run arguments
 
 // ============= Could be in a separate file status.toit. =============
 
-create_status_command -> cli.Command:
+create-status-command -> cli.Command:
   return cli.Command "status"
-      --short_help="Shows the status of the fleet:"
+      --short-help="Shows the status of the fleet:"
       --options=[
-        cli.Flag "verbose" --short_name="v" --short_help="Show more details." --multi,
-        cli.OptionInt "max-lines" --short_help="Maximum number of lines to show." --default=10,
+        cli.Flag "verbose" --short-name="v" --short-help="Show more details." --multi,
+        cli.OptionInt "max-lines" --short-help="Maximum number of lines to show." --default=10,
       ]
       --examples=[
         cli.Example "Show the status of the fleet:" --arguments="",
         cli.Example "Show a detailed status of the fleet:" --arguments="--verbose"
-            --global_priority=7,  // Show this example for the root command.
+            --global-priority=7,  // Show this example for the root command.
       ]
-      --run=:: fleet_status it
+      --run=:: fleet-status it
 
-fleet_status parsed/cli.Parsed:
-  verbose_list := parsed["verbose"]
-  trues := (verbose_list.filter: it).size
-  falses := verbose_list.size - trues
-  verbose_level := trues - falses
-  max_lines := parsed["max-lines"]
+fleet-status parsed/cli.Parsed:
+  verbose-list := parsed["verbose"]
+  trues := (verbose-list.filter: it).size
+  falses := verbose-list.size - trues
+  verbose-level := trues - falses
+  max-lines := parsed["max-lines"]
 
-  print "Max $max_lines of status with verbosity-level $verbose_level."
+  print "Max $max-lines of status with verbosity-level $verbose-level."
 
 
 // ============= Could be in a separate file device.toit. =============
 
-create_device_command -> cli.Command:
-  device_cmd := cli.Command "device"
+create-device-command -> cli.Command:
+  device-cmd := cli.Command "device"
       // Aliases can be used to invoke this command.
       --aliases=[
         "dev",
         "thingy",
       ]
-      --long_help="""
+      --long-help="""
         Manage a particular device.
 
         Use the '--device' option to specify a specific device. Otherwise, the
           last used device is used.
         """
       --options=[
-        cli.Option "device" --short_name="d"
-            --short_help="The device to operate on."
+        cli.Option "device" --short-name="d"
+            --short-help="The device to operate on."
       ]
-  device_cmd.add create_reset_command
-  device_cmd.add create_upload_command
-  return device_cmd
+  device-cmd.add create-reset-command
+  device-cmd.add create-upload-command
+  return device-cmd
 
-create_upload_command -> cli.Command:
+create-upload-command -> cli.Command:
   return cli.Command "upload"
-      --long_help="""
+      --long-help="""
         Uploads the given file to the device.
 
         Other useful information here.
@@ -139,50 +139,50 @@ create_upload_command -> cli.Command:
       --rest=[
         cli.OptionString "data"
             --type="file"
-            --short_help="The data to upload."
+            --short-help="The data to upload."
             --required,
       ]
       --examples=[
         cli.Example
             "Uploads the file 'foo.data' to the device 'foo':"
             --arguments="--device=foo foo.data"
-            --global_priority=8,  // Include this example for super commands.
+            --global-priority=8,  // Include this example for super commands.
       ]
-      --run=:: upload_to_device it
+      --run=:: upload-to-device it
 
-upload_to_device parsed/cli.Parsed:
+upload-to-device parsed/cli.Parsed:
   device := parsed["device"]
   data := parsed["data"]
 
   print "Uploading file '$data' to device '$device'."
 
-create_reset_command -> cli.Command:
+create-reset-command -> cli.Command:
   return cli.Command "reset"
-      --long_help="""
+      --long-help="""
         Resets the device.
 
         Other useful information here.
         """
       --options=[
         cli.OptionEnum "mode" ["hard", "soft"]
-            --short_help="The reset mode to use."
-            --short_name="m"
+            --short-help="The reset mode to use."
+            --short-name="m"
             --required,
-        cli.Flag "force" --short_name="f"
-            --short_help="Force the reset even if the device is active.",
+        cli.Flag "force" --short-name="f"
+            --short-help="Force the reset even if the device is active.",
       ]
       --examples=[
         cli.Example
             "Do a soft-reset of device 'foo':"
             --arguments="--device=foo -m soft"
-            --global_priority=5,  // Include this example for super commands.
+            --global-priority=5,  // Include this example for super commands.
         cli.Example
             "Do a hard-reset:"
             --arguments="--mode=hard",
       ]
-      --run=:: reset_device it
+      --run=:: reset-device it
 
-reset_device parsed/cli.Parsed:
+reset-device parsed/cli.Parsed:
   device := parsed["device"]
   mode := parsed["mode"]
   force := parsed["force"]

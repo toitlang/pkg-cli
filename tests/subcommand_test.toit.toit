@@ -5,27 +5,27 @@
 import cli
 import expect show *
 
-check_arguments expected/Map parsed/cli.Parsed:
+check-arguments expected/Map parsed/cli.Parsed:
   expected.do: | key value |
-    expect_equals value parsed[key]
+    expect-equals value parsed[key]
 
 main:
   cmd := cli.Command "root"
       --options=[
-        cli.Option "global_string" --short_name="g" --short_help="Global string." --required,
-        cli.Option "global_string2" --short_help="Global string2.",
+        cli.Option "global_string" --short-name="g" --short-help="Global string." --required,
+        cli.Option "global_string2" --short-help="Global string2.",
       ]
 
   expected := {:}
 
-  executed_sub := false
+  executed-sub := false
   sub := cli.Command "sub1"
       --options=[
-        cli.Option "sub_string" --short_name="s" --short_help="Sub string." --required,
+        cli.Option "sub_string" --short-name="s" --short-help="Sub string." --required,
       ]
       --run=:: | arguments |
-        executed_sub = true
-        check_arguments expected arguments
+        executed-sub = true
+        check-arguments expected arguments
 
   cmd.add sub
 

@@ -7,5 +7,5 @@ Converts snake-case strings to kebab case.
 
 For example, "hello_world" becomes "hello-world".
 */
-to_kebab str/string -> string:
+to-kebab str/string -> string:
   return str.replace --all "_" "-"
