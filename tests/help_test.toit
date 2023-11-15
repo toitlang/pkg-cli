@@ -31,21 +31,20 @@ test-combination:
   create-root := : | subcommands/List |
     cli.Command "root"
         --aliases=["r"]  // Should not be visible.
-        --long-help="""
+        --help="""
           Root command.
           Two lines.
           """
-        --short-help="Root command."  // Should not be visible.
         --examples= subcommands.is-empty ? [
           cli.Example "Example 1:" --arguments="--option1 foo rest"
         ]: [
           cli.Example "Full example:" --arguments="sub --option1 root"
         ]
         --options=[
-          cli.Option "option1" --short-help="Option 1.",
+          cli.Option "option1" --help="Option 1.",
         ]
         --rest= subcommands.is-empty ? [
-          cli.Option "rest1" --short-help="Rest 1" --type="rest_type" --required,
+          cli.Option "rest1" --help="Rest 1" --type="rest_type" --required,
         ] : []
         --subcommands=subcommands
         --run= subcommands.is-empty? (:: null) : null
@@ -76,8 +75,7 @@ test-combination:
 
   sub := cli.Command "sub"
       --aliases=["sss"]
-      --long-help="Long sub."
-      --short-help="Short sub."
+      --help="Long sub."
       --examples=[
         cli.Example "Sub Example 1:" --arguments="",
         cli.Example "Sub Example 2:"
@@ -85,8 +83,8 @@ test-combination:
             --global-priority=5,
       ]
       --options=[
-        cli.Option "option_sub1" --short-help="Option 1.",
-        cli.OptionInt "option_sub2" --short-help="Option 2." --default=42,
+        cli.Option "option_sub1" --help="Option 1.",
+        cli.OptionInt "option_sub2" --help="Option 2." --default=42,
       ]
       --run=:: null
 
@@ -106,7 +104,7 @@ test-combination:
 
     Commands:
       help  Show help for a command.
-      sub   Short sub.
+      sub   Long sub.
 
     Options:
       -h, --help            Show help for this command.
@@ -160,14 +158,14 @@ test-usage:
 
   cmd := cli.Command "root"
       --options=[
-        cli.Option "option1" --short-help="Option 1." --required,
-        cli.OptionEnum "option2" ["bar", "baz"] --short-help="Option 2." --required,
+        cli.Option "option1" --help="Option 1." --required,
+        cli.OptionEnum "option2" ["bar", "baz"] --help="Option 2." --required,
         cli.Flag "optional"
       ]
       --rest=[
-        cli.Option "rest1" --short-help="Rest 1." --required,
-        cli.Option "rest2" --short-help="Rest 2.",
-        cli.Option "rest3" --short-help="Rest 3." --multi,
+        cli.Option "rest1" --help="Rest 1." --required,
+        cli.Option "rest2" --help="Rest 2.",
+        cli.Option "rest3" --help="Rest 3." --multi,
       ]
       --run=:: unreachable
 
@@ -182,13 +180,13 @@ test-usage:
   // Test different types.
   cmd = cli.Command "root"
       --options=[
-        cli.Option "option7" --short-help="Option 7." --hidden,
-        cli.Option "option6" --short-help="Option 6.",
-        cli.Option "option5" --short-help="Option 5." --required --type="my_type",
-        cli.Flag "option4" --short-help="Option 4." --required,
-        cli.OptionEnum "option3" ["bar", "baz"] --short-help="Option 3." --required,
-        cli.OptionInt "option2" --short-help="Option 2." --required,
-        cli.Option "option1" --short-help="Option 1." --required,
+        cli.Option "option7" --help="Option 7." --hidden,
+        cli.Option "option6" --help="Option 6.",
+        cli.Option "option5" --help="Option 5." --required --type="my_type",
+        cli.Flag "option4" --help="Option 4." --required,
+        cli.OptionEnum "option3" ["bar", "baz"] --help="Option 3." --required,
+        cli.OptionInt "option2" --help="Option 2." --required,
+        cli.Option "option1" --help="Option 1." --required,
       ]
       --run=:: unreachable
 
@@ -205,8 +203,8 @@ test-usage:
 
   cmd = cli.Command "root"
       --options=[
-        cli.Option "option1" --short-help="Option 1." --required,
-        cli.Option "option2" --short-help="Option 2." --required,
+        cli.Option "option1" --help="Option 1." --required,
+        cli.Option "option2" --help="Option 2." --required,
       ]
       --run=:: unreachable
 
@@ -222,13 +220,13 @@ test-usage:
   // Test the same options as rest arguments.
   cmd = cli.Command "root"
       --rest=[
-        cli.Option "option9" --short-help="Option 9." --required,
-        cli.OptionInt "option2" --short-help="Option 2." --required,
-        cli.OptionEnum "option3" ["bar", "baz"] --short-help="Option 3." --required,
-        cli.Flag "option4" --short-help="Option 4." --required,
-        cli.Option "option5" --short-help="Option 5." --required --type="my_type",
-        cli.Option "option6" --short-help="Option 6." --required,
-        cli.Option "option7" --short-help="Option 7.",
+        cli.Option "option9" --help="Option 9." --required,
+        cli.OptionInt "option2" --help="Option 2." --required,
+        cli.OptionEnum "option3" ["bar", "baz"] --help="Option 3." --required,
+        cli.Flag "option4" --help="Option 4." --required,
+        cli.Option "option5" --help="Option 5." --required --type="my_type",
+        cli.Option "option6" --help="Option 6." --required,
+        cli.Option "option7" --help="Option 7.",
       ]
       --run=:: unreachable
 
@@ -244,15 +242,15 @@ test-usage:
 
   cmd = cli.Command "root"
       --options=[
-        cli.Flag "option3" --short-help="Option 3." --required,
-        cli.Option "option2" --short-help="Option 2.",
-        cli.Option "option1" --short-help="Option 1." --required,
+        cli.Flag "option3" --help="Option 3." --required,
+        cli.Option "option2" --help="Option 2.",
+        cli.Option "option1" --help="Option 1." --required,
       ]
   sub := cli.Command "sub"
       --options=[
-        cli.Flag "sub_option3" --short-help="Option 3." --required,
-        cli.Option "sub_option2" --short-help="Option 2.",
-        cli.Option "sub_option1" --short-help="Option 1." --required,
+        cli.Flag "sub_option3" --help="Option 3." --required,
+        cli.Option "sub_option2" --help="Option 2.",
+        cli.Option "sub_option1" --help="Option 1." --required,
       ]
       --run=:: unreachable
   cmd.add sub
@@ -341,7 +339,7 @@ test-commands:
 
   cmd = cli.Command "root"
   sub = cli.Command "sub"
-      --short-help="Subcommand."
+      --help="Subcommand."
       --run=:: unreachable
   cmd.add sub
 
@@ -353,11 +351,11 @@ test-commands:
   expect-equals expected (build-commands.call [cmd])
 
   sub2 := cli.Command "sub2"
-      --short-help="Subcommand 2."
+      --help="Subcommand 2."
       --run=:: unreachable
   cmd.add sub2
   sub3 := cli.Command "asub3"
-      --short-help="Subcommand 3."
+      --help="Subcommand 3."
       --run=:: unreachable
   cmd.add sub3
 
@@ -373,7 +371,7 @@ test-commands:
 
   cmd = cli.Command "root"
   sub = cli.Command "sub"
-      --long-help="""
+      --help="""
         First
         paragraph.
 
@@ -397,16 +395,14 @@ test-commands:
       --run=:: unreachable
   cmd.add sub
   sub2 = cli.Command "sub2"
-      --long-help="unused."
-      --short-help="""
+      --help="""
       Long
       shorthelp.
       """
       --run=:: unreachable
   cmd.add sub2
   sub3 = cli.Command "sub3"
-      --long-help="unused."
-      --short-help="Short help3."
+      --help="Short help3."
       --run=:: unreachable
   cmd.add sub3
 
@@ -422,7 +418,7 @@ test-commands:
 
   cmd = cli.Command "root"
   sub = cli.Command "help"
-      --short-help="My own help."
+      --help="My own help."
       --run=:: unreachable
   cmd.add sub
 
@@ -436,7 +432,7 @@ test-commands:
   cmd = cli.Command "root"
   sub = cli.Command "sub"
       --aliases=["help"]
-      --short-help="Sub with 'help' alias."
+      --help="Sub with 'help' alias."
       --run=:: unreachable
   cmd.add sub
 
@@ -462,34 +458,34 @@ test-options:
   // Try different flags, like --required, --short_help, --type, --default, multi.
   cmd := cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short-help="Option 1." --default=42,
-        cli.Option "option2" --short-help="Option 2." --default="foo",
-        cli.OptionEnum "option3" ["bar", "baz"] --short-name="x" --short-help="Option 3." --default="bar",
-        cli.Flag "option4" --short-name="4" --short-help="Option 4." --default=false,
-        cli.Flag "option5" --short-help="Option 5." --default=true,
+        cli.OptionInt "option1" --help="Option 1." --default=42,
+        cli.Option "option2" --help="Option 2." --default="foo",
+        cli.OptionEnum "option3" ["bar", "baz"] --short-name="x" --help="Option 3." --default="bar",
+        cli.Flag "option4" --short-name="4" --help="Option 4." --default=false,
+        cli.Flag "option5" --help="Option 5." --default=true,
 
-        cli.OptionInt "option6" --short-help="Option 6." --required,
-        cli.Option "option7" --short-help="Option 7." --required,
-        cli.OptionEnum "option8" ["bar", "baz"] --short-help="Option 8." --required,
-        cli.Flag "option9" --short-help="Option 9." --required,
+        cli.OptionInt "option6" --help="Option 6." --required,
+        cli.Option "option7" --help="Option 7." --required,
+        cli.OptionEnum "option8" ["bar", "baz"] --help="Option 8." --required,
+        cli.Flag "option9" --help="Option 9." --required,
 
-        cli.OptionInt "option10" --short-help="Option 10." --multi,
-        cli.Option "option11" --short-help="Option 11." --multi,
-        cli.OptionEnum "option12" ["bar", "baz"] --short-help="Option 12." --multi,
-        cli.Flag "option13" --short-help="Option 13." --multi,
+        cli.OptionInt "option10" --help="Option 10." --multi,
+        cli.Option "option11" --help="Option 11." --multi,
+        cli.OptionEnum "option12" ["bar", "baz"] --help="Option 12." --multi,
+        cli.Flag "option13" --help="Option 13." --multi,
 
-        cli.OptionInt "option14" --short-help="Option 14." --multi --required,
-        cli.Option "option15" --short-help="Option 15." --multi --required,
-        cli.OptionEnum "option16" ["bar", "baz"] --short-help="Option 16." --multi --required,
-        cli.Flag "option17" --short-help="Option 17." --multi --required,
+        cli.OptionInt "option14" --help="Option 14." --multi --required,
+        cli.Option "option15" --help="Option 15." --multi --required,
+        cli.OptionEnum "option16" ["bar", "baz"] --help="Option 16." --multi --required,
+        cli.Flag "option17" --help="Option 17." --multi --required,
 
-        cli.OptionInt "option18" --short-help="Option 18." --type="my_int_type",
-        cli.Option "option19" --short-help="Option 19." --short-name="y" --type="my_string_type",
-        cli.OptionEnum "option20" ["bar", "baz"] --short-help="Option 20." --type="my_enum_type",
+        cli.OptionInt "option18" --help="Option 18." --type="my_int_type",
+        cli.Option "option19" --help="Option 19." --short-name="y" --type="my_string_type",
+        cli.OptionEnum "option20" ["bar", "baz"] --help="Option 20." --type="my_enum_type",
 
-        cli.OptionInt "option21" --short-help="Option 21\nmulti_line_help.",
+        cli.OptionInt "option21" --help="Option 21\nmulti_line_help.",
 
-        cli.OptionInt "option22" --short-name="zz" --short-help="Option 22." --default=42,
+        cli.OptionInt "option22" --short-name="zz" --help="Option 22." --default=42,
       ]
   sub := cli.Command "sub" --run=:: unreachable
   cmd.add sub
@@ -564,12 +560,12 @@ test-options:
   // Test global options.
   cmd = cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short-help="Option 1." --default=42,
+        cli.OptionInt "option1" --help="Option 1." --default=42,
       ]
 
   sub = cli.Command "sub"
       --options=[
-        cli.OptionInt "option_sub1" --short-help="Option 1." --default=42,
+        cli.OptionInt "option_sub1" --help="Option 1." --default=42,
       ]
       --run=:: unreachable
   cmd.add sub
@@ -590,7 +586,7 @@ test-options:
 
   cmd = cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short-name="h" --short-help="Option 1." --default=42,
+        cli.OptionInt "option1" --short-name="h" --help="Option 1." --default=42,
       ]
       --run=:: unreachable
   expected := """
@@ -603,8 +599,8 @@ test-options:
 
   cmd = cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short-help="Option 1." --default=42,
-        cli.OptionEnum "help" ["bar", "baz"] --short-help="Own help."
+        cli.OptionInt "option1" --help="Option 1." --default=42,
+        cli.OptionEnum "help" ["bar", "baz"] --help="Own help."
       ]
       --run=:: unreachable
   // No automatic help. Not even `-h`.
@@ -624,7 +620,7 @@ test-examples:
 
   cmd := cli.Command "root"
       --options=[
-        cli.OptionInt "option1" --short-help="Option 1." --default=42,
+        cli.OptionInt "option1" --help="Option 1." --default=42,
       ]
       --examples=[
         cli.Example "Example 1:" --arguments="--option1=499",

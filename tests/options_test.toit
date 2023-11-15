@@ -18,7 +18,7 @@ test-string:
   expect-null option.default
   expect-equals "string" option.type
   expect-null option.short-name
-  expect-null option.short-help
+  expect-null option.help
   expect-not option.is-required
   expect-not option.is-hidden
   expect-not option.is-multi
@@ -34,8 +34,8 @@ test-string:
   option = cli.Option "foo" --short-name="foo"
   expect-equals "foo" option.short-name
 
-  option = cli.Option "foo" --short-help="Some_help."
-  expect-equals "Some_help." option.short-help
+  option = cli.Option "foo" --help="Some_help."
+  expect-equals "Some_help." option.help
 
   option = cli.Option "foo" --required
   expect option.is-required
@@ -50,12 +50,12 @@ test-string:
   expect option.should-split-commas
 
   option = cli.Option "foo" --short-name="f" \
-      --short-help="Baz." --required --multi \
+      --help="Baz." --required --multi \
       --split-commas --type="some_type"
   expect-equals option.name "foo"
   expect-equals "some_type" option.type
   expect-equals option.short-name "f"
-  expect-equals option.short-help "Baz."
+  expect-equals option.help "Baz."
   expect option.is-required
   expect-not option.is-hidden
   expect option.is-multi

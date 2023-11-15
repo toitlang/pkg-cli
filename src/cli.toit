@@ -39,7 +39,7 @@ class Command:
   short-help_/string?
 
   /** A longer description of the command. */
-  long-help_/string?
+  help_/string?
 
   /** Examples of the command. */
   examples_/List
@@ -77,19 +77,53 @@ class Command:
   The $usage is usually constructed from the name and the arguments of the command, but can
     be provided explicitly if a different usage string is desired.
 
-  The $long-help is a longer description of the command that can span multiple lines. Use
-    indented lines to continue paragraphs (just like toitdoc).
-
-  The $short-help is a short description of the command. In most cases this help is a single
-    line, but it can span multiple lines/paragraphs if necessary. Use indented lines to
-    continue paragraphs (just like toitdoc).
+  The $help is a longer description of the command that can span multiple lines. Use
+    indented lines to continue paragraphs (just like toitdoc). The first paragraph of the
+    $help is used as short help, and should have meaningful content on its own.
   */
-  constructor .name --usage/string?=null --short-help/string?=null --long-help/string?=null --examples/List=[] \
+  constructor name --usage/string?=null --help/string?=null --examples/List=[] \
+      --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
+      --run/Lambda?=null:
+    return Command.private name --usage=usage --help=help --examples=examples \
+        --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
+        --run=run
+
+  /**
+  Deprecated. Use '--help' instead of '--short-help'.
+  */
+  constructor name --usage/string?=null --short-help/string --examples/List=[] \
+      --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
+      --run/Lambda?=null:
+    return Command.private name --usage=usage --short-help=short-help --examples=examples \
+        --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
+        --run=run
+
+  /**
+  Deprecated. Use '--help' instead of '--long-help'.
+  */
+  constructor name --usage/string?=null --long-help/string --examples/List=[] \
+      --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
+      --run/Lambda?=null:
+    return Command.private name --usage=usage --help=long-help --examples=examples \
+        --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
+        --run=run
+
+  /**
+  Deprecated. Use '--help' with a meaningful first paragraph instead of '--short-help' and '--long-help'.
+  */
+  constructor name --usage/string?=null --short-help/string --long-help/string --examples/List=[] \
+      --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
+      --run/Lambda?=null:
+    return Command.private name --usage=usage --short-help=short-help --help=long-help --examples=examples \
+        --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
+        --run=run
+
+  constructor.private .name --usage/string?=null --short-help/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
       --run/Lambda?=null:
     usage_ = usage
     short-help_ = short-help
-    long-help_ = long-help
+    help_ = help
     examples_ = examples
     aliases_ = aliases
     options_ = options
@@ -245,18 +279,18 @@ Non-rest options can be used with '--$name' or '-$short-name' (if provided). Res
 abstract class Option:
   name/string
   short-name/string?
-  short-help/string?
+  help/string?
   is-required/bool
   is-hidden/bool
   is-multi/bool
   should-split-commas/bool
 
-  /** An alias for $OptionString. */
+  /** Deprecated. Use '--help' instead of '--short-help'. */
   constructor name/string
       --default/string?=null
       --type/string="string"
       --short-name/string?=null
-      --short-help/string?=null
+      --short-help/string
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
@@ -265,11 +299,34 @@ abstract class Option:
         --default=default
         --type=type
         --short-name=short-name
-        --short-help=short-help
+        --help=short-help
         --required=required
         --hidden=hidden
         --multi=multi
         --split-commas=split-commas
+
+  /** An alias for $OptionString. */
+  constructor name/string
+      --default/string?=null
+      --type/string="string"
+      --short-name/string?=null
+      --help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false:
+    return OptionString name
+        --default=default
+        --type=type
+        --short-name=short-name
+        --help=help
+        --required=required
+        --hidden=hidden
+        --multi=multi
+        --split-commas=split-commas
+
+  /** Deprecated. Use $help instead. */
+  short-help -> string?: return help
 
   /**
   Creates an option with the given $name.
@@ -285,7 +342,7 @@ abstract class Option:
 
   The $short-name is optional and will normally be a single-character string when provided.
 
-  The $short-help is optional and is used for help output. It should be a full sentence, starting
+  The $help is optional and is used for help output. It should be a full sentence, starting
     with a capital letter and ending with a period.
 
   If $required is true, then the option must be provided. Otherwise, it is optional.
@@ -299,7 +356,24 @@ abstract class Option:
   If $split-commas is true, then $multi must be true too. Values given to this option are then
     split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
   */
-  constructor.from-subclass .name --.short-name --.short-help --required --hidden --multi --split-commas:
+  constructor.from-subclass .name --.short-name --help/string? --required --hidden --multi --split-commas:
+    this.help = help
+    name = to-kebab name
+    is-required = required
+    is-hidden = hidden
+    is-multi = multi
+    should-split-commas = split-commas
+    if name.contains "=" or name.starts-with "no-": throw "Invalid option name: $name"
+    if short-name and not is-alpha-num-string_ short-name:
+      throw "Invalid short option name: '$short-name'"
+    if split-commas and not multi:
+      throw "--split_commas is only valid for multi options."
+    if is-hidden and is-required:
+      throw "Option can't be hidden and required."
+
+  /** Deprecated. Use --help instead of '--short-help'. */
+  constructor.from-subclass .name --.short-name --short-help/string --required --hidden --multi --split-commas:
+    help = short-help
     name = to-kebab name
     is-required = required
     is-hidden = hidden
@@ -370,14 +444,30 @@ class OptionString extends Option:
       --.default=null
       --.type="string"
       --short-name/string?=null
-      --short-help/string?=null
+      --help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
       --split-commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from-subclass name --short-name=short-name --short-help=short-help \
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas
+
+  /** Deprecated. Use '--help' instead of '--short-help'. */
+  constructor name/string
+      --.default=null
+      --.type="string"
+      --short-name/string?=null
+      --short-help/string?
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=short-help \
         --required=required --hidden=hidden --multi=multi \
         --split-commas=split-commas
 
@@ -413,19 +503,36 @@ class OptionEnum extends Option:
       --.default=null
       --.type=(values.join "|")
       --short-name/string?=null
-      --short-help/string?=null
+      --help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
       --split-commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from-subclass name --short-name=short-name --short-help=short-help \
+    super.from-subclass name --short-name=short-name --help=help \
         --required=required --hidden=hidden --multi=multi \
         --split-commas=split-commas
     if default and not values.contains default:
       throw "Default value of '$name' is not a valid value: $default"
 
+  /** Deprecated. Use '--help' instead of '--short-help'. */
+  constructor name/string .values/List
+      --.default=null
+      --.type=(values.join "|")
+      --short-name/string?=null
+      --short-help/string?
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=short-help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas
+    if default and not values.contains default:
+      throw "Default value of '$name' is not a valid value: $default"
   is-flag: return false
 
   parse str/string --for-help-example/bool=false -> string:
@@ -454,14 +561,30 @@ class OptionInt extends Option:
       --.default=null
       --.type="int"
       --short-name/string?=null
-      --short-help/string?=null
+      --help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
       --split-commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from-subclass name --short-name=short-name --short-help=short-help \
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas
+
+  /** Deprecated. Use '--help' instead of '--short-help'. */
+  constructor name/string
+      --.default=null
+      --.type="int"
+      --short-name/string?=null
+      --short-help/string?
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=short-help \
         --required=required --hidden=hidden --multi=multi \
         --split-commas=split-commas
 
@@ -494,13 +617,26 @@ class Flag extends Option:
   constructor name/string
       --.default=null
       --short-name/string?=null
-      --short-help/string?=null \
+      --help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false:
     if multi and default != null: throw "Multi option can't have default value."
     if required and default != null: throw "Option can't have default value and be required."
-    super.from-subclass name --short-name=short-name --short-help=short-help \
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi --no-split-commas
+
+  /** Deprecated. Use '--help' instead of '--short-help'. */
+  constructor name/string
+      --.default=null
+      --short-name/string?=null
+      --short-help/string?
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false:
+    if multi and default != null: throw "Multi option can't have default value."
+    if required and default != null: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=short-help \
         --required=required --hidden=hidden --multi=multi --no-split-commas
 
   type -> string:

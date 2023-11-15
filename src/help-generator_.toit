@@ -94,11 +94,11 @@ class HelpGenerator:
   /**
   Builds the description.
 
-  If available, the description is the $Command.long-help_, otherwise, the
-    $Command.short-help_ is used. If none exists, no description is built.
+  If available, the description is the $Command.help_, otherwise, the
+    (now deprecated) $Command.short-help_ is used. If none exists, no description is built.
   */
   build-description -> none:
-    if help := command_.long-help_:
+    if help := command_.help_:
       ensure-vertical-space_
       writeln_ (help.trim --right)
     else if short-help := command_.short-help_:
@@ -194,7 +194,7 @@ class HelpGenerator:
       help-str := ?
       if help := subcommand.short-help_:
         help-str = help
-      else if long-help := subcommand.long-help_:
+      else if long-help := subcommand.help_:
         // Take the first paragraph (potentially multiple lines) of the long help.
         paragraph-index := long-help.index-of "\n\n"
         if paragraph-index == -1:
@@ -244,7 +244,7 @@ class HelpGenerator:
       if not has-help-flag:
         options = options.copy
         short-name := has-short-help-flag ? null : "h"
-        help-flag := Flag "help" --short-name=short-name --short-help="Show help for this command."
+        help-flag := Flag "help" --short-name=short-name --help="Show help for this command."
         options.add help-flag
 
     sorted-options := options.sort: | a/Option b/Option | a.name.compare-to b.name
@@ -269,7 +269,7 @@ class HelpGenerator:
         if not option.is-flag:
           option-str += " $type-str"
 
-      help-str := option.short-help or ""
+      help-str := option.help or ""
       additional-info := ""
       default-value := option.default
       needs-separator := false
