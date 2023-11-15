@@ -4,7 +4,7 @@
 
 import .parser_
 import .utils_
-import .help_generator_
+import .help-generator_
 
 /**
 When the arg-parser needs to report an error, or write a help message, it
@@ -36,10 +36,10 @@ class Command:
   usage_/string?
 
   /** A short (one line) description of the command. */
-  short_help_/string?
+  short-help_/string?
 
   /** A longer description of the command. */
-  long_help_/string?
+  long-help_/string?
 
   /** Examples of the command. */
   examples_/List
@@ -54,7 +54,7 @@ class Command:
   rest_/List
 
   /** Whether this command should show up in the help. */
-  is_hidden_/bool
+  is-hidden_/bool
 
   /**
   Subcommands.
@@ -66,7 +66,7 @@ class Command:
   The function to invoke when this command is executed.
   May be null, in which case at least one subcommand must be specified.
   */
-  run_callback_/Lambda?
+  run-callback_/Lambda?
 
   /**
   Constructs a new command.
@@ -77,33 +77,33 @@ class Command:
   The $usage is usually constructed from the name and the arguments of the command, but can
     be provided explicitly if a different usage string is desired.
 
-  The $long_help is a longer description of the command that can span multiple lines. Use
+  The $long-help is a longer description of the command that can span multiple lines. Use
     indented lines to continue paragraphs (just like toitdoc).
 
-  The $short_help is a short description of the command. In most cases this help is a single
+  The $short-help is a short description of the command. In most cases this help is a single
     line, but it can span multiple lines/paragraphs if necessary. Use indented lines to
     continue paragraphs (just like toitdoc).
   */
-  constructor .name --usage/string?=null --short_help/string?=null --long_help/string?=null --examples/List=[] \
+  constructor .name --usage/string?=null --short-help/string?=null --long-help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
       --run/Lambda?=null:
     usage_ = usage
-    short_help_ = short_help
-    long_help_ = long_help
+    short-help_ = short-help
+    long-help_ = long-help
     examples_ = examples
     aliases_ = aliases
     options_ = options
     rest_ = rest
     subcommands_ = subcommands
-    run_callback_ = run
-    is_hidden_ = hidden
-    if not subcommands.is_empty and not rest.is_empty:
+    run-callback_ = run
+    is-hidden_ = hidden
+    if not subcommands.is-empty and not rest.is-empty:
       throw "Cannot have both subcommands and rest arguments."
-    if run and not subcommands.is_empty:
+    if run and not subcommands.is-empty:
       throw "Cannot have both a run callback and subcommands."
 
-  hash_code -> int:
-    return name.hash_code
+  hash-code -> int:
+    return name.hash-code
 
   /**
   Adds a subcommand to this command.
@@ -114,23 +114,23 @@ class Command:
   It is an error to add a subcommand to a command that has a run callback.
   */
   add command/Command:
-    if not rest_.is_empty:
+    if not rest_.is-empty:
       throw "Cannot add subcommands to a command with rest arguments."
-    if run_callback_:
+    if run-callback_:
       throw "Cannot add subcommands to a command with a run callback."
     subcommands_.add command
 
   /** Returns the help string of this command. */
-  help --invoked_command/string=program_name -> string:
-    generator := HelpGenerator [this] --invoked_command=invoked_command
-    generator.build_all
-    return generator.to_string
+  help --invoked-command/string=program-name -> string:
+    generator := HelpGenerator [this] --invoked-command=invoked-command
+    generator.build-all
+    return generator.to-string
 
   /** Returns the usage string of this command. */
-  usage --invoked_command/string=program_name -> string:
-    generator := HelpGenerator [this] --invoked_command=invoked_command
-    generator.build_usage --as_section=false
-    return generator.to_string
+  usage --invoked-command/string=program-name -> string:
+    generator := HelpGenerator [this] --invoked-command=invoked-command
+    generator.build-usage --as-section=false
+    return generator.to-string
 
   /**
   Runs this command.
@@ -138,76 +138,76 @@ class Command:
   Parses the given $arguments and then invokes the command or one of its subcommands
     with the $Parsed output.
 
-  The $invoked_command is used only for the usage message in case of an
-    error. It defaults to $program_name.
+  The $invoked-command is used only for the usage message in case of an
+    error. It defaults to $program-name.
 
   The default $ui prints to stdout and calls `exit 1` when $Ui.abort is called.
   */
-  run arguments/List --invoked_command=program_name --ui/Ui=Ui_ -> none:
-    parser := Parser_ --ui=ui --invoked_command=invoked_command
+  run arguments/List --invoked-command=program-name --ui/Ui=Ui_ -> none:
+    parser := Parser_ --ui=ui --invoked-command=invoked-command
     parsed := parser.parse this arguments
-    parsed.command.run_callback_.call parsed
+    parsed.command.run-callback_.call parsed
 
   /**
   Checks this command and all subcommands for errors.
   */
-  check --invoked_command=program_name:
-    check_ --path=[invoked_command]
+  check --invoked-command=program-name:
+    check_ --path=[invoked-command]
 
-  are_prefix_of_each_other_ str1/string str2/string -> bool:
+  are-prefix-of-each-other_ str1/string str2/string -> bool:
     m := min str1.size str2.size
     return str1[..m] == str2[..m]
 
   /**
   Checks this command and all subcommands.
   The $path, a list of strings, provides the sequence that was used to reach this command.
-  The $outer_long_options and $outer_short_options are the options that are
+  The $outer-long-options and $outer-short-options are the options that are
     available through supercommands.
   */
-  check_ --path/List --outer_long_options/Set={} --outer_short_options/Set={}:
+  check_ --path/List --outer-long-options/Set={} --outer-short-options/Set={}:
     examples_.do: it as Example
     aliases_.do: it as string
 
-    long_options := {}
-    short_options := {}
+    long-options := {}
+    short-options := {}
     options_.do: | option/Option |
-      if long_options.contains option.name:
+      if long-options.contains option.name:
         throw "Ambiguous option of '$(path.join " ")': --$option.name."
-      if outer_long_options.contains option.name:
+      if outer-long-options.contains option.name:
         throw "Ambiguous option of '$(path.join " ")': --$option.name conflicts with global option."
-      long_options.add option.name
+      long-options.add option.name
 
-      if option.short_name:
-        if (short_options.any: are_prefix_of_each_other_ it option.short_name):
-          throw "Ambiguous option of '$(path.join " ")': -$option.short_name."
-        if (outer_short_options.any: are_prefix_of_each_other_ it option.short_name):
-          throw "Ambiguous option of '$(path.join " ")': -$option.short_name conflicts with global option."
-        short_options.add option.short_name
+      if option.short-name:
+        if (short-options.any: are-prefix-of-each-other_ it option.short-name):
+          throw "Ambiguous option of '$(path.join " ")': -$option.short-name."
+        if (outer-short-options.any: are-prefix-of-each-other_ it option.short-name):
+          throw "Ambiguous option of '$(path.join " ")': -$option.short-name conflicts with global option."
+        short-options.add option.short-name
 
-    have_seen_optional_rest := false
+    have-seen-optional-rest := false
     for i := 0; i < rest_.size; i++:
       option/Option := rest_[i]
-      if option.is_multi and not i == rest_.size - 1:
+      if option.is-multi and not i == rest_.size - 1:
         throw "Multi-option '$option.name' of '$(path.join " ")' must be the last rest argument."
-      if long_options.contains option.name:
+      if long-options.contains option.name:
         throw "Rest name '$option.name' of '$(path.join " ")' already used."
-      if outer_long_options.contains option.name:
+      if outer-long-options.contains option.name:
         throw "Rest name '$option.name' of '$(path.join " ")' already a global option."
-      if have_seen_optional_rest and option.is_required:
+      if have-seen-optional-rest and option.is-required:
         throw "Required rest argument '$option.name' of '$(path.join " ")' cannot follow optional rest argument."
-      if option.is_hidden:
+      if option.is-hidden:
         throw "Rest argument '$option.name' of '$(path.join " ")' cannot be hidden."
-      have_seen_optional_rest = not option.is_required
-      long_options.add option.name
+      have-seen-optional-rest = not option.is-required
+      long-options.add option.name
 
-    if not long_options.is_empty:
+    if not long-options.is-empty:
       // Make a copy first.
-      outer_long_options = outer_long_options.map: it
-      outer_long_options.add_all long_options
-    if not short_options.is_empty:
+      outer-long-options = outer-long-options.map: it
+      outer-long-options.add-all long-options
+    if not short-options.is-empty:
       // Make a copy first.
-      outer_short_options = outer_short_options.map: it
-      outer_short_options.add_all short_options
+      outer-short-options = outer-short-options.map: it
+      outer-short-options.add-all short-options
 
     subnames := {}
     subcommands_.do: | command/Command |
@@ -218,16 +218,16 @@ class Command:
         subnames.add name
 
       command.check_ --path=(path + [command.name])
-          --outer_long_options=outer_long_options
-          --outer_short_options=outer_short_options
+          --outer-long-options=outer-long-options
+          --outer-short-options=outer-short-options
 
     // We allow a command with a run callback if all subcommands are hidden.
     // As such, we could also allow commands without either. If desired, it should be
     // safe to remove the following check.
-    if subcommands_.is_empty and not run_callback_:
+    if subcommands_.is-empty and not run-callback_:
       throw "Command '$(path.join " ")' has no subcommands and no run callback."
 
-  find_subcommand_ name/string -> Command?:
+  find-subcommand_ name/string -> Command?:
     subcommands_.do: | command/Command |
       if command.name == name or command.aliases_.contains name:
         return command
@@ -239,37 +239,37 @@ An option to a command.
 Options are used for any input from the command line to the program. They must have unique names,
   so that they can be identified in the $Parsed output.
 
-Non-rest options can be used with '--$name' or '-$short_name' (if provided). Rest options are positional
+Non-rest options can be used with '--$name' or '-$short-name' (if provided). Rest options are positional
   and their name is not exposed to the user except for the help.
 */
 abstract class Option:
   name/string
-  short_name/string?
-  short_help/string?
-  is_required/bool
-  is_hidden/bool
-  is_multi/bool
-  should_split_commas/bool
+  short-name/string?
+  short-help/string?
+  is-required/bool
+  is-hidden/bool
+  is-multi/bool
+  should-split-commas/bool
 
   /** An alias for $OptionString. */
   constructor name/string
       --default/string?=null
       --type/string="string"
-      --short_name/string?=null
-      --short_help/string?=null
+      --short-name/string?=null
+      --short-help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split_commas/bool=false:
+      --split-commas/bool=false:
     return OptionString name
         --default=default
         --type=type
-        --short_name=short_name
-        --short_help=short_help
+        --short-name=short-name
+        --short-help=short-help
         --required=required
         --hidden=hidden
         --multi=multi
-        --split_commas=split_commas
+        --split-commas=split-commas
 
   /**
   Creates an option with the given $name.
@@ -283,9 +283,9 @@ abstract class Option:
     snake case ('foo_bar') to kebab case. This also means, that it's not possible to
     have two options that only differ in their case (kebab and snake).
 
-  The $short_name is optional and will normally be a single-character string when provided.
+  The $short-name is optional and will normally be a single-character string when provided.
 
-  The $short_help is optional and is used for help output. It should be a full sentence, starting
+  The $short-help is optional and is used for help output. It should be a full sentence, starting
     with a capital letter and ending with a period.
 
   If $required is true, then the option must be provided. Otherwise, it is optional.
@@ -296,24 +296,24 @@ abstract class Option:
   If $multi is true, then the option can be provided multiple times. The parsed value will
     be a list of strings.
 
-  If $split_commas is true, then $multi must be true too. Values given to this option are then
+  If $split-commas is true, then $multi must be true too. Values given to this option are then
     split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
   */
-  constructor.from_subclass .name --.short_name --.short_help --required --hidden --multi --split_commas:
-    name = to_kebab name
-    is_required = required
-    is_hidden = hidden
-    is_multi = multi
-    should_split_commas = split_commas
-    if name.contains "=" or name.starts_with "no-": throw "Invalid option name: $name"
-    if short_name and not is_alpha_num_string_ short_name:
-      throw "Invalid short option name: '$short_name'"
-    if split_commas and not multi:
+  constructor.from-subclass .name --.short-name --.short-help --required --hidden --multi --split-commas:
+    name = to-kebab name
+    is-required = required
+    is-hidden = hidden
+    is-multi = multi
+    should-split-commas = split-commas
+    if name.contains "=" or name.starts-with "no-": throw "Invalid option name: $name"
+    if short-name and not is-alpha-num-string_ short-name:
+      throw "Invalid short option name: '$short-name'"
+    if split-commas and not multi:
       throw "--split_commas is only valid for multi options."
-    if is_hidden and is_required:
+    if is-hidden and is-required:
       throw "Option can't be hidden and required."
 
-  static is_alpha_num_string_ str/string -> bool:
+  static is-alpha-num-string_ str/string -> bool:
     if str.size < 1: return false
     str.do --runes: | c |
       if not ('a' <= c <= 'z' or 'A' <= c <= 'Z' or '0' <= c <= '9'):
@@ -326,9 +326,9 @@ abstract class Option:
 
   This output is used in the help output.
   */
-  default_as_string -> string?:
-    default_value := default
-    if default_value != null: return default_value.stringify
+  default-as-string -> string?:
+    default-value := default
+    if default-value != null: return default-value.stringify
     return null
 
   /** The default value of this option. */
@@ -338,15 +338,15 @@ abstract class Option:
   abstract type -> string
 
   /** Whether this option is a flag. */
-  abstract is_flag -> bool
+  abstract is-flag -> bool
 
   /**
   Parses the given $str and returns the parsed value.
 
-  If $for_help_example is true, only performs validation that is valid for examples.
+  If $for-help-example is true, only performs validation that is valid for examples.
     For example, a FileOption would not check that the file exists.
   */
-  abstract parse str/string --for_help_example/bool=false -> any
+  abstract parse str/string --for-help-example/bool=false -> any
 
 
 /**
@@ -369,21 +369,21 @@ class OptionString extends Option:
   constructor name/string
       --.default=null
       --.type="string"
-      --short_name/string?=null
-      --short_help/string?=null
+      --short-name/string?=null
+      --short-help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split_commas/bool=false:
+      --split-commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from_subclass name --short_name=short_name --short_help=short_help \
+    super.from-subclass name --short-name=short-name --short-help=short-help \
         --required=required --hidden=hidden --multi=multi \
-        --split_commas=split_commas
+        --split-commas=split-commas
 
-  is_flag: return false
+  is-flag: return false
 
-  parse str/string --for_help_example/bool=false -> string:
+  parse str/string --for-help-example/bool=false -> string:
     return str
 
 /**
@@ -412,23 +412,23 @@ class OptionEnum extends Option:
   constructor name/string .values/List
       --.default=null
       --.type=(values.join "|")
-      --short_name/string?=null
-      --short_help/string?=null
+      --short-name/string?=null
+      --short-help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split_commas/bool=false:
+      --split-commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from_subclass name --short_name=short_name --short_help=short_help \
+    super.from-subclass name --short-name=short-name --short-help=short-help \
         --required=required --hidden=hidden --multi=multi \
-        --split_commas=split_commas
+        --split-commas=split-commas
     if default and not values.contains default:
       throw "Default value of '$name' is not a valid value: $default"
 
-  is_flag: return false
+  is-flag: return false
 
-  parse str/string --for_help_example/bool=false -> string:
+  parse str/string --for-help-example/bool=false -> string:
     if not values.contains str:
       throw "Invalid value for option '$name': '$str'. Valid values are: $(values.join ", ")."
     return str
@@ -453,22 +453,22 @@ class OptionInt extends Option:
   constructor name/string
       --.default=null
       --.type="int"
-      --short_name/string?=null
-      --short_help/string?=null
+      --short-name/string?=null
+      --short-help/string?=null
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split_commas/bool=false:
+      --split-commas/bool=false:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
-    super.from_subclass name --short_name=short_name --short_help=short_help \
+    super.from-subclass name --short-name=short-name --short-help=short-help \
         --required=required --hidden=hidden --multi=multi \
-        --split_commas=split_commas
+        --split-commas=split-commas
 
-  is_flag: return false
+  is-flag: return false
 
-  parse str/string --for_help_example/bool=false -> int:
-    return int.parse str --on_error=:
+  parse str/string --for-help-example/bool=false -> int:
+    return int.parse str --on-error=:
       throw "Invalid integer value for option '$name': '$str'."
 
 /**
@@ -493,22 +493,22 @@ class Flag extends Option:
   */
   constructor name/string
       --.default=null
-      --short_name/string?=null
-      --short_help/string?=null \
+      --short-name/string?=null
+      --short-help/string?=null \
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false:
     if multi and default != null: throw "Multi option can't have default value."
     if required and default != null: throw "Option can't have default value and be required."
-    super.from_subclass name --short_name=short_name --short_help=short_help \
-        --required=required --hidden=hidden --multi=multi --no-split_commas
+    super.from-subclass name --short-name=short-name --short-help=short-help \
+        --required=required --hidden=hidden --multi=multi --no-split-commas
 
   type -> string:
     return "true|false"
 
-  is_flag: return true
+  is-flag: return true
 
-  parse str/string --for_help_example/bool=false -> bool:
+  parse str/string --for-help-example/bool=false -> bool:
     if str == "true": return true
     if str == "false": return false
     throw "Invalid value for boolean flag '$name': '$str'. Valid values are: true, false."
@@ -521,13 +521,13 @@ Examples are parsed and must be valid. They are used to generate the help.
 class Example:
   description/string
   arguments/string
-  global_priority/int
+  global-priority/int
 
   /**
   Creates an example.
 
   The $description should describe the example without any context. This is especially true
-    if the $global_priority is greater than 0 (see below). It should start with a capital
+    if the $global-priority is greater than 0 (see below). It should start with a capital
     letter and finish with a ":". It may contain newlines. Use indentation to group
     paragraphs (just like toitdoc).
 
@@ -539,16 +539,16 @@ class Example:
     $arguments should be equal to `--gee`. If the example is for the command `bar`, then $arguments
     should be equal to `baz --gee`.
 
-  The $global_priority is used to sort the examples of sub commands. Examples with a higher priority
+  The $global-priority is used to sort the examples of sub commands. Examples with a higher priority
     are shown first. Examples with the same priority are sorted in the order in which they are
     encountered.
 
-  The $global_priority must be in the range 0 to 10 (both inclusive). The default value is 0.
+  The $global-priority must be in the range 0 to 10 (both inclusive). The default value is 0.
 
-  If the $global_priority is 0, then it is not used as example for super commands.
+  If the $global-priority is 0, then it is not used as example for super commands.
   */
-  constructor .description --.arguments --.global_priority=0:
-    if not 0 <= global_priority <= 10: throw "INVALID_ARGUMENT"
+  constructor .description --.arguments --.global-priority=0:
+    if not 0 <= global-priority <= 10: throw "INVALID_ARGUMENT"
 
 /**
 The result of parsing the command line arguments.
@@ -573,12 +573,12 @@ class Parsed:
   Contrary to the $options_ map, this set only contains options that were actually given, and
     not filled in by default values.
   */
-  seen_options_/Set
+  seen-options_/Set
 
   /**
   Builds a new $Parsed object.
   */
-  constructor.private_ .path .options_ .seen_options_:
+  constructor.private_ .path .options_ .seen-options_:
 
   /**
   The command that should be executed.
@@ -593,22 +593,22 @@ class Parsed:
     to kebab-case.
   */
   operator[] name/string -> any:
-    kebab_name := to_kebab name
-    return options_.get kebab_name --if_absent=: throw "No option named '$name'"
+    kebab-name := to-kebab name
+    return options_.get kebab-name --if-absent=: throw "No option named '$name'"
 
   /**
   Whether an option with the given $name was given on the command line.
   */
-  was_provided name/string -> bool:
-    return seen_options_.contains name
+  was-provided name/string -> bool:
+    return seen-options_.contains name
 
   stringify:
     buffer := []
     options_.do: | name value | buffer.add "$name=$value"
     return buffer.join " "
 
-global_print_ str/string: print str
+global-print_ str/string: print str
 
 class Ui_ implements Ui:
-  print str/string: global_print_ str
+  print str/string: global-print_ str
   abort: exit 1

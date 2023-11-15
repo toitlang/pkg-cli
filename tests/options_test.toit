@@ -6,139 +6,139 @@ import cli
 import expect show *
 
 main:
-  test_string
-  test_enum
-  test_int
-  test_flag
-  test_bad_combos
+  test-string
+  test-enum
+  test-int
+  test-flag
+  test-bad-combos
 
-test_string:
+test-string:
   option := cli.Option "foo"
-  expect_equals option.name "foo"
-  expect_null option.default
-  expect_equals "string" option.type
-  expect_null option.short_name
-  expect_null option.short_help
-  expect_not option.is_required
-  expect_not option.is_hidden
-  expect_not option.is_multi
-  expect_not option.should_split_commas
-  expect_not option.is_flag
+  expect-equals option.name "foo"
+  expect-null option.default
+  expect-equals "string" option.type
+  expect-null option.short-name
+  expect-null option.short-help
+  expect-not option.is-required
+  expect-not option.is-hidden
+  expect-not option.is-multi
+  expect-not option.should-split-commas
+  expect-not option.is-flag
 
   option = cli.Option "foo" --default="some_default"
-  expect_equals "some_default" option.default
+  expect-equals "some_default" option.default
 
-  option = cli.Option "foo" --short_name="f"
-  expect_equals "f" option.short_name
+  option = cli.Option "foo" --short-name="f"
+  expect-equals "f" option.short-name
 
-  option = cli.Option "foo" --short_name="foo"
-  expect_equals "foo" option.short_name
+  option = cli.Option "foo" --short-name="foo"
+  expect-equals "foo" option.short-name
 
-  option = cli.Option "foo" --short_help="Some_help."
-  expect_equals "Some_help." option.short_help
+  option = cli.Option "foo" --short-help="Some_help."
+  expect-equals "Some_help." option.short-help
 
   option = cli.Option "foo" --required
-  expect option.is_required
+  expect option.is-required
 
   option = cli.Option "foo" --hidden
-  expect option.is_hidden
+  expect option.is-hidden
 
   option = cli.Option "foo" --multi
-  expect option.is_multi
+  expect option.is-multi
 
-  option = cli.Option "foo" --multi --split_commas
-  expect option.should_split_commas
+  option = cli.Option "foo" --multi --split-commas
+  expect option.should-split-commas
 
-  option = cli.Option "foo" --short_name="f" \
-      --short_help="Baz." --required --multi \
-      --split_commas --type="some_type"
-  expect_equals option.name "foo"
-  expect_equals "some_type" option.type
-  expect_equals option.short_name "f"
-  expect_equals option.short_help "Baz."
-  expect option.is_required
-  expect_not option.is_hidden
-  expect option.is_multi
-  expect option.should_split_commas
-  expect_not option.is_flag
+  option = cli.Option "foo" --short-name="f" \
+      --short-help="Baz." --required --multi \
+      --split-commas --type="some_type"
+  expect-equals option.name "foo"
+  expect-equals "some_type" option.type
+  expect-equals option.short-name "f"
+  expect-equals option.short-help "Baz."
+  expect option.is-required
+  expect-not option.is-hidden
+  expect option.is-multi
+  expect option.should-split-commas
+  expect-not option.is-flag
 
   value := option.parse "foo"
-  expect_equals "foo" value
+  expect-equals "foo" value
 
-test_enum:
+test-enum:
   option := cli.OptionEnum "enum" ["foo", "bar"]
-  expect_equals option.name "enum"
-  expect_null option.default
-  expect_equals "foo|bar" option.type
+  expect-equals option.name "enum"
+  expect-null option.default
+  expect-equals "foo|bar" option.type
 
   option = cli.OptionEnum "enum" ["foo", "bar"] --default="bar"
-  expect_equals "bar" option.default
+  expect-equals "bar" option.default
 
   value := option.parse "foo"
-  expect_equals "foo" value
+  expect-equals "foo" value
 
   value = option.parse "bar"
-  expect_equals "bar" value
+  expect-equals "bar" value
 
-  expect_throw "Invalid value for option 'enum': 'baz'. Valid values are: foo, bar.":
+  expect-throw "Invalid value for option 'enum': 'baz'. Valid values are: foo, bar.":
     option.parse "baz"
 
-test_int:
+test-int:
   option := cli.OptionInt "int"
-  expect_equals option.name "int"
-  expect_null option.default
-  expect_equals "int" option.type
+  expect-equals option.name "int"
+  expect-null option.default
+  expect-equals "int" option.type
 
   option = cli.OptionInt "int" --default=42
-  expect_equals 42 option.default
+  expect-equals 42 option.default
 
   value := option.parse "42"
-  expect_equals 42 value
+  expect-equals 42 value
 
-  expect_throw "Invalid integer value for option 'int': 'foo'.":
+  expect-throw "Invalid integer value for option 'int': 'foo'.":
     option.parse "foo"
 
-test_flag:
+test-flag:
   flag := cli.Flag "flag" --default=false
-  expect_equals flag.name "flag"
-  expect_identical false flag.default
+  expect-equals flag.name "flag"
+  expect-identical false flag.default
 
   flag = cli.Flag "flag" --default=true
-  expect_identical true flag.default
+  expect-identical true flag.default
 
   value := flag.parse "true"
-  expect_identical true value
+  expect-identical true value
 
   value = flag.parse "false"
-  expect_identical false value
+  expect-identical false value
 
-  expect_throw "Invalid value for boolean flag 'flag': 'foo'. Valid values are: true, false.":
+  expect-throw "Invalid value for boolean flag 'flag': 'foo'. Valid values are: true, false.":
     flag.parse "foo"
 
-test_bad_combos:
-  expect_throw "--split_commas is only valid for multi options.":
-    cli.Option "foo" --split_commas
+test-bad-combos:
+  expect-throw "--split_commas is only valid for multi options.":
+    cli.Option "foo" --split-commas
 
-  expect_throw "Invalid short option name: '@'":
-    cli.Option "bar" --short_name="@"
+  expect-throw "Invalid short option name: '@'":
+    cli.Option "bar" --short-name="@"
 
-  expect_throw "Option can't be hidden and required.":
+  expect-throw "Option can't be hidden and required.":
     cli.Option "foo" --hidden --required
 
-  expect_throw "Option can't have default value and be required.":
+  expect-throw "Option can't have default value and be required.":
     cli.Option "foo" --default="bar" --required
 
-  expect_throw "Option can't have default value and be required.":
+  expect-throw "Option can't have default value and be required.":
     cli.OptionInt "foo" --default=42 --required
 
-  expect_throw "Option can't have default value and be required.":
+  expect-throw "Option can't have default value and be required.":
     cli.Flag "foo" --default=false --required
 
-  expect_throw "Multi option can't have default value.":
+  expect-throw "Multi option can't have default value.":
     cli.Option "foo" --default="bar" --multi
 
-  expect_throw "Multi option can't have default value.":
+  expect-throw "Multi option can't have default value.":
     cli.OptionInt "foo" --default=42 --multi
 
-  expect_throw "Multi option can't have default value.":
+  expect-throw "Multi option can't have default value.":
     cli.Flag "foo" --default=false --multi

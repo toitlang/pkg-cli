@@ -3,71 +3,71 @@
 // found in the package's LICENSE file.
 
 import .cli
-import .help_generator_
+import .help-generator_
 import .utils_
 
 class Parser_:
   ui_/Ui
-  invoked_command_/string
-  usage_on_error_/bool
+  invoked-command_/string
+  usage-on-error_/bool
 
-  constructor --ui/Ui --invoked_command/string --usage_on_error=true:
+  constructor --ui/Ui --invoked-command/string --usage-on-error=true:
     ui_ = ui
-    invoked_command_ = invoked_command
-    usage_on_error_ = usage_on_error
+    invoked-command_ = invoked-command
+    usage-on-error_ = usage-on-error
 
   fatal path/List str/string:
     ui_.print "Error: $str"
-    if usage_on_error_:
+    if usage-on-error_:
       ui_.print ""
-      help_command_ path [] --invoked_command=invoked_command_ --ui=ui_
+      help-command_ path [] --invoked-command=invoked-command_ --ui=ui_
     ui_.abort
     unreachable
 
-  parse root_command/Command arguments --for_help_example/bool=false -> Parsed:
+  parse root-command/Command arguments --for-help-example/bool=false -> Parsed:
     path := []
     // Populate the options from the default values or empty lists (for multi-options)
     options := {:}
 
-    seen_options := {}
-    all_named_options := {:}
-    all_short_options := {:}
+    seen-options := {}
+    all-named-options := {:}
+    all-short-options := {:}
 
-    add_option := : | option/Option argument/string |
-      if option.is_multi:
-        values := option.should_split_commas ? argument.split "," : [argument]
-        parsed := values.map: option.parse it --for_help_example=for_help_example
-        options[option.name].add_all parsed
-      else if seen_options.contains option.name:
+    add-option := : | option/Option argument/string |
+      if option.is-multi:
+        values := option.should-split-commas ? argument.split "," : [argument]
+        parsed := values.map: option.parse it --for-help-example=for-help-example
+        options[option.name].add-all parsed
+      else if seen-options.contains option.name:
         fatal path "Option was provided multiple times: $option.name"
       else:
-        value := option.parse argument --for_help_example=for_help_example
+        value := option.parse argument --for-help-example=for-help-example
         options[option.name] = value
 
-      seen_options.add option.name
+      seen-options.add option.name
 
-    create_help := : | arguments/List |
-      help_command := Command "help" --run=::
-        help_command_ path arguments --invoked_command=invoked_command_ --ui=ui_
-      Parsed.private_ [help_command] {:} {}
+    create-help := : | arguments/List |
+      help-command := Command "help" --run=::
+        help-command_ path arguments --invoked-command=invoked-command_ --ui=ui_
+      Parsed.private_ [help-command] {:} {}
 
     command/Command? := null
-    set_command := : | new_command/Command |
-      new_command.options_.do: | option/Option |
-        all_named_options[option.name] = option
-        if option.short_name: all_short_options[option.short_name] = option
+    set-command := : | new-command/Command |
+      new-command.options_.do: | option/Option |
+        all-named-options[option.name] = option
+        if option.short-name: all-short-options[option.short-name] = option
 
       // The rest options are only allowed for the last command.
-      (new_command.options_ + new_command.rest_).do: | option/Option |
-        if option.is_multi:
+      (new-command.options_ + new-command.rest_).do: | option/Option |
+        if option.is-multi:
           options[option.name] = []
         else:
           options[option.name] = option.default
 
-      command = new_command
+      command = new-command
       path.add command
 
-    set_command.call root_command
+    set-command.call root-command
 
     rest := []
 
@@ -75,106 +75,106 @@ class Parser_:
     while index < arguments.size:
       argument := arguments[index++]
       if argument == "--":
-        rest.add_all arguments[index ..]
+        rest.add-all arguments[index ..]
         break  // We're done!
 
-      if argument.starts_with "--":
+      if argument.starts-with "--":
         value := null
         // Get the option name.
-        split := argument.index_of "="
+        split := argument.index-of "="
         name := (split < 0) ? argument[2..] : argument[2..split]
         if split >= 0: value = argument[split + 1 ..]
 
-        is_inverted := false
-        if name.starts_with "no-":
-          is_inverted = true
+        is-inverted := false
+        if name.starts-with "no-":
+          is-inverted = true
           name = name[3..]
 
-        kebab_name := to_kebab name
+        kebab-name := to-kebab name
 
-        option := all_named_options.get kebab_name
+        option := all-named-options.get kebab-name
         if not option:
-          if name == "help" and not is_inverted: return create_help.call []
+          if name == "help" and not is-inverted: return create-help.call []
           fatal path "Unknown option: --$name"
 
-        if option.is_flag and value != null:
+        if option.is-flag and value != null:
           fatal path "Cannot specify value for boolean flag --$name."
-        if option.is_flag:
-          value = is_inverted ? "false" : "true"
-        else if is_inverted:
+        if option.is-flag:
+          value = is-inverted ? "false" : "true"
+        else if is-inverted:
           fatal path "Cannot invert non-boolean flag --$name."
         if value == null:
           if index >= arguments.size:
             fatal path "Option --$name requires an argument."
           value = arguments[index++]
 
-        add_option.call option value
+        add-option.call option value
 
-      else if argument.starts_with "-":
+      else if argument.starts-with "-":
         // Compute the option and the effective name. We allow short form prefixes to have
         // the value encoded in the same argument like -s"123 + 345", so we have to search
         // for prefixes.
         for i := 1; i < argument.size; :
-          option_length := 1
-          short_name := null
+          option-length := 1
+          short-name := null
           option := null
-          while i + option_length <= argument.size:
-            short_name = argument[i..i + option_length]
-            option = all_short_options.get short_name
+          while i + option-length <= argument.size:
+            short-name = argument[i..i + option-length]
+            option = all-short-options.get short-name
             if option: break
-            option_length++
+            option-length++
 
           if not option:
-            if short_name == "h": return create_help.call []
-            fatal path "Unknown option: -$short_name"
+            if short-name == "h": return create-help.call []
+            fatal path "Unknown option: -$short-name"
 
-          i += option_length
+          i += option-length
 
           if option is Flag:
-            add_option.call option "true"
+            add-option.call option "true"
           else:
             if i < argument.size:
-              add_option.call option argument[i ..]
+              add-option.call option argument[i ..]
               break
             else:
               if index >= arguments.size:
-                fatal path "Option -$short_name requires an argument."
-              add_option.call option arguments[index++]
+                fatal path "Option -$short-name requires an argument."
+              add-option.call option arguments[index++]
               break
 
-      else if not command.run_callback_:
-        subcommand := command.find_subcommand_ argument
+      else if not command.run-callback_:
+        subcommand := command.find-subcommand_ argument
         if not subcommand:
-          if argument == "help" and command == root_command:
+          if argument == "help" and command == root-command:
             // Special case for the help command.
-            return create_help.call arguments[index..]
+            return create-help.call arguments[index..]
 
           fatal path "Unknown command: $argument"
-        set_command.call subcommand
+        set-command.call subcommand
 
       else:
         rest.add argument
 
-    all_named_options.do: | name/string option/Option |
-      if option.is_required and not seen_options.contains name:
+    all-named-options.do: | name/string option/Option |
+      if option.is-required and not seen-options.contains name:
         fatal path "Required option $name is missing."
 
-    rest_index := 0
-    command.rest_.do: | rest_option/Option |
-      if rest_option.is_required and rest_index >= rest.size:
-        fatal path "Missing required rest argument: '$rest_option.name'."
-      if rest_index >= rest.size: continue.do
+    rest-index := 0
+    command.rest_.do: | rest-option/Option |
+      if rest-option.is-required and rest-index >= rest.size:
+        fatal path "Missing required rest argument: '$rest-option.name'."
+      if rest-index >= rest.size: continue.do
 
-      if rest_option.is_multi:
-        while rest_index < rest.size:
-          add_option.call rest_option rest[rest_index++]
+      if rest-option.is-multi:
+        while rest-index < rest.size:
+          add-option.call rest-option rest[rest-index++]
       else:
-        add_option.call rest_option rest[rest_index++]
+        add-option.call rest-option rest[rest-index++]
 
-    if rest_index < rest.size:
-      fatal path "Unexpected rest argument: '$rest[rest_index]'."
+    if rest-index < rest.size:
+      fatal path "Unexpected rest argument: '$rest[rest-index]'."
 
-    if not command.run_callback_:
+    if not command.run-callback_:
       fatal path "Missing subcommand."
 
-    return Parsed.private_ path options seen_options
+    return Parsed.private_ path options seen-options

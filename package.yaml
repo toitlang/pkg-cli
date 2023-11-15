@@ -1,2 +1,5 @@
 name: cli
 description: Tools, like an argument parser, to create command-line applications.
+
+environment:
+  sdk: ^2.0.0-alpha.100

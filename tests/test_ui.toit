@@ -14,13 +14,13 @@ class TestUi implements cli.Ui:
   abort:
     throw "abort"
 
-expect_abort expected/string [block]:
+expect-abort expected/string [block]:
   ui := TestUi
   exception := catch:
     block.call ui
-  expect_equals "abort" exception
-  all_output := ui.messages.join "\n"
-  if not all_output.starts_with "Error: $expected":
+  expect-equals "abort" exception
+  all-output := ui.messages.join "\n"
+  if not all-output.starts-with "Error: $expected":
     print "Expected: $expected"
-    print "Actual: $all_output"
-    throw "Expected error message to start with 'Error: $expected'. Actual: $all_output"
+    print "Actual: $all-output"
+    throw "Expected error message to start with 'Error: $expected'. Actual: $all-output"
