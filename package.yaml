@@ -1,5 +1,10 @@
 name: cli
 description: Tools, like an argument parser, to create command-line applications.
-
 environment:
   sdk: ^2.0.0-alpha.100
+dependencies:
+  fs:
+    path: ../pkg-fs
+  host:
+    url: github.com/toitlang/pkg-host
+    version: ^1.11.0

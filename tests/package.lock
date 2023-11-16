@@ -1,5 +1,19 @@
+sdk: ^2.0.0-alpha.64
 prefixes:
   cli: ..
+  host: pkg-host
 packages:
   ..:
     path: ..
+    prefixes:
+      fs: pkg-fs
+      host: pkg-host
+  pkg-fs:
+    path: ../../pkg-fs
+    prefixes:
+      host: pkg-host
+  pkg-host:
+    url: github.com/toitlang/pkg-host
+    name: host
+    version: 1.11.0
+    hash: 7e7df6ac70d98a02f232185add81a06cec0d77e8

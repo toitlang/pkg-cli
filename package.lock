@@ -1,1 +1,14 @@
-# Toit Lock File.
+sdk: ^2.0.0-alpha.100
+prefixes:
+  fs: pkg-fs
+  host: pkg-host
+packages:
+  pkg-fs:
+    path: ../pkg-fs
+    prefixes:
+      host: pkg-host
+  pkg-host:
+    url: github.com/toitlang/pkg-host
+    name: host
+    version: 1.11.0
+    hash: 7e7df6ac70d98a02f232185add81a06cec0d77e8
