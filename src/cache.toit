@@ -37,12 +37,20 @@ class Cache:
   /**
   Creates a new cache.
 
-  If the \$XDG_CACHE_HOME environment variable is set, the cache is located
-    at \$XDG_CACHE_HOME/$app-name. Otherwise, the cache will is stored
-    in \$(HOME)/.cache/$app-name.
+  Determines the cache directory in the following order:
+  - If APP_CACHE_DIR (where "APP" is the uppercased version of $app-name) is set,
+    uses it as the path to the cache.
+  - If the \$XDG_CACHE_HOME environment variable is set, the cache is located
+    at \$XDG_CACHE_HOME/$app-name.
+  - Otherwise, the cache directory is set to \$(HOME)/.cache/$app-name.
   */
   constructor --app-name/string:
     app-name-upper := app-name.to-ascii-upper
+    env := os.env
+    if env.contains "$(app-name-upper)_CACHE_DIR":
+      path := env["$(app-name-upper)_CACHE_DIR"]
+      return Cache --app-name=app-name --path=path
+
     cache-home := xdg.cache-home
     return Cache --app-name=app-name --path="$cache-home/$(app-name)"
 
