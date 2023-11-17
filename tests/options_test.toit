@@ -4,11 +4,14 @@
 
 import cli
 import expect show *
+import uuid
 
 main:
   test-string
   test-enum
+  test-patterns
   test-int
+  test-uuid
   test-flag
   test-bad-combos
 
@@ -83,6 +86,30 @@ test-enum:
   expect-throw "Invalid value for option 'enum': 'baz'. Valid values are: foo, bar.":
     option.parse "baz"
 
+test-patterns:
+  option := cli.OptionPatterns "pattern" ["foo", "bar:<duration>", "baz=<address>"]
+  expect-equals option.name "pattern"
+  expect-null option.default
+  expect-equals "foo|bar:<duration>|baz=<address>" option.type
+
+  option = cli.OptionPatterns "pattern" ["foo", "bar:<duration>", "baz=<address>"] --default="bar:1h"
+  expect-equals "bar:1h" option.default
+
+  value := option.parse "foo"
+  expect-equals "foo" value
+
+  value = option.parse "bar:1h"
+  expect-structural-equals { "bar": "1h" } value
+
+  value = option.parse "baz=neverland"
+  expect-structural-equals { "baz": "neverland" } value
+
+  expect-throw "Invalid value for option 'pattern': 'baz'. Valid values are: foo, bar:<duration>, baz=<address>.":
+    option.parse "baz"
+
+  expect-throw "Invalid value for option 'pattern': 'not-there'. Valid values are: foo, bar:<duration>, baz=<address>.":
+    option.parse "not-there"
+
 test-int:
   option := cli.OptionInt "int"
   expect-equals option.name "int"
@@ -97,6 +124,27 @@ test-int:
 
   expect-throw "Invalid integer value for option 'int': 'foo'.":
     option.parse "foo"
+
+test-uuid:
+  option := cli.OptionUuid "uuid"
+  expect-equals option.name "uuid"
+  expect-null option.default
+  expect-equals "uuid" option.type
+
+  option = cli.OptionUuid "uuid" --default=uuid.NIL
+  expect-equals uuid.NIL option.default
+
+  value := option.parse "00000000-0000-0000-0000-000000000000"
+  expect-equals uuid.NIL value
+
+  value = option.parse "00000000-0000-0000-0000-000000000001"
+  expect-equals (uuid.parse "00000000-0000-0000-0000-000000000001") value
+
+  expect-throw "Invalid value for option 'uuid': 'foo'. Expected a UUID.":
+    option.parse "foo"
+
+  expect-throw "Invalid value for option 'uuid': '00000000-0000-0000-0000-00000000000'. Expected a UUID.":
+    option.parse "00000000-0000-0000-0000-00000000000"
 
 test-flag:
   flag := cli.Flag "flag" --default=false

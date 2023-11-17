@@ -2,6 +2,8 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import uuid
+
 import .parser_
 import .utils_
 import .help-generator_
@@ -533,6 +535,7 @@ class OptionEnum extends Option:
         --split-commas=split-commas
     if default and not values.contains default:
       throw "Default value of '$name' is not a valid value: $default"
+
   is-flag: return false
 
   parse str/string --for-help-example/bool=false -> string:
@@ -593,6 +596,102 @@ class OptionInt extends Option:
   parse str/string --for-help-example/bool=false -> int:
     return int.parse str --on-error=:
       throw "Invalid integer value for option '$name': '$str'."
+
+/**
+An option for patterns.
+
+Patterns are an extension to enums: they allow to specify a prefix to a value.
+For example, a pattern `"interval:<duration>"` would allow values like
+  `"interval:1h"`, `"interval:30m"`, etc.
+
+Both '=' and ':' are allowed as separators between the prefix and the value.
+*/
+class OptionPatterns extends Option:
+  default/string?
+  patterns/List
+  type/string
+
+  constructor name/string .patterns/List
+      --.default=null
+      --.type=(patterns.join "|")
+      --short-name/string?=null
+      --help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas
+    if default:
+      parse_ default --on-error=:
+        throw "Default value of '$name' is not a valid value: $default"
+
+  is-flag -> bool: return false
+
+  /**
+  Returns the pattern that matches the given $str in a map with the pattern as key.
+  */
+  parse str/string --for-help-example/bool=false -> any:
+    return parse_ str --on-error=:
+      throw "Invalid value for option '$name': '$str'. Valid values are: $(patterns.join ", ")."
+
+  parse_ str/string [--on-error]:
+    if not str.contains ":" and not str.contains "=":
+      if not patterns.contains str: on-error.call
+      return str
+
+    separator-index := str.index-of ":"
+    if separator-index < 0: separator-index = str.index-of "="
+    key := str[..separator-index]
+    key-with-equals := "$key="
+    key-with-colon := "$key:"
+    if not (patterns.any: it.starts-with key-with-equals or it.starts-with key-with-colon):
+      on-error.call
+
+    return {
+      key: str[separator-index + 1..]
+    }
+
+/**
+A Uuid option.
+*/
+class OptionUuid extends Option:
+  default/uuid.Uuid?
+
+  /**
+  Creates a new Uuid option.
+
+  The $default value is null.
+
+  The $type is set to 'uuid'.
+
+  Ensures that values are valid Uuids.
+  */
+  constructor name/string
+      --.default=null
+      --short-name/string?=null
+      --help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas
+
+  is-flag: return false
+
+  type -> string: return "uuid"
+
+  parse str/string --for-help-example/bool=false -> uuid.Uuid:
+    return uuid.parse str --on-error=:
+      throw "Invalid value for option '$name': '$str'. Expected a UUID."
+
 
 /**
 An option that must be a boolean value.
