@@ -68,7 +68,7 @@ main arguments:
   // Creates a root command.
   // The name of the root command is not used.
   root-cmd := cli.Command "fleet_manager"
-      --long-help="""
+      --help="""
         This is an imaginary fleet manager for a fleet of Toit devices.
 
         It can not be used to manage the fleet, for example
@@ -84,10 +84,10 @@ main arguments:
 
 create-status-command -> cli.Command:
   return cli.Command "status"
-      --short-help="Shows the status of the fleet:"
+      --help="Shows the status of the fleet:"
       --options=[
-        cli.Flag "verbose" --short-name="v" --short-help="Show more details." --multi,
-        cli.OptionInt "max-lines" --short-help="Maximum number of lines to show." --default=10,
+        cli.Flag "verbose" --short-name="v" --help="Show more details." --multi,
+        cli.OptionInt "max-lines" --help="Maximum number of lines to show." --default=10,
       ]
       --examples=[
         cli.Example "Show the status of the fleet:" --arguments="",
@@ -115,7 +115,7 @@ create-device-command -> cli.Command:
         "dev",
         "thingy",
       ]
-      --long-help="""
+      --help="""
         Manage a particular device.
 
         Use the '--device' option to specify a specific device. Otherwise, the
@@ -123,7 +123,7 @@ create-device-command -> cli.Command:
         """
       --options=[
         cli.Option "device" --short-name="d"
-            --short-help="The device to operate on."
+            --help="The device to operate on."
       ]
   device-cmd.add create-reset-command
   device-cmd.add create-upload-command
@@ -131,7 +131,7 @@ create-device-command -> cli.Command:
 
 create-upload-command -> cli.Command:
   return cli.Command "upload"
-      --long-help="""
+      --help="""
         Uploads the given file to the device.
 
         Other useful information here.
@@ -139,7 +139,7 @@ create-upload-command -> cli.Command:
       --rest=[
         cli.OptionString "data"
             --type="file"
-            --short-help="The data to upload."
+            --help="The data to upload."
             --required,
       ]
       --examples=[
@@ -158,18 +158,18 @@ upload-to-device parsed/cli.Parsed:
 
 create-reset-command -> cli.Command:
   return cli.Command "reset"
-      --long-help="""
+      --help="""
         Resets the device.
 
         Other useful information here.
         """
       --options=[
         cli.OptionEnum "mode" ["hard", "soft"]
-            --short-help="The reset mode to use."
+            --help="The reset mode to use."
             --short-name="m"
             --required,
         cli.Flag "force" --short-name="f"
-            --short-help="Force the reset even if the device is active.",
+            --help="Force the reset even if the device is active.",
       ]
       --examples=[
         cli.Example
@@ -187,5 +187,5 @@ reset-device parsed/cli.Parsed:
   mode := parsed["mode"]
   force := parsed["force"]
 
-  print "Resetting device '$device' in $mode-mode."
+  print "Resetting device '$device' in $(mode)-mode."
   if force: print "Using the force if necessary."
