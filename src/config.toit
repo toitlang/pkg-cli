@@ -52,11 +52,10 @@ class Config:
   */
   constructor --app-name/string [--init]:
     app-name-upper := app-name.to-ascii-upper
-    env := os.env
-    if env.contains "$(app-name-upper)_CONFIG":
-      path := env["$(app-name-upper)_CONFIG"]
-      data := read-config-file_ path --if_absent=: init.call
-      return Config --app-name=app-name --path=path --data=data
+    env-path := os.env.get "$(app-name-upper)_CONFIG"
+    if env-path:
+      data := read-config-file_ env-path --if_absent=: init.call
+      return Config --app-name=app-name --path=env-path --data=data
 
     config-home := xdg.config-home
 
