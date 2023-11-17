@@ -164,7 +164,7 @@ test-flag:
     flag.parse "foo"
 
 test-bad-combos:
-  expect-throw "--split_commas is only valid for multi options.":
+  expect-throw "--split-commas is only valid for multi options.":
     cli.Option "foo" --split-commas
 
   expect-throw "Invalid short option name: '@'":

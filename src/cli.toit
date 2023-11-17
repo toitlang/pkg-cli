@@ -369,7 +369,7 @@ abstract class Option:
     if short-name and not is-alpha-num-string_ short-name:
       throw "Invalid short option name: '$short-name'"
     if split-commas and not multi:
-      throw "--split_commas is only valid for multi options."
+      throw "--split-commas is only valid for multi options."
     if is-hidden and is-required:
       throw "Option can't be hidden and required."
 
@@ -654,7 +654,6 @@ class OptionPatterns extends Option:
     return {
       key: str[separator-index + 1..]
     }
-
 
 /**
 A Uuid option.
