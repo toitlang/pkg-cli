@@ -655,7 +655,6 @@ class OptionPatterns extends Option:
       key: str[separator-index + 1..]
     }
 
-
 /**
 A Uuid option.
 */
