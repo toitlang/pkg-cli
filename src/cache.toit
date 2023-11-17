@@ -46,10 +46,9 @@ class Cache:
   */
   constructor --app-name/string:
     app-name-upper := app-name.to-ascii-upper
-    env := os.env
-    if env.contains "$(app-name-upper)_CACHE_DIR":
-      path := env["$(app-name-upper)_CACHE_DIR"]
-      return Cache --app-name=app-name --path=path
+    env-path := os.env.get "$(app-name-upper)_CACHE_DIR"
+    if env-path:
+      return Cache --app-name=app-name --path=env-path
 
     cache-home := xdg.cache-home
     return Cache --app-name=app-name --path="$cache-home/$(app-name)"
