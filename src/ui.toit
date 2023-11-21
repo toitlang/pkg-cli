@@ -1,6 +1,6 @@
 // Copyright (C) 2023 Toitware ApS. All rights reserved.
-
-// TODO(florian): move this library to the cli package.
+// Use of this source code is governed by an MIT-style license that can be
+// found in the package's LICENSE file.
 
 import encoding.json
 
