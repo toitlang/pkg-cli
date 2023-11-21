@@ -3,6 +3,7 @@
 // found in the package's LICENSE file.
 
 import cli
+import cli.ui as cli
 
 /**
 Creates a command-line executable that parses the command-line arguments and
@@ -53,7 +54,10 @@ Options:
   -m, --mode hard|soft  The reset mode to use. (required)
 
 Global options:
-  -d, --device string  The device to operate on.
+  -d, --device string                                    The device to operate on.
+      --output-format text|json                          Specify the format used when printing to the console. (default: text)
+      --verbose                                          Enable verbose output. Shorthand for --verbosity-level=verbose.
+      --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
 
 Examples:
   # Do a soft-reset of device 'foo':
@@ -86,7 +90,6 @@ create-status-command -> cli.Command:
   return cli.Command "status"
       --help="Shows the status of the fleet:"
       --options=[
-        cli.Flag "verbose" --short-name="v" --help="Show more details." --multi,
         cli.OptionInt "max-lines" --help="Maximum number of lines to show." --default=10,
       ]
       --examples=[
@@ -94,16 +97,21 @@ create-status-command -> cli.Command:
         cli.Example "Show a detailed status of the fleet:" --arguments="--verbose"
             --global-priority=7,  // Show this example for the root command.
       ]
-      --run=:: fleet-status it
+      --run=:: | app parsed | fleet-status app parsed
 
-fleet-status parsed/cli.Parsed:
-  verbose-list := parsed["verbose"]
-  trues := (verbose-list.filter: it).size
-  falses := verbose-list.size - trues
-  verbose-level := trues - falses
+fleet-status app/cli.App parsed/cli.Parsed:
   max-lines := parsed["max-lines"]
+  verbose := app.ui.level >= cli.Ui.VERBOSE-LEVEL
 
-  print "Max $max-lines of status with verbosity-level $verbose-level."
+  app.ui.do --kind=cli.Ui.RESULT: | printer/cli.Printer |
+    printer.emit-structured
+        --json=:
+          {
+            "some": "json",
+            "info": "about the status",
+          }
+        --stdout=:
+          printer.emit "Printing max $max-lines of status. (verbose: $(verbose ? "yes" : "no"))"
 
 
 // ============= Could be in a separate file device.toit. =============
@@ -129,6 +137,16 @@ create-device-command -> cli.Command:
   device-cmd.add create-upload-command
   return device-cmd
 
+with-device app/cli.App parsed/cli.Parsed [block]:
+  device := parsed["device"]
+  if not device:
+    device = app.config.get "default-device"
+
+  if not device:
+    app.ui.abort "No device specified and no default device set."
+
+  block.call device
+
 create-upload-command -> cli.Command:
   return cli.Command "upload"
       --help="""
@@ -148,13 +166,13 @@ create-upload-command -> cli.Command:
             --arguments="--device=foo foo.data"
             --global-priority=8,  // Include this example for super commands.
       ]
-      --run=:: upload-to-device it
+      --run=:: | app parsed | upload-to-device app parsed
 
-upload-to-device parsed/cli.Parsed:
-  device := parsed["device"]
+upload-to-device app/cli.App parsed/cli.Parsed:
   data := parsed["data"]
 
-  print "Uploading file '$data' to device '$device'."
+  with-device app parsed: | device |
+    print "Uploading file '$data' to device '$device'."
 
 create-reset-command -> cli.Command:
   return cli.Command "reset"
@@ -180,12 +198,12 @@ create-reset-command -> cli.Command:
             "Do a hard-reset:"
             --arguments="--mode=hard",
       ]
-      --run=:: reset-device it
+      --run=:: | app parsed | reset-device app parsed
 
-reset-device parsed/cli.Parsed:
-  device := parsed["device"]
+reset-device app/cli.App parsed/cli.Parsed:
   mode := parsed["mode"]
   force := parsed["force"]
 
-  print "Resetting device '$device' in $(mode)-mode."
-  if force: print "Using the force if necessary."
+  with-device app parsed: | device |
+    app.ui.info "Resetting device '$device' in $(mode)-mode."
+    if force: app.ui.debug "Using the force if necessary."

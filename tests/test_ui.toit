@@ -3,6 +3,7 @@
 // be found in the tests/LICENSE file.
 
 import cli.ui as cli
+import cli.parser_ as cli-parser
 import expect show *
 
 class TestUi extends cli.Ui:
@@ -10,6 +11,7 @@ class TestUi extends cli.Ui:
 
   constructor --level/int=cli.Ui.NORMAL-LEVEL:
     super --level=level
+    cli-parser.test-ui_ = this
 
   create-printer_ prefix/string? kind/int -> cli.Printer:
     return TestPrinter this prefix

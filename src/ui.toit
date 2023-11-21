@@ -4,6 +4,55 @@
 
 import encoding.json
 
+create-ui-from-args_ args/List:
+  verbose-level/string? := null
+  output-format/string? := null
+
+  // We don't keep track of whether an argument was already provided.
+  // The last one wins.
+  // The real parsing later will catch any errors.
+  // The output might still be affected since we use the created Ui class
+  // for the output of parsing.
+  // Also we might parse the flags in the wrong way here. For example,
+  //   `--output "--verbosity-level"` would be parsed differently if we knew
+  // that `--output` is an option that takes an argument. We completely ignore
+  // this here.
+  for i := 0; i < args.size; i++:
+    arg := args[i]
+    if arg == "--": break
+    if arg == "--verbose":
+      verbose-level = "verbose"
+    else if arg == "--verbosity-level" or arg == "--verbose_level":
+      if i + 1 >= args.size:
+        // We will get an error during the real parsing of the args.
+        break
+      verbose-level = args[++i]
+    else if arg.starts-with "--verbosity-level=" or arg.starts-with "--verbose_level=":
+      verbose-level = arg["--verbosity-level=".size..]
+    else if arg == "--output-format" or arg == "--output_format":
+      if i + 1 >= args.size:
+        // We will get an error during the real parsing of the args.
+        break
+      output-format = args[++i]
+    else if arg.starts-with "--output-format=" or arg.starts-with "--output_format=":
+      output-format = arg["--output-format=".size..]
+
+  if verbose-level == null: verbose-level = "info"
+  if output-format == null: output-format = "text"
+
+  level/int := ?
+  if verbose-level == "debug": level = Ui.DEBUG-LEVEL
+  else if verbose-level == "info": level = Ui.NORMAL-LEVEL
+  else if verbose-level == "verbose": level = Ui.VERBOSE-LEVEL
+  else if verbose-level == "quiet": level = Ui.QUIET-LEVEL
+  else if verbose-level == "silent": level = Ui.SILENT-LEVEL
+  else: level = Ui.NORMAL-LEVEL
+
+  if output-format == "json":
+    return JsonUi --level=level
+  else:
+    return ConsoleUi --level=level
+
 interface Printer:
   emit o/any --title/string?=null --header/Map?=null
   emit-structured [--json] [--stdout]
@@ -161,24 +210,43 @@ abstract class Ui:
       error "Invalid level: $level"
     generator.call (printer_ --kind=kind)
 
-  /** Reports an error. */
-  error o/any:
-    do --kind=ERROR: | printer/Printer | printer.emit o
+  /** Emits the given object $o at a debug-level. */
+  debug o/any --title/string?=null --header/Map?=null:
+    do --kind=DEBUG: | printer/Printer | printer.emit o --title=title --header=header
 
-  /** Reports a warning. */
-  warning o/any:
-    do --kind=WARNING: | printer/Printer | printer.emit o
+  /** Emits the given object $o at a verbose-level. */
+  verbose o/any --title/string?=null --header/Map?=null:
+    do --kind=VERBOSE: | printer/Printer | printer.emit o --title=title --header=header
 
-  info o/any:
-    do --kind=INFO: | printer/Printer | printer.emit o
+  /** Emits the given object $o at an info-level. */
+  info o/any --title/string?=null --header/Map?=null:
+    do --kind=INFO: | printer/Printer | printer.emit o --title=title --header=header
 
+  /** Alias for $info. */
   print o/any: info o
 
-  result o/any:
-    do --kind=RESULT: | printer/Printer | printer.emit o
+  /** Emits the given object $o at a warning-level. */
+  warning o/any --title/string?=null --header/Map?=null:
+    do --kind=WARNING: | printer/Printer | printer.emit o --title=title --header=header
 
-  abort o/any:
-    do --kind=ERROR: | printer/Printer | printer.emit o
+  /** Emits the given object $o at an interactive-level. */
+  interactive o/any --title/string?=null --header/Map?=null:
+    do --kind=INTERACTIVE: | printer/Printer | printer.emit o --title=title --header=header
+
+  /** Emits the given object $o at an error-level. */
+  error o/any --title/string?=null --header/Map?=null:
+    do --kind=ERROR: | printer/Printer | printer.emit o --title=title --header=header
+
+  /** Emits the given object $o as result. */
+  result o/any --title/string?=null --header/Map?=null:
+    do --kind=RESULT: | printer/Printer | printer.emit o --title=title --header=header
+
+  /**
+  Aborts the program with the given error message.
+  First emits $o at an error-level, then calls $abort.
+  */
+  abort o/any --title/string?=null --header/Map?=null:
+    do --kind=ERROR: | printer/Printer | printer.emit o --title=title --header=header
     abort
 
   printer_ --kind/int -> Printer:

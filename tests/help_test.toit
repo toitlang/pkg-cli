@@ -612,6 +612,18 @@ test-options:
   actual = build-local-options.call [cmd]
   expect-equals expected actual
 
+  cmd = cli.Command "root" --run=:: null
+  // This adds the ui-help options.
+  cmd.run --add-ui-help []
+  expected = """
+    Global options:
+          --output-format text|json                          Specify the format used when printing to the console. (default: text)
+          --verbose                                          Enable verbose output. Shorthand for --verbosity-level=verbose.
+          --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
+    """
+  actual = build-global-options.call [cmd, sub]
+  expect-equals expected actual
+
 test-examples:
   build-examples := : | path/List |
     help := HelpGenerator path --invoked-command="root"

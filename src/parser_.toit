@@ -4,27 +4,54 @@
 
 import .cli
 import .help-generator_
+import .ui
 import .utils_
+import host.pipe
+
+class StderrUi_ extends Ui:
+  constructor:
+    super --level=Ui.NORMAL-LEVEL
+  create-printer_ prefix/string? kind/int -> Printer:
+    return StderrPrinter_ prefix
+
+class StderrPrinter_ extends PrinterBase:
+  constructor prefix/string?:
+    super prefix
+
+  needs-structured_: return false
+  handle-structured_ o: unreachable
+  print_ o:
+    pipe.stderr.write "$o\n"
+
+test-ui_/Ui? := null
 
 class Parser_:
-  ui_/Ui
   invoked-command_/string
-  usage-on-error_/bool
+  for-help-example_/bool
 
-  constructor --ui/Ui --invoked-command/string --usage-on-error=true:
-    ui_ = ui
+  constructor --invoked-command/string --for-help-example/bool=false:
     invoked-command_ = invoked-command
-    usage-on-error_ = usage-on-error
+    for-help-example_ = for-help-example
 
+  /**
+  Reports and error and aborts the program.
+
+  The program was called with wrong arguments.
+  */
   fatal path/List str/string:
-    ui_.print "Error: $str"
-    if usage-on-error_:
-      ui_.print ""
-      help-command_ path [] --invoked-command=invoked-command_ --ui=ui_
-    ui_.abort
+    if for-help-example_:
+      throw str
+
+    // If there is a test-ui_ use it.
+    // Otherwise, ignore the ui that was determined through the command line and
+    // print the usage on stderr, followed by an exit 1.
+    ui := test-ui_ or StderrUi_
+    ui.error str
+    help-command_ path [] --invoked-command=invoked-command_ --ui=ui
+    ui.abort
     unreachable
 
-  parse root-command/Command arguments --for-help-example/bool=false -> Parsed:
+  parse root-command/Command arguments -> Parsed:
     path := []
     // Populate the options from the default values or empty lists (for multi-options)
     options := {:}
@@ -36,19 +63,19 @@ class Parser_:
     add-option := : | option/Option argument/string |
       if option.is-multi:
         values := option.should-split-commas ? argument.split "," : [argument]
-        parsed := values.map: option.parse it --for-help-example=for-help-example
+        parsed := values.map: option.parse it --for-help-example=for-help-example_
         options[option.name].add-all parsed
       else if seen-options.contains option.name:
         fatal path "Option was provided multiple times: $option.name"
       else:
-        value := option.parse argument --for-help-example=for-help-example
+        value := option.parse argument --for-help-example=for-help-example_
         options[option.name] = value
 
       seen-options.add option.name
 
     create-help := : | arguments/List |
-      help-command := Command "help" --run=::
-        help-command_ path arguments --invoked-command=invoked-command_ --ui=ui_
+      help-command := Command "help" --run=:: | app/App _ |
+        help-command_ path arguments --invoked-command=invoked-command_ --ui=app.ui
       Parsed.private_ [help-command] {:} {}
 
     command/Command? := null

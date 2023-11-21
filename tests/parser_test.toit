@@ -33,7 +33,7 @@ test-options:
         cli.Option "bar" --short-name="b",
         cli.OptionInt "gee" --short-name="g",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": "bar_value", "gee": null}
@@ -57,7 +57,7 @@ test-options:
         cli.Flag "bar" --short-name="b",
         cli.Option "fizz" --short-name="iz" --default="default_fizz",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": "default_foo", "bar": true, "fizz": "default_fizz"}
@@ -87,7 +87,7 @@ test-options:
       --options=[
         cli.Flag "foo" --short-name="f" --default=false,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": false}
@@ -103,7 +103,7 @@ test-options:
       --options=[
         cli.Flag "foo" --short-name="f" --default=true,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": true
@@ -117,7 +117,7 @@ test-multi:
         cli.Option "foo" --short-name="f" --multi,
         cli.Option "bar" --short-name="b" --multi --split-commas,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": ["foo_value"], "bar": ["bar_value"]}
@@ -147,7 +147,7 @@ test-multi:
       --options=[
         cli.OptionInt "foo" --short-name="f" --multi --split-commas,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": [1, 2, 3]}
@@ -158,7 +158,7 @@ test-multi:
       --options=[
         cli.Flag "foo" --short-name="f" --multi,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": [true, true, true]}
@@ -170,7 +170,7 @@ test-multi:
       --options=[
         cli.OptionEnum "foo" ["a", "b"] --short-name="f" --multi,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": ["a", "b", "a"]}
@@ -183,7 +183,7 @@ test-rest:
         cli.Option "foo",
         cli.OptionInt "bar",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": 42}
@@ -200,7 +200,7 @@ test-rest:
         cli.Option "foo" --required,
         cli.OptionInt "bar" --default=42,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": 42}
@@ -217,7 +217,7 @@ test-rest:
         cli.Option "foo" --required,
         cli.Option "bar" --required --multi,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": "foo_value", "bar": ["bar_value"]}
@@ -242,16 +242,16 @@ test-subcommands:
             --options=[
               cli.Option "foo" --short-name="f",
             ]
-            --run=:: | parsed/cli.Parsed |
+            --run=:: | app/cli.App parsed/cli.Parsed |
               check-arguments expected parsed,
         cli.Command "sub2"
             --options=[
               cli.Option "bar" --short-name="b",
             ]
-            --run=:: | parsed/cli.Parsed |
+            --run=:: | app/cli.App parsed/cli.Parsed |
               check-arguments expected parsed,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": "foo_value"}
@@ -270,7 +270,7 @@ test-subcommands:
 
 test-no-option:
   cmd := cli.Command "test"
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         expect-throw "No option named 'foo'": parsed["foo"]
   cmd.run []
 
@@ -283,7 +283,7 @@ test-no-option:
             --options=[
               cli.Option "bar" --short-name="b",
             ]
-            --run=:: | parsed/cli.Parsed |
+            --run=:: | app/cli.App parsed/cli.Parsed |
               expect-throw "No option named 'gee'": parsed["gee"],
       ]
 
@@ -296,7 +296,7 @@ test-invert-flag:
       --options=[
         cli.Flag "foo" --short-name="f",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": null}
@@ -312,7 +312,7 @@ test-invert-flag:
       --options=[
         cli.Flag "foo" --short-name="f" --default=true,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments expected parsed
 
   expected = {"foo": true}
@@ -326,7 +326,7 @@ test-invert-non-flag:
       --options=[
         cli.Option "foo" --short-name="f",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         unreachable
 
   expect-abort "Cannot invert non-boolean flag --foo.": | ui/cli.Ui |
@@ -337,7 +337,7 @@ test-value-for-flag:
       --options=[
         cli.Flag "foo" --short-name="f",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         unreachable
 
   expect-abort "Cannot specify value for boolean flag --foo.": | ui/cli.Ui |
@@ -348,7 +348,7 @@ test-missing-args:
       --options=[
         cli.Option "foo" --short-name="f",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         unreachable
 
   expect-abort "Option --foo requires an argument.": | ui/cli.Ui |
@@ -372,7 +372,7 @@ test-dash-arg:
       --options=[
         cli.Option "foo" --short-name="f",
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments {"foo": "-"} parsed
 
   cmd.run ["-f", "-"]
@@ -388,7 +388,7 @@ test-mixed-rest-named:
       --rest=[
         cli.Option "baz" --required,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} parsed
 
   cmd.run ["--foo", "foo_value", "--bar", "bar_value", "baz_value"]
@@ -403,7 +403,7 @@ test-mixed-rest-named:
       --rest=[
         cli.Option "baz" --required,
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} parsed
 
   // Because of the '--', the rest argument is not interpreted as a named argument.
@@ -415,7 +415,7 @@ test-snake-kebab:
         cli.Option "foo-bar" --short-name="f",
         cli.Option "toto_titi"
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | app/cli.App parsed/cli.Parsed |
         check-arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } parsed
         check-arguments {"foo_bar": "foo_value", "toto_titi": "toto_value" } parsed
 
