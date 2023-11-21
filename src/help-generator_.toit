@@ -33,18 +33,68 @@ help-command_ path/List arguments/List --invoked-command/string --ui/Ui:
     command = subcommand
     path.add command
 
-  print-help_ path --invoked-command=invoked-command --ui=ui
+  emit-help_ path --invoked-command=invoked-command --ui=ui
 
 /**
-Prints the help for the given command.
+Emits the help for the given command.
 
 The command is identified by the $path where the command is the last element.
 */
-print-help_ path --invoked-command/string --ui/Ui:
-  generator := HelpGenerator path --invoked-command=invoked-command
-  generator.build-all
-  help := generator.to-string
-  ui.print help
+emit-help_ path/List --invoked-command/string --ui/Ui:
+  ui.do --kind=Ui.RESULT: | printer/Printer |
+    printer.emit-structured
+        --json=: build-json-help_ path --invoked-command=invoked-command
+        --stdout=:
+          generator := HelpGenerator path --invoked-command=invoked-command
+          generator.build-all
+          help := generator.to-string
+          printer.emit help
+
+build-json-help_ path/List --invoked-command/string -> Map:
+
+  extract-options := : | command/Command out-map/Map |
+    options := command.options_.filter: | option/Option | not option.is-hidden
+    command.options_.do: | option/Option |
+      if not out-map.contains option.name:
+        default := option.default
+        if default != null and default is not bool and default is not num and default is not string and
+            default is not List and default is not Map:
+          default = "$default"
+        json-option := {
+          "type": option.type,
+          "is-flag": option.is-flag,
+          "is-multi": option.is-multi,
+          "is-required": option.is-required,
+        }
+        if not option.is-required: json-option["default"] = default
+        if option.help: json-option["help"] = option.help
+        if option.short-name: json-option["short-name"] = option.short-name
+        out-map[option.name] = json-option
+    out-map
+
+  command/Command := path.last
+
+  global-options := {:}
+  for i := path.size - 2; i >= 0; i--:
+    parent-command := path[i]
+    extract-options.call parent-command global-options
+
+  json-examples := command.examples_.map: | example/Example |
+    {
+      "description": example.description,
+      "arguments": example.arguments,
+      "global-priority": example.global-priority,
+    }
+
+  return {
+    "name": command.name,
+    "path": path.map: | command/Command | command.name,
+    "help": command.help_,
+    "aliases": command.aliases_,
+    "options": extract-options.call command {:},
+    "global-options": global-options,
+    "examples": json-examples,
+  }
 
 /**
 Generates the help for a command.
