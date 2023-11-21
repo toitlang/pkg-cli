@@ -2,17 +2,34 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
-import cli
+import cli.ui as cli
 import expect show *
 
-class TestUi implements cli.Ui:
+class TestUi extends cli.Ui:
   messages := []
 
-  print str/string:
-    messages.add str
+  constructor --level/int=cli.Ui.NORMAL-LEVEL:
+    super --level=level
+
+  create-printer_ prefix/string? kind/int -> cli.Printer:
+    return TestPrinter this prefix
 
   abort:
     throw "abort"
+
+class TestPrinter extends cli.PrinterBase:
+  ui_/TestUi
+
+  constructor .ui_ prefix/string?:
+    super prefix
+
+  needs-structured_: return false
+
+  print_ str/string:
+    ui_.messages.add str
+
+  handle-structured_ structured:
+    unreachable
 
 expect-abort expected/string [block]:
   ui := TestUi
