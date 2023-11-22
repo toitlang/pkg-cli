@@ -79,12 +79,11 @@ build-json-help_ path/List --invoked-command/string -> Map:
     parent-command := path[i]
     extract-options.call parent-command global-options
 
-  json-examples := command.examples_.map: | example/Example |
-    {
-      "description": example.description,
-      "arguments": example.arguments,
-      "global-priority": example.global-priority,
-    }
+  json-examples := command.examples_.map: | example/Example | {
+    "description": example.description,
+    "arguments": example.arguments,
+    "global-priority": example.global-priority,
+  }
 
   return {
     "name": command.name,
