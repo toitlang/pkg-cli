@@ -5,6 +5,7 @@
 import .cli
 import .parser_
 import .utils_
+import .ui
 
 /**
 The 'help' command that can be executed on the root command.
@@ -610,16 +611,10 @@ class HelpGenerator:
     return buffer_.join ""
 
 
-global-print_ str/string:
-  print str
-
-class ExampleUi_ implements Ui:
+class ExampleUi_ extends ConsoleUi:
   example_/string
 
   constructor .example_:
-
-  print str/string:
-    global-print_ str
 
   abort:
     throw "Error in example: $example_"

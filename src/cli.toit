@@ -7,16 +7,9 @@ import uuid
 import .parser_
 import .utils_
 import .help-generator_
+import .ui
 
-/**
-When the arg-parser needs to report an error, or write a help message, it
-  uses this interface.
-
-The $abort function either calls $exit or throws an exception.
-*/
-interface Ui:
-  print str/string
-  abort -> none
+export Ui
 
 /**
 A command.
@@ -179,7 +172,7 @@ class Command:
 
   The default $ui prints to stdout and calls `exit 1` when $Ui.abort is called.
   */
-  run arguments/List --invoked-command=program-name --ui/Ui=Ui_ -> none:
+  run arguments/List --invoked-command=program-name --ui/Ui=ConsoleUi -> none:
     parser := Parser_ --ui=ui --invoked-command=invoked-command
     parsed := parser.parse this arguments
     parsed.command.run-callback_.call parsed
@@ -841,9 +834,3 @@ class Parsed:
     buffer := []
     options_.do: | name value | buffer.add "$name=$value"
     return buffer.join " "
-
-global-print_ str/string: print str
-
-class Ui_ implements Ui:
-  print str/string: global-print_ str
-  abort: exit 1
