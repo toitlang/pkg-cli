@@ -54,7 +54,7 @@ create-ui-from-args_ args/List:
     return ConsoleUi --level=level
 
 interface Printer:
-  emit o/any --title/string?=null --header/Map?=null
+  emit object/any --title/string?=null --header/Map?=null
   emit-structured [--json] [--stdout]
 
 abstract class PrinterBase implements Printer:
@@ -63,11 +63,11 @@ abstract class PrinterBase implements Printer:
 
   abstract needs-structured_ -> bool
   abstract print_ str/string
-  abstract handle-structured_ o/any
+  abstract handle-structured_ object/any
 
-  emit o/any --title/string?=null --header/Map?=null:
+  emit object/any --title/string?=null --header/Map?=null:
     if needs-structured_:
-      handle-structured_ o
+      handle-structured_ object
       return
 
     // Prints the prefix on a line. Typically something like 'Warning: ' or 'Error: '.
@@ -84,21 +84,21 @@ abstract class PrinterBase implements Printer:
         print_ "$title:"
         indentation = "  "
 
-    if o is List and header:
+    if object is List and header:
       // A table.
       print-prefix-on-line.call
-      emit-table_ --title=title --header=header (o as List)
-    else if o is List:
+      emit-table_ --title=title --header=header (object as List)
+    else if object is List:
       print-prefix-on-line.call
       print-title-on-line.call
-      emit-list_ (o as List) --indentation=indentation
-    else if o is Map:
+      emit-list_ (object as List) --indentation=indentation
+    else if object is Map:
       print-prefix-on-line.call
       print-title-on-line.call
-      emit-map_ (o as Map) --indentation=indentation
+      emit-map_ (object as Map) --indentation=indentation
     else:
       // Convert to string.
-      msg := "$o"
+      msg := "$object"
       if title:
         msg = "$title: $msg"
       if prefix_:
@@ -141,10 +141,10 @@ abstract class PrinterBase implements Printer:
         entry/string := "$row[key]"
         column-sizes.update key: | old/int | max old (entry.size --runes)
 
-    pad := : | o/Map |
+    pad := : | object/Map |
       padded-row := []
       column-sizes.do: | key size |
-        entry := "$o[key]"
+        entry := "$object[key]"
         // TODO(florian): allow alignment.
         padded := entry + " " * (size - (entry.size --runes))
         padded-row.add padded
@@ -210,43 +210,43 @@ abstract class Ui:
       error "Invalid level: $level"
     generator.call (printer_ --kind=kind)
 
-  /** Emits the given object $o at a debug-level. */
-  debug o/any --title/string?=null --header/Map?=null:
-    do --kind=DEBUG: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object at a debug-level. */
+  debug object/any --title/string?=null --header/Map?=null:
+    do --kind=DEBUG: | printer/Printer | printer.emit object --title=title --header=header
 
-  /** Emits the given object $o at a verbose-level. */
-  verbose o/any --title/string?=null --header/Map?=null:
-    do --kind=VERBOSE: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object at a verbose-level. */
+  verbose object/any --title/string?=null --header/Map?=null:
+    do --kind=VERBOSE: | printer/Printer | printer.emit object --title=title --header=header
 
-  /** Emits the given object $o at an info-level. */
-  info o/any --title/string?=null --header/Map?=null:
-    do --kind=INFO: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object at an info-level. */
+  info object/any --title/string?=null --header/Map?=null:
+    do --kind=INFO: | printer/Printer | printer.emit object --title=title --header=header
 
   /** Alias for $info. */
-  print o/any: info o
+  print object/any: info object
 
-  /** Emits the given object $o at a warning-level. */
-  warning o/any --title/string?=null --header/Map?=null:
-    do --kind=WARNING: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object at a warning-level. */
+  warning object/any --title/string?=null --header/Map?=null:
+    do --kind=WARNING: | printer/Printer | printer.emit object --title=title --header=header
 
-  /** Emits the given object $o at an interactive-level. */
-  interactive o/any --title/string?=null --header/Map?=null:
-    do --kind=INTERACTIVE: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object at an interactive-level. */
+  interactive object/any --title/string?=null --header/Map?=null:
+    do --kind=INTERACTIVE: | printer/Printer | printer.emit object --title=title --header=header
 
-  /** Emits the given object $o at an error-level. */
-  error o/any --title/string?=null --header/Map?=null:
-    do --kind=ERROR: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object at an error-level. */
+  error object/any --title/string?=null --header/Map?=null:
+    do --kind=ERROR: | printer/Printer | printer.emit object --title=title --header=header
 
-  /** Emits the given object $o as result. */
-  result o/any --title/string?=null --header/Map?=null:
-    do --kind=RESULT: | printer/Printer | printer.emit o --title=title --header=header
+  /** Emits the given $object as result. */
+  result object/any --title/string?=null --header/Map?=null:
+    do --kind=RESULT: | printer/Printer | printer.emit object --title=title --header=header
 
   /**
   Aborts the program with the given error message.
-  First emits $o at an error-level, then calls $abort.
+  First emits $object at an error-level, then calls $abort.
   */
-  abort o/any --title/string?=null --header/Map?=null:
-    do --kind=ERROR: | printer/Printer | printer.emit o --title=title --header=header
+  abort object/any --title/string?=null --header/Map?=null:
+    do --kind=ERROR: | printer/Printer | printer.emit object --title=title --header=header
     abort
 
   printer_ --kind/int -> Printer:
