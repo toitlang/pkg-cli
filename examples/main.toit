@@ -103,15 +103,13 @@ fleet-status app/cli.App parsed/cli.Parsed:
   max-lines := parsed["max-lines"]
   verbose := app.ui.level >= cli.Ui.VERBOSE-LEVEL
 
-  app.ui.do --kind=cli.Ui.RESULT: | printer/cli.Printer |
-    printer.emit-structured
-        --json=:
-          {
-            "some": "json",
-            "info": "about the status",
-          }
-        --stdout=:
-          printer.emit "Printing max $max-lines of status. (verbose: $(verbose ? "yes" : "no"))"
+  app.ui.emit
+      --structured=: {
+          "some": "json",
+          "info": "about the status",
+        }
+      --text=:
+        "Printing max $max-lines of status. (verbose: $(verbose ? "yes" : "no"))"
 
 
 // ============= Could be in a separate file device.toit. =============

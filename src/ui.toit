@@ -49,67 +49,82 @@ create-ui-from-args_ args/List:
   else: level = Ui.NORMAL-LEVEL
 
   if output-format == "json":
-    return JsonUi --level=level
+    return Ui.json --level=level
   else:
-    return ConsoleUi --level=level
+    return Ui.console --level=level
 
 interface Printer:
-  emit object/any --title/string?=null --header/Map?=null
-  emit-structured [--json] [--stdout]
+  /** Emits the given $msg of the given message-$kind. */
+  emit --kind/int msg/string
+  /**
+  Emits the given $list of the given message-$kind.
+
+  This method is only called if the printer does not request a structured
+    representation.
+  */
+  emit-list --kind/int list/List --title/string?
+  /**
+  Emits the given $table of the given message-$kind.
+
+  This method is only called if the printer does not request a structured
+    representation.
+  */
+  emit-table --kind/int table/List --title/string? --header/Map?
+  /**
+  Emits the given $map of the given message-$kind.
+
+  This method is only called if the printer does not request a structured
+    representation.
+  */
+  emit-map --kind/int map/Map --title/string?
+
+  /** Whether the printer wants a structured representation for the given $kind. */
+  needs-structured --kind/int -> bool
+  /** Emits the given $json-object of the given message-$kind. */
+  emit-structured --kind/int json-object/any
+
 
 abstract class PrinterBase implements Printer:
-  prefix_/string? := ?
-  constructor .prefix_:
 
-  abstract needs-structured_ -> bool
+  abstract needs-structured --kind/int -> bool
+  abstract emit-structured --kind/int object/any
+
   abstract print_ str/string
-  abstract handle-structured_ object/any
 
-  emit object/any --title/string?=null --header/Map?=null:
-    if needs-structured_:
-      handle-structured_ object
-      return
+  emit --kind/int msg/string:
+    prefix := ""
+    if kind == Ui.ERROR:
+      prefix = "Error: "
+    else if kind == Ui.WARNING:
+      prefix = "Warning: "
+    print_ "$prefix$msg"
 
-    // Prints the prefix on a line. Typically something like 'Warning: ' or 'Error: '.
-    print-prefix-on-line := :
-      if prefix_:
-        print_ prefix_
-        prefix_ = null
+  print-prefix_ --kind/int --title/string? -> string:
+    prefix := ""
+    if kind == Ui.ERROR:
+      prefix = "Error:"
+    else if kind == Ui.WARNING:
+      prefix = "Warning:"
 
-    indentation := ""
-    // Local block that prints the title, if any on one line, and
-    // adjusts the indentation.
-    print-title-on-line := :
-      if title:
-        print_ "$title:"
-        indentation = "  "
+    if title:
+      if prefix != "": prefix = "$prefix $title:"
+      else: prefix = "$title:"
 
-    if object is List and header:
-      // A table.
-      print-prefix-on-line.call
-      emit-table_ --title=title --header=header (object as List)
-    else if object is List:
-      print-prefix-on-line.call
-      print-title-on-line.call
-      emit-list_ (object as List) --indentation=indentation
-    else if object is Map:
-      print-prefix-on-line.call
-      print-title-on-line.call
-      emit-map_ (object as Map) --indentation=indentation
-    else:
-      // Convert to string.
-      msg := "$object"
-      if title:
-        msg = "$title: $msg"
-      if prefix_:
-        msg = "$prefix_$msg"
-        prefix_ = null
-      print_ msg
+    if prefix != "":
+      print_ prefix
+      return "  "
 
-  emit-list_ list/List --indentation/string:
+    return ""
+
+  emit-list --kind/int list/List --title/string?:
+    indentation := print-prefix_ --kind=kind --title=title
     list.do:
       // TODO(florian): should the entries be recursively pretty-printed?
       print_ "$indentation$it"
+
+  emit-map --kind/int map/Map --title/string?:
+    indentation := print-prefix_ --kind=kind --title=title
+    emit-map_ map --indentation=indentation
 
   emit-map_ map/Map --indentation/string:
     map.do: | key value |
@@ -120,18 +135,9 @@ abstract class PrinterBase implements Printer:
         // TODO(florian): should the entries handle lists as well.
         print_ "$indentation$key: $value"
 
-  emit-table_ --title/string?=null --header/Map table/List:
-    if needs-structured_:
-      handle-structured_ table
-      return
-
-    if prefix_:
-      print_ prefix_
-      prefix_ = null
-
-    // TODO(florian): make this look nicer.
-    if title:
-      print_ "$title:"
+  emit-table --kind/int table/List --title/string?=null --header/Map:
+    // Ignore the recommended indentation.
+    print-prefix_ --kind=kind --title=title
 
     column-count := header.size
     column-sizes := header.map: | _ header-string/string | header-string.size --runes
@@ -163,19 +169,12 @@ abstract class PrinterBase implements Printer:
       print_ "│ $(padded-row.join "   ") │"
     print_ "└─$(bars.join "─┴─")─┘"
 
-  emit-structured [--json] [--stdout]:
-    if needs-structured_:
-      handle-structured_ json.call
-      return
-
-    stdout.call this
-
 /**
 A class for handling input/output from the user.
 
 The Ui class is used to display text to the user and to get input from the user.
 */
-abstract class Ui:
+class Ui:
   static DEBUG ::= 0
   static VERBOSE ::= 1
   static INFO ::= 2
@@ -191,11 +190,66 @@ abstract class Ui:
   static SILENT-LEVEL ::= -5
 
   level/int
-  constructor --.level/int:
+  printer_/Printer
+
+  constructor --.level=NORMAL-LEVEL --printer/Printer:
+    printer_ = printer
     if not DEBUG-LEVEL >= level >= SILENT-LEVEL:
       error "Invalid level: $level"
 
-  do --kind/int=Ui.INFO [generator] -> none:
+  constructor.console --level/int=NORMAL-LEVEL:
+    return Ui --level=level --printer=ConsolePrinter
+
+  constructor.json --level/int=NORMAL-LEVEL:
+    return Ui --level=level --printer=JsonPrinter
+
+  /**
+  Emits the given $object using the $INFO kind.
+
+  If the printer requests a structured object, the $object is provided as is.
+    As such, the object must be a valid JSON object.
+  Otherwise, the $object is converted to a string.
+  */
+  info object/any:
+    emit --kind=INFO --structured=: object
+
+  /** Alias for $info. */
+  print object/any:
+    info object
+
+  /** Variant of $info using the $DEBUG kind. */
+  debug object/any:
+    emit --kind=DEBUG --structured=: "$object"
+
+  /** Variant of $info using the $VERBOSE kind. */
+  verbose object/any:
+    emit --kind=VERBOSE --structured=: "$object"
+
+  /** Emits the given $object at a warning-level as a string. */
+  warning object/any:
+    emit --kind=WARNING --structured=: "$object"
+
+  /** Emits the given $object at an interactive-level as a string. */
+  interactive object/any:
+    emit --kind=INTERACTIVE --structured=: "$object"
+
+  /** Emits the given $object at an error-level as a string. */
+  error object/any:
+    emit --kind=ERROR --structured=: "$object"
+
+  /** Emits the given $object at a result-level as a string. */
+  result object/any:
+    emit --kind=RESULT --structured=: "$object"
+
+  /**
+  Aborts the program with the given error message.
+  First emits $object at an error-level as as tring, then calls $abort.
+  */
+  abort object/any:
+    error object
+    abort
+
+  do_ --kind/int [generator] -> none:
     if level == DEBUG-LEVEL:
       // Always triggers.
     else if level == VERBOSE-LEVEL:
@@ -208,54 +262,81 @@ abstract class Ui:
       if kind < RESULT: return
     else:
       error "Invalid level: $level"
-    generator.call (printer_ --kind=kind)
-
-  /** Emits the given $object at a debug-level. */
-  debug object/any --title/string?=null --header/Map?=null:
-    do --kind=DEBUG: | printer/Printer | printer.emit object --title=title --header=header
-
-  /** Emits the given $object at a verbose-level. */
-  verbose object/any --title/string?=null --header/Map?=null:
-    do --kind=VERBOSE: | printer/Printer | printer.emit object --title=title --header=header
-
-  /** Emits the given $object at an info-level. */
-  info object/any --title/string?=null --header/Map?=null:
-    do --kind=INFO: | printer/Printer | printer.emit object --title=title --header=header
-
-  /** Alias for $info. */
-  print object/any: info object
-
-  /** Emits the given $object at a warning-level. */
-  warning object/any --title/string?=null --header/Map?=null:
-    do --kind=WARNING: | printer/Printer | printer.emit object --title=title --header=header
-
-  /** Emits the given $object at an interactive-level. */
-  interactive object/any --title/string?=null --header/Map?=null:
-    do --kind=INTERACTIVE: | printer/Printer | printer.emit object --title=title --header=header
-
-  /** Emits the given $object at an error-level. */
-  error object/any --title/string?=null --header/Map?=null:
-    do --kind=ERROR: | printer/Printer | printer.emit object --title=title --header=header
-
-  /** Emits the given $object as result. */
-  result object/any --title/string?=null --header/Map?=null:
-    do --kind=RESULT: | printer/Printer | printer.emit object --title=title --header=header
+    generator.call
 
   /**
-  Aborts the program with the given error message.
-  First emits $object at an error-level, then calls $abort.
-  */
-  abort object/any --title/string?=null --header/Map?=null:
-    do --kind=ERROR: | printer/Printer | printer.emit object --title=title --header=header
-    abort
+  Emits a table.
 
-  printer_ --kind/int -> Printer:
-    prefix/string? := null
-    if kind == Ui.WARNING:
-      prefix = "Warning: "
-    else if kind == Ui.ERROR:
-      prefix = "Error: "
-    return create-printer_ prefix kind
+  A table is a list of maps. Each map represents a row in the table. The keys
+    of the map are the column names. The values are the entries in the table.
+
+  The $title may be used to create a title string. Printers are *not* required
+    to display the title.
+
+  The $header map may used to create a header row. The keys of the map are the
+    key entries into the $table. The values are used in the header row. Printers
+    are *not* required to use the $header.
+  */
+  emit-table --kind/int=RESULT table/List --title/string?=null --header/Map?=null:
+    do_ --kind=kind:
+      if printer_.needs-structured --kind=kind:
+        printer_.emit-structured --kind=kind table
+      else:
+        printer_.emit-table --kind=kind --title=title --header=header table
+
+  /**
+  Emits a list.
+
+  Printers are *not* required to display the title.
+  */
+  emit-list --kind/int=RESULT list/List --title/string?=null:
+    do_ --kind=kind:
+      if printer_.needs-structured --kind=kind:
+        printer_.emit-structured --kind=kind list
+      else:
+        printer_.emit-list --kind=kind --title=title list
+
+  /**
+  Emits a map.
+
+  Printers are *not* required to display the title.
+  */
+  emit-map --kind/int=RESULT map/Map --title/string?=null:
+    do_ --kind=kind:
+      if printer_.needs-structured --kind=kind:
+        printer_.emit-structured --kind=kind map
+      else:
+        printer_.emit-map --kind=kind --title=title map
+
+  /**
+  Emits the value created by calling $structured or $text.
+
+  If the UI's printer requests a structured representation calls the $structured block and
+    passes the result to the printer.
+
+  If the printer does not request a structured representation calls the $text block and
+    passes the result as string to the printer.
+  */
+  emit --kind/int=RESULT [--structured] [--text]:
+    do_ --kind=kind:
+      if printer_.needs-structured --kind=kind:
+        printer_.emit-structured --kind=kind structured.call
+      else:
+        printer_.emit --kind=kind "$text.call"
+
+  /**
+  Variant of $(emit --kind [--structured] [--text]).
+
+  If the printer needs a non-structred representation, simply converts the
+    result of the $structured block to a string.
+  */
+  emit --kind/int=RESULT [--structured]:
+    do_ --kind=kind:
+      if printer_.needs-structured --kind=kind:
+        printer_.emit-structured --kind=kind structured.call
+      else:
+        global-print_ "calling 'emit'"
+        printer_.emit --kind=kind "$(structured.call)"
 
   /**
   Aborts the program with the given error message.
@@ -267,15 +348,6 @@ abstract class Ui:
   abort -> none:
     exit 1
 
-  /**
-  Creates a new printer for the given $kind.
-
-  # Inheritance
-  Customization generally happens at this level, by providing different
-    implementations of the $Printer class.
-  */
-  abstract create-printer_ prefix/string? kind/int -> Printer
-
 /**
 Prints the given $str using $print.
 
@@ -286,42 +358,19 @@ global-print_ str/string:
   print str
 
 class ConsolePrinter extends PrinterBase:
-  constructor prefix/string?:
-    super prefix
-
-  needs-structured_: return false
+  needs-structured --kind/int -> bool: return false
 
   print_ str/string:
     global-print_ str
 
-  handle-structured_ structured:
+  emit-structured --kind/int object/any:
     unreachable
 
-class ConsoleUi extends Ui:
-
-  constructor --level/int=Ui.NORMAL-LEVEL:
-    super --level=level
-
-  create-printer_ prefix/string? kind/int -> Printer:
-    return ConsolePrinter prefix
-
 class JsonPrinter extends PrinterBase:
-  kind_/int
-
-  constructor prefix/string? .kind_:
-    super prefix
-
-  needs-structured_: return kind_ == Ui.RESULT
+  needs-structured --kind/int -> bool: return kind == Ui.RESULT
 
   print_ str/string:
     print-on-stderr_ str
 
-  handle-structured_ structured:
-    global-print_ (json.stringify structured)
-
-class JsonUi extends Ui:
-  constructor --level/int=Ui.QUIET-LEVEL:
-    super --level=level
-
-  create-printer_ prefix/string? kind/int -> Printer:
-    return JsonPrinter prefix kind
+  emit-structured --kind/int object/any:
+    global-print_ (json.stringify object)
