@@ -4,12 +4,40 @@
 
 import uuid
 
+import .cache
+import .config
 import .parser_
 import .utils_
 import .help-generator_
 import .ui
 
 export Ui
+
+/**
+An object giving access to common operations for CLI programs.
+*/
+class App:
+  /**
+  The name of the application.
+
+  Used to find configurations and caches.
+  */
+  name/string
+
+  cache_/Cache? := null
+  config_/Config? := null
+
+  ui/Ui
+
+  constructor.private_ .name --.ui:
+
+  cache -> Cache:
+    if not cache_: cache_ = Cache --app-name=name
+    return cache_
+
+  config -> Config:
+    if not config_: config_ = Config --app-name=name
+    return config_
 
 /**
 A command.
@@ -19,7 +47,7 @@ The main program is a command, and so are all subcommands.
 class Command:
   /**
   The name of the command.
-  The name of the root command is usually ignored (and replaced by the executable name).
+  The name of the root command is used as application name for the $App.
   */
   name/string
 
@@ -43,7 +71,7 @@ class Command:
   aliases_/List
 
   /** Options to the command. */
-  options_/List
+  options_/List := ?
 
   /** The rest arguments. */
   rest_/List
@@ -75,6 +103,10 @@ class Command:
   The $help is a longer description of the command that can span multiple lines. Use
     indented lines to continue paragraphs (just like toitdoc). The first paragraph of the
     $help is used as short help, and should have meaningful content on its own.
+
+  The $run callback is invoked when the command is executed. It is given the $App and the
+    $Parsed object. If $run is null, then at least one subcommand must be added to this
+    command.
   */
   constructor name --usage/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
@@ -170,12 +202,58 @@ class Command:
   The $invoked-command is used only for the usage message in case of an
     error. It defaults to $program-name.
 
-  The default $ui prints to stdout and calls `exit 1` when $Ui.abort is called.
+  If no UI is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
+    `--output-format` to create the appropriate UI object. If a $ui is given, then these
+    arguments are ignored.
+
+  The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
+    in the help output. By default it is active if no $ui is provided.
   */
-  run arguments/List --invoked-command=program-name --ui/Ui=ConsoleUi -> none:
-    parser := Parser_ --ui=ui --invoked-command=invoked-command
+  run arguments/List --invoked-command=program-name --ui/Ui?=null --add-ui-help/bool=(not ui) -> none:
+    if not ui: ui = create-ui-from-args_ arguments
+    if add-ui-help:
+      add-ui-options_
+    app := App.private_ name --ui=ui
+    parser := Parser_ --invoked-command=invoked-command
     parsed := parser.parse this arguments
-    parsed.command.run-callback_.call parsed
+    parsed.command.run-callback_.call app parsed
+
+  add-ui-options_:
+    has-output-format-option := false
+    has-verbose-flag := false
+    has-verbosity-level-option := false
+
+    options_.do: | option/Option |
+      if option.name == "output-format": has-output-format-option = true
+      if option.name == "verbose": has-verbose-flag = true
+      if option.name == "verbosity-level": has-verbosity-level-option = true
+
+    is-copied := false
+    if not has-output-format-option:
+      options_ = options_.copy
+      is-copied = true
+      option := OptionEnum "output-format"
+        ["text", "json"]
+        --help="Specify the format used when printing to the console."
+        --default="text"
+      options_.add option
+    if not has-verbose-flag:
+      if not is-copied:
+        options_ = options_.copy
+        is-copied = true
+      option := Flag "verbose"
+        --help="Enable verbose output. Shorthand for --verbosity-level=verbose."
+        --default=false
+      options_.add option
+    if not has-verbosity-level-option:
+      if not is-copied:
+        options_ = options_.copy
+        is-copied = true
+      option := OptionEnum "verbosity-level"
+        ["debug", "info", "verbose", "quiet", "silent"]
+        --help="Specify the verbosity level."
+        --default="info"
+      options_.add option
 
   /**
   Checks this command and all subcommands for errors.

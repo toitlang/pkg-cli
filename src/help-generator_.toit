@@ -28,8 +28,7 @@ help-command_ path/List arguments/List --invoked-command/string --ui/Ui:
 
     subcommand := command.find-subcommand_ argument
     if not subcommand:
-      ui.print "Unknown command: $argument"
-      ui.abort
+      ui.abort "Unknown command: $argument"
       unreachable
     command = subcommand
     path.add command
@@ -393,8 +392,12 @@ class HelpGenerator:
 
     // Parse it, to verify that it actually is valid.
     // We are also using the result to reorder the options.
-    parser := Parser_ --ui=(ExampleUi_ arguments-line) --invoked-command="root" --no-usage-on-error
-    parsed := parser.parse example-path.first command-line --for-help-example
+    parser := Parser_ --invoked-command="root" --for-help-example
+    parsed/Parsed? := null
+    exception := catch:
+      parsed = parser.parse example-path.first command-line
+    if exception:
+      throw "Error in example '$arguments-line': $exception"
 
     parsed-path := parsed.path
 
@@ -609,12 +612,3 @@ class HelpGenerator:
 
   to-string -> string:
     return buffer_.join ""
-
-
-class ExampleUi_ extends ConsoleUi:
-  example_/string
-
-  constructor .example_:
-
-  abort:
-    throw "Error in example: $example_"
