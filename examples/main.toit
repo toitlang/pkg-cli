@@ -88,7 +88,7 @@ main arguments:
 
 create-status-command -> cli.Command:
   return cli.Command "status"
-      --help="Shows the status of the fleet:"
+      --help="Shows the status of the fleet."
       --options=[
         cli.OptionInt "max-lines" --help="Maximum number of lines to show." --default=10,
       ]
