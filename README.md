@@ -11,7 +11,7 @@ It provides:
 * Command aliases
 * Functionality to cache data between runs
 * Functionality to store configurations
-* A UI class to support output at different verbosity levels and different output formats.
+* A UI class to support output at different verbosity levels and different output formats
 
 ## Command
 
