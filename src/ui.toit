@@ -80,9 +80,9 @@ interface Printer:
 
   /** Whether the printer wants a structured representation for the given $kind. */
   needs-structured --kind/int -> bool
+
   /** Emits the given $json-object of the given message-$kind. */
   emit-structured --kind/int json-object/any
-
 
 abstract class PrinterBase implements Printer:
 
