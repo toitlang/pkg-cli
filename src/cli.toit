@@ -16,7 +16,7 @@ export Ui
 /**
 An object giving access to common operations for CLI programs.
 */
-class App:
+class Application:
   /**
   The name of the application.
 
@@ -47,7 +47,7 @@ The main program is a command, and so are all subcommands.
 class Command:
   /**
   The name of the command.
-  The name of the root command is used as application name for the $App.
+  The name of the root command is used as application name for the $Application.
   */
   name/string
 
@@ -104,7 +104,7 @@ class Command:
     indented lines to continue paragraphs (just like toitdoc). The first paragraph of the
     $help is used as short help, and should have meaningful content on its own.
 
-  The $run callback is invoked when the command is executed. It is given the $App and the
+  The $run callback is invoked when the command is executed. It is given the $Application and the
     $Parsed object. If $run is null, then at least one subcommand must be added to this
     command.
   */
@@ -213,7 +213,7 @@ class Command:
     if not ui: ui = create-ui-from-args_ arguments
     if add-ui-help:
       add-ui-options_
-    app := App.private_ name --ui=ui
+    app := Application.private_ name --ui=ui
     parser := Parser_ --invoked-command=invoked-command
     parsed := parser.parse this arguments
     parsed.command.run-callback_.call app parsed

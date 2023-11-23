@@ -6,7 +6,7 @@ import cli
 import cli.cache as cli
 import host.file
 
-store-bytes app/cli.App:
+store-bytes app/cli.Application:
   cache := app.cache
 
   data := cache.get "my-key": | store/cli.FileStore |
@@ -16,7 +16,7 @@ store-bytes app/cli.App:
 
   print data  // Prints #[0x01, 0x02, 0x03].
 
-store-from-file app/cli.App:
+store-from-file app/cli.Application:
   cache := app.cache
 
   data := cache.get "my-file-key": | store/cli.FileStore |
@@ -32,7 +32,7 @@ store-from-file app/cli.App:
 
 main args:
   cmd := cli.Command "my-app"
-      --run=:: | app/cli.App parsed/cli.Parsed |
+      --run=:: | app/cli.Application parsed/cli.Parsed |
         print "Data is cached in $app.cache.path"
         store-bytes app
         store-from-file app

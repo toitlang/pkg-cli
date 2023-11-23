@@ -99,7 +99,7 @@ create-status-command -> cli.Command:
       ]
       --run=:: | app parsed | fleet-status app parsed
 
-fleet-status app/cli.App parsed/cli.Parsed:
+fleet-status app/cli.Application parsed/cli.Parsed:
   max-lines := parsed["max-lines"]
   verbose := app.ui.level >= cli.Ui.VERBOSE-LEVEL
 
@@ -135,7 +135,7 @@ create-device-command -> cli.Command:
   device-cmd.add create-upload-command
   return device-cmd
 
-with-device app/cli.App parsed/cli.Parsed [block]:
+with-device app/cli.Application parsed/cli.Parsed [block]:
   device := parsed["device"]
   if not device:
     device = app.config.get "default-device"
@@ -166,7 +166,7 @@ create-upload-command -> cli.Command:
       ]
       --run=:: | app parsed | upload-to-device app parsed
 
-upload-to-device app/cli.App parsed/cli.Parsed:
+upload-to-device app/cli.Application parsed/cli.Parsed:
   data := parsed["data"]
 
   with-device app parsed: | device |
@@ -198,7 +198,7 @@ create-reset-command -> cli.Command:
       ]
       --run=:: | app parsed | reset-device app parsed
 
-reset-device app/cli.App parsed/cli.Parsed:
+reset-device app/cli.Application parsed/cli.Parsed:
   mode := parsed["mode"]
   force := parsed["force"]
 
