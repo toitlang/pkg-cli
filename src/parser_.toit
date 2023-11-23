@@ -8,18 +8,9 @@ import .ui
 import .utils_
 import host.pipe
 
-class StderrUi_ extends Ui:
-  constructor:
-    super --level=Ui.NORMAL-LEVEL
-  create-printer_ prefix/string? kind/int -> Printer:
-    return StderrPrinter_ prefix
-
 class StderrPrinter_ extends PrinterBase:
-  constructor prefix/string?:
-    super prefix
-
-  needs-structured_: return false
-  handle-structured_ o: unreachable
+  needs-structured --kind/int -> bool: return false
+  emit-structured --kind/int o/any: unreachable
   print_ o:
     pipe.stderr.write "$o\n"
 
@@ -45,7 +36,7 @@ class Parser_:
     // If there is a test-ui_ use it.
     // Otherwise, ignore the ui that was determined through the command line and
     // print the usage on stderr, followed by an exit 1.
-    ui := test-ui_ or StderrUi_
+    ui := test-ui_ or (Ui --level=Ui.QUIET-LEVEL --printer=StderrPrinter_)
     ui.error str
     help-command_ path [] --invoked-command=invoked-command_ --ui=ui
     ui.abort

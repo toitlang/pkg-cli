@@ -41,17 +41,17 @@ Emits the help for the given command.
 The command is identified by the $path where the command is the last element.
 */
 emit-help_ path/List --invoked-command/string --ui/Ui:
-  ui.do --kind=Ui.RESULT: | printer/Printer |
-    printer.emit-structured
-        --json=: build-json-help_ path --invoked-command=invoked-command
-        --stdout=:
-          generator := HelpGenerator path --invoked-command=invoked-command
-          generator.build-all
-          help := generator.to-string
-          printer.emit help
+  ui.emit --kind=Ui.RESULT
+      --structured=:
+        build-json-help_ path --invoked-command=invoked-command
+      --text=:
+        generator := HelpGenerator path --invoked-command=invoked-command
+        generator.build-all
+        generator.to-string
 
 build-json-help_ path/List --invoked-command/string -> Map:
-
+  // Local block to build json objects for the given command.
+  // Adds the converted json object to the out-map.
   extract-options := : | command/Command out-map/Map |
     options := command.options_.filter: | option/Option | not option.is-hidden
     command.options_.do: | option/Option |

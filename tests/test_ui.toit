@@ -10,27 +10,25 @@ class TestUi extends cli.Ui:
   messages := []
 
   constructor --level/int=cli.Ui.NORMAL-LEVEL:
-    super --level=level
+    printer := TestPrinter
+    super --level=level --printer=printer
+    printer.ui_ = this
     cli-parser.test-ui_ = this
-
-  create-printer_ prefix/string? kind/int -> cli.Printer:
-    return TestPrinter this prefix
 
   abort:
     throw "abort"
 
 class TestPrinter extends cli.PrinterBase:
-  ui_/TestUi
+  ui_/TestUi? := null
 
-  constructor .ui_ prefix/string?:
-    super prefix
+  constructor:
 
-  needs-structured_: return false
+  needs-structured --kind/int -> bool: return false
 
   print_ str/string:
     ui_.messages.add str
 
-  handle-structured_ structured:
+  emit-structured --kind/int structured/any:
     unreachable
 
 expect-abort expected/string [block]:
