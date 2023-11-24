@@ -5,7 +5,7 @@
 import cli
 import cli.config as cli
 
-config-example app/cli.App:
+config-example app/cli.Application:
   config := app.config
 
   print "old value: $(config.get "my-key")"
@@ -13,7 +13,7 @@ config-example app/cli.App:
   config["my-key"] = "my-value"
   config.write
 
-dotted-example app/cli.App:
+dotted-example app/cli.Application:
   config := app.config
 
   print "old value: $(config.get "super-key.sub-key")"
@@ -23,7 +23,7 @@ dotted-example app/cli.App:
 
 main args:
   cmd := cli.Command "my-app"
-      --run=:: | app/cli.App parsed/cli.Parsed |
+      --run=:: | app/cli.Application parsed/cli.Parsed |
         print "Configuration is stored in $app.config.path"
         config-example app
         dotted-example app

@@ -6,7 +6,7 @@ import cli
 import cli.cache as cli
 import host.file
 
-store-directory app/cli.App:
+store-directory app/cli.Application:
   cache := app.cache
 
   directory := cache.get-directory-path "my-dir-key": | store/cli.DirectoryStore |
@@ -23,7 +23,7 @@ store-directory app/cli.App:
 
 main args:
   cmd := cli.Command "my-app"
-      --run=:: | app/cli.App parsed/cli.Parsed |
+      --run=:: | app/cli.Application parsed/cli.Parsed |
         print "Data is cached in $app.cache.path"
         store-directory app
 

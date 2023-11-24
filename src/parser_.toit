@@ -65,7 +65,7 @@ class Parser_:
       seen-options.add option.name
 
     create-help := : | arguments/List |
-      help-command := Command "help" --run=:: | app/App _ |
+      help-command := Command "help" --run=:: | app/Application _ |
         help-command_ path arguments --invoked-command=invoked-command_ --ui=app.ui
       Parsed.private_ [help-command] {:} {}
 

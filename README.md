@@ -49,7 +49,7 @@ main args/List:
       cli.Example "Do something with the flag:"
           --arguments="--some-option=foo --no-some-flag rest1 rest1",
     ]
-    --run=:: | app/cli.App parsed/cli.Parsed |
+    --run=:: | app/cli.Application parsed/cli.Parsed |
       print parsed["some-option"]
       print parsed["some-flag"]
       print parsed["rest-arg"]  // A list.
@@ -86,7 +86,7 @@ main args/List:
 
   sub := cli.Command "subcommand"
     --help="This is a subcommand."
-    --run=:: | app/cli.App parsed/cli.Parsed |
+    --run=:: | app/cli.Application parsed/cli.Parsed |
       print "This is a subcommand."
   command.add sub
 
@@ -117,13 +117,13 @@ of the library for a complete list.
 
 Users are encouraged to extend the `cli.Option` class and create their own typed options.
 
-## App
+## Application
 
 A call to `command.run` parses the given arguments and then executes the
-appropriate lambda. The lambda receives two arguments: an `App` object and a
+appropriate lambda. The lambda receives two arguments: an `Application` object and a
 `Parsed` object.
 
-The `App` object contains getters for the cache, config, and UI objects.
+The `Application` object contains getters for the cache, config, and UI objects.
 
 ### Cache
 
@@ -142,7 +142,7 @@ The cache can store bytes. For example:
 import cli
 import cli.cache as cli
 
-store-bytes app/cli.App:
+store-bytes app/cli.Application:
   cache := app.cache
 
   data := cache.get "my-key": | store/cli.FileStore |
@@ -162,7 +162,7 @@ import cli
 import cli.cache as cli
 import host.file
 
-store-from-file app/cli.App:
+store-from-file app/cli.Application:
   cache := app.cache
 
   data := cache.get "my-file-key": | store/cli.FileStore |
@@ -187,7 +187,7 @@ directory in the cache structure. The cache class has the
 import cli
 import cli.cache as cli
 
-store-directory app/cli.App:
+store-directory app/cli.Application:
   cache := app.cache
 
   directory := cache.get-directory-path "my-dir-key": | store/cli.DirectoryStore |
@@ -219,7 +219,7 @@ When modifying a configuration it is necessary to `write` the changes back to di
 import cli
 import cli.config as cli
 
-config-example app/cli.App:
+config-example app/cli.Application:
   config := app.config
 
   print "old value: $(config.get "my-key")"
@@ -231,7 +231,7 @@ config-example app/cli.App:
 Keys are split at "." to allow for nested values. For example:
 
 ``` toit
-dotted-example app/cli.App:
+dotted-example app/cli.Application:
   config := app.config
 
   print "old value: $(config.get "super-key.sub-key")"
@@ -266,13 +266,13 @@ add the following options to the root command:
   --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
 ```
 
-A corresponding UI object is then available in the `App` object. Whenever the
+A corresponding UI object is then available in the `Application` object. Whenever the
 program wants to output something, it should use the `ui` object.
 
 ``` toit
 import cli
 
-some-chatty-method app/cli.App:
+some-chatty-method app/cli.Application:
   ui := app.ui
   ui.debug "This is a debug message."
   ui.verbose "This is a verbose message."
@@ -309,10 +309,10 @@ import cli.ui as cli
 main args:
   cmd := cli.Command "my-app"
     --help="My app does something."
-    --run=:: | app/cli.App parsed/cli.Parsed |
+    --run=:: | app/cli.Application parsed/cli.Parsed |
       run-app app parsed
 
-run-app app/cli.App parsed/cli.Parsed:
+run-app app/cli.Application parsed/cli.Parsed:
   ui := app.ui
   ui.emit
       // Block that is invoked if structured data is needed.
