@@ -374,7 +374,7 @@ abstract class Option:
       throw "Option can't be hidden and required."
 
   /** Deprecated. Use --help instead of '--short-help'. */
-  constructor.from-subclass .name --.short-name --short-help/string --required --hidden --multi --split-commas:
+  constructor.from-subclass .name --.short-name --short-help/string? --required --hidden --multi --split-commas:
     help = short-help
     name = to-kebab name
     is-required = required
