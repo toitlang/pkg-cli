@@ -1,5 +1,21 @@
+sdk: ^2.0.0-alpha.120
 prefixes:
   cli: ..
 packages:
   ..:
     path: ..
+    prefixes:
+      fs: pkg-fs
+      host: pkg-host
+  pkg-fs:
+    url: github.com/toitlang/pkg-fs
+    name: fs
+    version: 2.1.0
+    hash: ac3933367912563055ceea4188adcead3428103c
+    prefixes:
+      host: pkg-host
+  pkg-host:
+    url: github.com/toitlang/pkg-host
+    name: host
+    version: 1.12.0
+    hash: fe5e10c56abc3fca1ef9bcba415e77fd59183cab
