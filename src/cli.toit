@@ -3,6 +3,7 @@
 // found in the package's LICENSE file.
 
 import uuid
+import system
 
 import .cache
 import .config
@@ -182,13 +183,13 @@ class Command:
     subcommands_.add command
 
   /** Returns the help string of this command. */
-  help --invoked-command/string=program-name -> string:
+  help --invoked-command/string=system.program-name -> string:
     generator := HelpGenerator [this] --invoked-command=invoked-command
     generator.build-all
     return generator.to-string
 
   /** Returns the usage string of this command. */
-  usage --invoked-command/string=program-name -> string:
+  usage --invoked-command/string=system.program-name -> string:
     generator := HelpGenerator [this] --invoked-command=invoked-command
     generator.build-usage --as-section=false
     return generator.to-string
@@ -200,7 +201,7 @@ class Command:
     with the $Parsed output.
 
   The $invoked-command is used only for the usage message in case of an
-    error. It defaults to $program-name.
+    error. It defaults to $system.program-name.
 
   If no UI is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
     `--output-format` to create the appropriate UI object. If a $ui is given, then these
@@ -209,7 +210,7 @@ class Command:
   The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
     in the help output. By default it is active if no $ui is provided.
   */
-  run arguments/List --invoked-command=program-name --ui/Ui?=null --add-ui-help/bool=(not ui) -> none:
+  run arguments/List --invoked-command=system.program-name --ui/Ui?=null --add-ui-help/bool=(not ui) -> none:
     if not ui: ui = create-ui-from-args_ arguments
     if add-ui-help:
       add-ui-options_
@@ -258,7 +259,7 @@ class Command:
   /**
   Checks this command and all subcommands for errors.
   */
-  check --invoked-command=program-name:
+  check --invoked-command=system.program-name:
     check_ --path=[invoked-command]
 
   are-prefix-of-each-other_ str1/string str2/string -> bool:
