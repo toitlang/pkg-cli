@@ -3,6 +3,7 @@
 // found in the package's LICENSE file.
 
 import uuid
+import system
 
 import .parser_
 import .utils_
@@ -157,13 +158,13 @@ class Command:
     subcommands_.add command
 
   /** Returns the help string of this command. */
-  help --invoked-command/string=program-name -> string:
+  help --invoked-command/string=system.program-name -> string:
     generator := HelpGenerator [this] --invoked-command=invoked-command
     generator.build-all
     return generator.to-string
 
   /** Returns the usage string of this command. */
-  usage --invoked-command/string=program-name -> string:
+  usage --invoked-command/string=system.program-name -> string:
     generator := HelpGenerator [this] --invoked-command=invoked-command
     generator.build-usage --as-section=false
     return generator.to-string
@@ -175,11 +176,11 @@ class Command:
     with the $Parsed output.
 
   The $invoked-command is used only for the usage message in case of an
-    error. It defaults to $program-name.
+    error. It defaults to $system.program-name.
 
   The default $ui prints to stdout and calls `exit 1` when $Ui.abort is called.
   */
-  run arguments/List --invoked-command=program-name --ui/Ui=Ui_ -> none:
+  run arguments/List --invoked-command=system.program-name --ui/Ui=Ui_ -> none:
     parser := Parser_ --ui=ui --invoked-command=invoked-command
     parsed := parser.parse this arguments
     parsed.command.run-callback_.call parsed
@@ -187,7 +188,7 @@ class Command:
   /**
   Checks this command and all subcommands for errors.
   */
-  check --invoked-command=program-name:
+  check --invoked-command=system.program-name:
     check_ --path=[invoked-command]
 
   are-prefix-of-each-other_ str1/string str2/string -> bool:
