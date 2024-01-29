@@ -52,6 +52,7 @@ class Config:
   */
   constructor --app-name/string [--init]:
     app-name-upper := app-name.to-ascii-upper
+    app-name-upper = app-name-upper.replace --all "-" "_"
     env-path := os.env.get "$(app-name-upper)_CONFIG"
     if env-path:
       data := read-config-file_ env-path --if_absent=: init.call
