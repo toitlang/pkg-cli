@@ -46,6 +46,7 @@ class Cache:
   */
   constructor --app-name/string:
     app-name-upper := app-name.to-ascii-upper
+    app-name-upper = app-name-upper.replace --all "-" "_"
     env-path := os.env.get "$(app-name-upper)_CACHE_DIR"
     if env-path:
       return Cache --app-name=app-name --path=env-path
