@@ -56,7 +56,7 @@ test-combination:
     Two lines.
 
     Usage:
-      root [<options>] [--] <rest1:rest_type>
+      bin/app [<options>] [--] <rest1:rest_type>
 
     Options:
       -h, --help            Show help for this command.
@@ -67,11 +67,11 @@ test-combination:
 
     Examples:
       # Example 1:
-      root --option1 foo rest
+      app --option1 foo rest
     """
   check-output cmd-help: | ui/cli.Ui |
-    cmd.run ["--help"] --ui=ui --invoked-command="root"
-  expect-equals cmd-help (cmd.help --invoked-command="root")
+    cmd.run ["--help"] --ui=ui --invoked-command="bin/app"
+  expect-equals cmd-help (cmd.help --invoked-command="bin/app")
 
   sub := cli.Command "sub"
       --aliases=["sss"]
@@ -100,7 +100,7 @@ test-combination:
     Two lines.
 
     Usage:
-      root <command> [<options>]
+      bin/app <command> [<options>]
 
     Commands:
       help  Show help for a command.
@@ -112,21 +112,21 @@ test-combination:
 
     Examples:
       # Full example:
-      root --option1 root sub
+      app --option1 root sub
 
       # Sub Example 2:
-      root --option1 foo sub --option_sub1='xyz'
+      app --option1 foo sub --option_sub1='xyz'
     """
   check-output cmd-help: | ui/cli.Ui |
-    cmd.run ["--help"] --ui=ui --invoked-command="root"
+    cmd.run ["--help"] --ui=ui --invoked-command="bin/app"
 
-  expect-equals cmd-help (cmd.help --invoked-command="root")
+  expect-equals cmd-help (cmd.help --invoked-command="bin/app")
 
   sub-help := """
     Long sub.
 
     Usage:
-      root sub [<options>]
+      bin/app sub [<options>]
 
     Aliases:
       sss
@@ -141,18 +141,18 @@ test-combination:
 
     Examples:
       # Sub Example 1:
-      root sub
+      app sub
 
       # Sub Example 2:
-      root --option1 foo sub --option_sub1='xyz'
+      app --option1 foo sub --option_sub1='xyz'
     """
 
   check-output sub-help: | ui/cli.Ui |
-    cmd.run ["help", "sub"] --ui=ui --invoked-command="root"
+    cmd.run ["help", "sub"] --ui=ui --invoked-command="bin/app"
 
 test-usage:
   build-usage := : | path/List |
-    help := HelpGenerator path --invoked-command="root"
+    help := HelpGenerator path --invoked-command="bin/app"
     help.build-usage
     help.to-string
 
@@ -171,11 +171,11 @@ test-usage:
 
   expected-usage := """
     Usage:
-      root --option1=<string> --option2=<bar|baz> [<options>] [--] <rest1> [<rest2>] [<rest3>...]
+      bin/app --option1=<string> --option2=<bar|baz> [<options>] [--] <rest1> [<rest2>] [<rest3>...]
     """
   actual-usage := build-usage.call [cmd]
   expect-equals expected-usage actual-usage
-  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="root")\n"
+  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="bin/app")\n"
 
   // Test different types.
   cmd = cli.Command "root"
@@ -195,11 +195,11 @@ test-usage:
   // Since there are named options that aren't shown, there is a [<options>].
   expected-usage = """
     Usage:
-      root --option1=<string> --option2=<int> --option3=<bar|baz> --option4 --option5=<my_type> [<options>]
+      bin/app --option1=<string> --option2=<int> --option3=<bar|baz> --option4 --option5=<my_type> [<options>]
     """
   actual-usage = build-usage.call [cmd]
   expect-equals expected-usage actual-usage
-  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="root")\n"
+  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="bin/app")\n"
 
   cmd = cli.Command "root"
       --options=[
@@ -211,11 +211,11 @@ test-usage:
   // If all options are required, there is no [<options>].
   expected-usage = """
     Usage:
-      root --option1=<string> --option2=<string>
+      bin/app --option1=<string> --option2=<string>
     """
   actual-usage = build-usage.call [cmd]
   expect-equals expected-usage actual-usage
-  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="root")\n"
+  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="bin/app")\n"
 
   // Test the same options as rest arguments.
   cmd = cli.Command "root"
@@ -234,11 +234,11 @@ test-usage:
   // Also, optional arguments are shown.
   expected-usage = """
     Usage:
-      root [--] <option9> <option2:int> <option3:bar|baz> <option4:true|false> <option5:my_type> <option6> [<option7>]
+      bin/app [--] <option9> <option2:int> <option3:bar|baz> <option4:true|false> <option5:my_type> <option6> [<option7>]
     """
   actual-usage = build-usage.call [cmd]
   expect-equals expected-usage actual-usage
-  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="root")\n"
+  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="bin/app")\n"
 
   cmd = cli.Command "root"
       --options=[
@@ -259,7 +259,7 @@ test-usage:
   // All options must still be sorted.
   expected-usage = """
     Usage:
-      root --option1=<string> --option3 sub --sub-option1=<string> --sub-option3 [<options>]
+      bin/app --option1=<string> --option3 sub --sub-option1=<string> --sub-option3 [<options>]
     """
   actual-usage = build-usage.call [cmd, sub]
   expect-equals expected-usage actual-usage
@@ -276,11 +276,11 @@ test-usage:
     """
   actual-usage = build-usage.call [cmd]
   expect-equals expected-usage actual-usage
-  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="root")\n"
+  expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="bin/app")\n"
 
 test-aliases:
   build-aliases := : | path/List |
-    help := HelpGenerator path --invoked-command="root"
+    help := HelpGenerator path --invoked-command="bin/app"
     help.build-aliases
     help.to-string
 
@@ -316,7 +316,7 @@ test-aliases:
 
 test-commands:
   build-commands := : | path/List |
-    help := HelpGenerator path --invoked-command="root"
+    help := HelpGenerator path --invoked-command="bin/app"
     help.build-commands
     help.to-string
 
@@ -445,12 +445,12 @@ test-commands:
 
 test-options:
   build-local-options := : | path/List |
-    help := HelpGenerator path --invoked-command="root"
+    help := HelpGenerator path --invoked-command="bin/app"
     help.build-local-options
     help.to-string
 
   build-global-options := : | path/List |
-    help := HelpGenerator path --invoked-command="root"
+    help := HelpGenerator path --invoked-command="bin/app"
     help.build-global-options
     help.to-string
 
@@ -614,7 +614,7 @@ test-options:
 
 test-examples:
   build-examples := : | path/List |
-    help := HelpGenerator path --invoked-command="root"
+    help := HelpGenerator path --invoked-command="bin/app"
     help.build-examples
     help.to-string
 
@@ -638,12 +638,12 @@ test-examples:
   expected := """
     Examples:
       # Example 1:
-      root --option1=499
+      app --option1=499
 
       # Example 2
       # over multiple lines:
-      root --option1=1
-      root --option1=2
+      app --option1=1
+      app --option1=2
     """
   actual := build-examples.call [cmd]
   expect-equals expected actual
@@ -699,33 +699,33 @@ test-examples:
   expected = """
     Examples:
       # Example 1:
-      root --option1=499 sub subsub
+      app --option1=499 sub subsub
 
       # Example 2:
-      root sub --option_sub1=499 subsub
+      app sub --option_sub1=499 subsub
 
       # Example 3:
-      root sub subsub --option_subsub1=499
+      app sub subsub --option_subsub1=499
 
       # Example 4:
-      root --option1=499 sub --option_sub1=499 subsub --option_subsub1=499
+      app --option1=499 sub --option_sub1=499 subsub --option_subsub1=499
 
       # Example 5:
-      root --option1 499 sub --option_sub1 499 subsub --option_subsub1 499
+      app --option1 499 sub --option_sub1 499 subsub --option_subsub1 499
 
       # Example 6 with rest:
-      root --option1 499 sub --option_sub1 499 subsub --option_subsub1 499 rest1 rest2
+      app --option1 499 sub --option_sub1 499 subsub --option_subsub1 499 rest1 rest2
 
       # Clusters go to the first that accepts all:
-      root sub -ab subsub -c
-      root -a sub -b subsub -c
-      root sub -b subsub -ca
-      root -a sub subsub -bc
+      app sub -ab subsub -c
+      app -a sub -b subsub -c
+      app sub -b subsub -ca
+      app -a sub subsub -bc
 
       # short_names can also have additional params:
-      root sub -ay 33 subsub -c
-      root sub -b subsub -cx 42
-      root -a sub subsub -bz 55
+      app sub -ay 33 subsub -c
+      app sub -b subsub -cx 42
+      app -a sub subsub -bz 55
     """
   actual = build-examples.call [cmd, sub, sub2]
   expect-equals expected actual
@@ -764,22 +764,22 @@ test-examples:
   expected = """
     Examples:
       # Root example 1:
-      root sub
+      app sub
 
       # Root example 2:
-      root sub2
+      app sub2
 
       # Example 5:
-      root sub2 global5
+      app sub2 global5
 
       # Example 1:
-      root sub global3
+      app sub global3
 
       # Example 3:
-      root sub global1
+      app sub global1
 
       # Example 6:
-      root sub2 global1
+      app sub2 global1
     """
   actual = build-examples.call [cmd]
   expect-equals expected actual
