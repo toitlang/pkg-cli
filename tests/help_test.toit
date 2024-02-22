@@ -769,17 +769,17 @@ test-examples:
       # Root example 2:
       root sub2
 
+      # Example 5:
+      root sub2 global5
+
+      # Example 1:
+      root sub global3
+
       # Example 3:
       root sub global1
 
       # Example 6:
       root sub2 global1
-
-      # Example 1:
-      root sub global3
-
-      # Example 5:
-      root sub2 global5
     """
   actual = build-examples.call [cmd]
   expect-equals expected actual
