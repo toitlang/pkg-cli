@@ -480,14 +480,9 @@ class HelpGenerator:
     // commands that defined them.
     full-command := []
     is-root := true
-    // For examples we don't want the full path that was used to invoke the
+    // For examples, we don't want the full path that was used to invoke the
     // command (like `build/bin/artemis`), but only the basename.
-    app-name := invoked-command_
-    separator-index := app-name.index-of --last "/"
-    if system.platform == system.PLATFORM-WINDOWS:
-      separator-index = max separator-index (app-name.index-of --last "\\")
-    app-name = app-name[separator-index + 1..]
-
+    app-name := basename_ invoked-command_
     parsed-path.do: | current-command |
       if is-root:
         is-root = false
@@ -500,6 +495,18 @@ class HelpGenerator:
           full-command.add option
 
     writeln_ (full-command.join " ") --indentation=2
+
+  /**
+  Extracts the basename of a path.
+
+  This is a simplified version that doesn't take into account volume names or
+    other complications.
+  */
+  basename_ path/string -> string:
+    separator-index := path.index-of --last "/"
+    if system.platform == system.PLATFORM-WINDOWS:
+      separator-index = max separator-index (path.index-of --last "\\")
+    return path[separator-index + 1..]
 
   /**
   Splits a string into individual arguments.
