@@ -6,6 +6,7 @@ import .cli
 import .parser_
 import .utils_
 import .ui
+import system
 
 /**
 The 'help' command that can be executed on the root command.
@@ -531,14 +532,34 @@ class HelpGenerator:
     // Reconstruct the full command line, but now with the options next to the
     // commands that defined them.
     full-command := []
+    is-root := true
+    // For examples, we don't want the full path that was used to invoke the
+    // command (like `build/bin/artemis`), but only the basename.
+    app-name := basename_ invoked-command_
     parsed-path.do: | current-command |
-      full-command.add current-command.name
+      if is-root:
+        is-root = false
+        full-command.add app-name
+      else:
+        full-command.add current-command.name
       command-options := options-for-command.get current-command
       if command-options:
         command-options.do: | option/string |
           full-command.add option
 
     writeln_ (full-command.join " ") --indentation=2
+
+  /**
+  Extracts the basename of a path.
+
+  This is a simplified version that doesn't take into account volume names or
+    other complications.
+  */
+  basename_ path/string -> string:
+    separator-index := path.index-of --last "/"
+    if system.platform == system.PLATFORM-WINDOWS:
+      separator-index = max separator-index (path.index-of --last "\\")
+    return path[separator-index + 1..]
 
   /**
   Splits a string into individual arguments.
