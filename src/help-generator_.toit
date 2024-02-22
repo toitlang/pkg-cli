@@ -322,7 +322,8 @@ class HelpGenerator:
     this-examples := command_.examples_.map: | example/Example | [example, path_]
     sub-examples := []
     add-global-examples_ command_ sub-examples --path=path_ --skip-first-level
-    sub-examples.sort --in-place: | a/List b/List | a[0].global-priority - b[0].global-priority
+    // Higher priority examples should come first.
+    sub-examples.sort --in-place: | a/List b/List | b[0].global-priority.compare-to a[0].global-priority
 
     all-examples := this-examples + sub-examples
     if all-examples.is-empty: return
