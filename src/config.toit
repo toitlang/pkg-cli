@@ -189,7 +189,6 @@ class Config:
     content := json.encode data
     stream := file.Stream.for-write path
     try:
-      writer := writer.Writer stream
-      writer.write content
+      stream.out.write content
     finally:
       stream.close
