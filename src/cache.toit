@@ -10,9 +10,9 @@ import fs.xdg
 import host.os
 import host.file
 import host.directory
+import io
 import system
 import uuid
-import writer
 
 import .utils_
 
@@ -232,7 +232,7 @@ interface FileStore:
   save bytes/ByteArray
 
   /**
-  Calls the given $block with a $writer.Writer.
+  Calls the given $block with an $io.Writer.
 
   The $block must write its chunks to the writer.
   The writer is closed after the block returns.
@@ -329,7 +329,7 @@ class FileStore_ implements FileStore:
       file.write-content bytes --path=file-path
 
   /**
-  Calls the given $block with a $writer.Writer.
+  Calls the given $block with a $io.Writer.
 
   The $block must write its chunks to the writer.
   The writer is closed after the block returns.
@@ -337,7 +337,7 @@ class FileStore_ implements FileStore:
   save-via-writer [block]:
     store_: | file-path/string |
       stream := file.Stream.for-write file-path
-      w := writer.Writer stream
+      w := stream.out
       try:
         block.call w
       finally:
@@ -463,9 +463,8 @@ atomic-move-directory_ source-path/string target-path/string -> none:
 copy-file_ --source/string --target/string -> none:
   // TODO(florian): we want to keep the permissions of the original file,
   // except that we want to make the file read-only.
-  in := file.Stream.for-read source
-  out := file.Stream.for-write target
-  w := writer.Writer out
-  w.write-from in
-  in.close
-  out.close
+  in-stream := file.Stream.for-read source
+  out-stream := file.Stream.for-write target
+  out-stream.out.write-from in-stream.in
+  in-stream.close
+  out-stream.close
