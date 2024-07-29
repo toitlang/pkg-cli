@@ -18,7 +18,7 @@ It can not be used to manage the fleet, for example
   by adding or removing devices.
 
 Usage:
-  examples/main.toit <command>
+  examples/main.toit <command> [<options>]
 
 Commands:
   device  Manage a particular device.
@@ -26,17 +26,20 @@ Commands:
   status  Shows the status of the fleet.
 
 Options:
-  -h, --help  Show help for this command.
+  -h, --help                                             Show help for this command.
+      --output-format text|json                          Specify the format used when printing to the console. (default: text)
+      --verbose                                          Enable verbose output. Shorthand for --verbosity-level=verbose.
+      --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
 
 Examples:
-  # Do a soft-reset of device 'foo':
-  fleet_manager device --device=foo reset -m soft
+  # Uploads the file 'foo.data' to the device 'foo':
+  main.toit device --device=foo upload foo.data
 
   # Show a detailed status of the fleet:
-  fleet_manager status --verbose
+  main.toit --verbose status
 
-  # Uploads the file 'foo.data' to the device 'foo':
-  fleet_manager device --device=foo upload foo.data
+  # Do a soft-reset of device 'foo':
+  main.toit device --device=foo reset -m soft
 ```
 
 The help for the `reset` command looks as follows:
@@ -61,10 +64,10 @@ Global options:
 
 Examples:
   # Do a soft-reset of device 'foo':
-  fleet_manager device --device=foo reset -m soft
+  main.toit device --device=foo reset -m soft
 
   # Do a hard-reset:
-  fleet_manager device reset --mode=hard
+  main.toit device reset --mode=hard
 ```
 */
 
@@ -97,10 +100,11 @@ create-status-command -> cli.Command:
         cli.Example "Show a detailed status of the fleet:" --arguments="--verbose"
             --global-priority=7,  // Show this example for the root command.
       ]
-      --run=:: | app parsed | fleet-status app parsed
+      --run=:: fleet-status it
 
-fleet-status app/cli.Application parsed/cli.Parsed:
-  max-lines := parsed["max-lines"]
+fleet-status invocation/cli.Invocation:
+  max-lines := invocation["max-lines"]
+  app := invocation.cli
   verbose := app.ui.level >= cli.Ui.VERBOSE-LEVEL
 
   app.ui.emit
@@ -131,19 +135,9 @@ create-device-command -> cli.Command:
         cli.Option "device" --short-name="d"
             --help="The device to operate on."
       ]
-  device-cmd.add create-reset-command
   device-cmd.add create-upload-command
+  device-cmd.add create-reset-command
   return device-cmd
-
-with-device app/cli.Application parsed/cli.Parsed [block]:
-  device := parsed["device"]
-  if not device:
-    device = app.config.get "default-device"
-
-  if not device:
-    app.ui.abort "No device specified and no default device set."
-
-  block.call device
 
 create-upload-command -> cli.Command:
   return cli.Command "upload"
@@ -164,13 +158,7 @@ create-upload-command -> cli.Command:
             --arguments="--device=foo foo.data"
             --global-priority=8,  // Include this example for super commands.
       ]
-      --run=:: | app parsed | upload-to-device app parsed
-
-upload-to-device app/cli.Application parsed/cli.Parsed:
-  data := parsed["data"]
-
-  with-device app parsed: | device |
-    print "Uploading file '$data' to device '$device'."
+      --run=:: upload-to-device it
 
 create-reset-command -> cli.Command:
   return cli.Command "reset"
@@ -196,12 +184,32 @@ create-reset-command -> cli.Command:
             "Do a hard-reset:"
             --arguments="--mode=hard",
       ]
-      --run=:: | app parsed | reset-device app parsed
+      --run=:: reset-device it
 
-reset-device app/cli.Application parsed/cli.Parsed:
-  mode := parsed["mode"]
-  force := parsed["force"]
+with-device invocation/cli.Invocation [block]:
+  app := invocation.cli
 
-  with-device app parsed: | device |
+  device := invocation["device"]
+  if not device:
+    device = app.config.get "default-device"
+
+  if not device:
+    app.ui.abort "No device specified and no default device set."
+
+  block.call device
+
+upload-to-device invocation/cli.Invocation:
+  data := invocation["data"]
+
+  with-device invocation: | device |
+    print "Uploading file '$data' to device '$device'."
+
+reset-device invocation/cli.Invocation:
+  app := invocation.cli
+
+  mode := invocation["mode"]
+  force := invocation["force"]
+
+  with-device invocation: | device |
     app.ui.info "Resetting device '$device' in $(mode)-mode."
     if force: app.ui.debug "Using the force if necessary."

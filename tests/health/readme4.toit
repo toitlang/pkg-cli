@@ -23,7 +23,7 @@ store-directory app/cli.Application:
 
 main args:
   cmd := cli.Command "my-app"
-      --run=:: | app/cli.Application parsed/cli.Parsed |
+      --run=:: | app/cli.Application parsed/cli.Invocation |
         print "Data is cached in $app.cache.path"
         store-directory app
 

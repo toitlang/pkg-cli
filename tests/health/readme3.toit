@@ -32,7 +32,7 @@ store-from-file app/cli.Application:
 
 main args:
   cmd := cli.Command "my-app"
-      --run=:: | app/cli.Application parsed/cli.Parsed |
+      --run=:: | app/cli.Application parsed/cli.Invocation |
         print "Data is cached in $app.cache.path"
         store-bytes app
         store-from-file app

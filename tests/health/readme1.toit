@@ -24,7 +24,7 @@ main args/List:
       cli.Example "Do something with the flag:"
           --arguments="--some-option=foo --no-some-flag rest1 rest1",
     ]
-    --run=:: | app/cli.Application parsed/cli.Parsed |
+    --run=:: | app/cli.Application parsed/cli.Invocation |
       print parsed["some-option"]
       print parsed["some-flag"]
       print parsed["rest-arg"]  // A list.

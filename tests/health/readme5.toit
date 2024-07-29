@@ -23,7 +23,7 @@ dotted-example app/cli.Application:
 
 main args:
   cmd := cli.Command "my-app"
-      --run=:: | app/cli.Application parsed/cli.Parsed |
+      --run=:: | app/cli.Application parsed/cli.Invocation |
         print "Configuration is stored in $app.config.path"
         config-example app
         dotted-example app

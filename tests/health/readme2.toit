@@ -10,7 +10,7 @@ main args/List:
 
   sub := cli.Command "subcommand"
     --help="This is a subcommand."
-    --run=:: | app/cli.Application parsed/cli.Parsed |
+    --run=:: | app/cli.Application parsed/cli.Invocation |
       print "This is a subcommand."
   command.add sub
 

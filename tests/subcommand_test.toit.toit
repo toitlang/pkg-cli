@@ -5,7 +5,7 @@
 import cli
 import expect show *
 
-check-arguments expected/Map parsed/cli.Parsed:
+check-arguments expected/Map parsed/cli.Invocation:
   expected.do: | key value |
     expect-equals value parsed[key]
 

@@ -60,10 +60,10 @@ main args:
   command.add other2
   command.run args
 
-run_help parsed/arguments.Parsed:
+run_help parsed/arguments.Invocation:
   print "in_help"
   print parsed
 
-run_other parsed/arguments.Parsed:
+run_other parsed/arguments.Invocation:
   print "in_other"
   print parsed
