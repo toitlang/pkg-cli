@@ -18,8 +18,17 @@ export Config
 
 /**
 An object giving access to common operations for CLI programs.
+
+If no ui is given uses $Ui.console.
 */
 interface Cli:
+  constructor
+      name/string
+      --ui/Ui?=null
+      --cache/Cache?=null
+      --config/Config?=null:
+    if not ui: ui = Ui.console
+    return Cli_ name --ui=ui --cache=cache --config=config
   /**
   The name of the application.
 
@@ -39,6 +48,18 @@ interface Cli:
 
   /** The configuration object for this application. */
   config -> Config
+
+  /**
+  Returns a new UI object based on the given arguments.
+
+  All non-null arguments are used to create the UI object. If an argument is null, the
+    current value is used.
+  */
+  with -> Cli
+      --name/string?=null
+      --ui/Ui?=null
+      --cache/Cache?=null
+      --config/Config?=null
 
 /**
 An object giving access to common operations for CLI programs.
@@ -61,7 +82,9 @@ class Cli_ implements Cli:
   */
   ui/Ui
 
-  constructor .name --.ui:
+  constructor .name --.ui --cache/Cache? --config/Config?:
+    cache_ = cache
+    config_ = config
 
   /** The cache object for this application. */
   cache -> Cache:
@@ -72,6 +95,17 @@ class Cli_ implements Cli:
   config -> Config:
     if not config_: config_ = Config --app-name=name
     return config_
+
+  with -> Cli
+      --name/string?=null
+      --ui/Ui?=null
+      --cache/Cache?=null
+      --config/Config?=null:
+    return Cli_
+        name or this.name
+        --ui=ui or this.ui
+        --cache=cache or cache_
+        --config=config or config_
 
 /**
 A command.
@@ -236,21 +270,22 @@ class Command:
   The $invoked-command is used only for the usage message in case of an
     error. It defaults to $system.program-name.
 
-  If no UI is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
-    `--output-format` to create the appropriate UI object. If a $ui is given, then these
-    arguments are ignored.
+  If no $cli is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
+    `--output-format` to create the appropriate UI object. If a $cli object is given,
+    then these arguments are ignored.
 
   The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
-    in the help output. By default it is active if no $ui is provided.
+    in the help output. By default it is active if no $cli is provided.
   */
-  run arguments/List --invoked-command=system.program-name --ui/Ui?=null --add-ui-help/bool=(not ui) -> none:
-    if not ui: ui = create-ui-from-args_ arguments
-    if add-ui-help:
-      add-ui-options_
-    app := Cli_ name --ui=ui
+  run arguments/List --invoked-command=system.program-name --cli/Cli?=null --add-ui-help/bool=(not cli) -> none:
+    if not cli:
+      ui := create-ui-from-args_ arguments
+      if add-ui-help:
+        add-ui-options_
+      cli = Cli_ name --ui=ui --cache=null --config=null
     parser := Parser_ --invoked-command=invoked-command
     parser.parse this arguments: | path/List parameters/Parameters |
-      invocation := Invocation.private_ app path parameters
+      invocation := Invocation.private_ cli path parameters
       invocation.command.run-callback_.call invocation
 
   add-ui-options_:

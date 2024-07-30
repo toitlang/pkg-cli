@@ -199,8 +199,8 @@ test-rest:
   expected = {"foo": "foo_value", "bar": 43}
   cmd.run ["foo_value", "43"]
 
-  expect-abort "Missing required rest argument: 'foo'.": | ui/cli.Ui |
-    cmd.run [] --ui=ui
+  expect-abort "Missing required rest argument: 'foo'.": | app/cli.Cli |
+    cmd.run [] --cli=app
 
   cmd = cli.Command "test"
       --rest=[
@@ -215,13 +215,13 @@ test-rest:
   expected = {"foo": "foo_value", "bar": ["bar_value", "bar_value2"]}
   cmd.run ["foo_value", "bar_value", "bar_value2"]
 
-  expect-abort "Missing required rest argument: 'bar'.": | ui/cli.Ui |
-    cmd.run ["foo_value"] --ui=ui
+  expect-abort "Missing required rest argument: 'bar'.": | app/cli.Cli |
+    cmd.run ["foo_value"] --cli=app
 
   cmd = cli.Command "test"
       --run=:: null
-  expect-abort "Unexpected rest argument: 'baz'.": | ui/cli.Ui |
-    cmd.run ["baz"] --ui=ui
+  expect-abort "Unexpected rest argument: 'baz'.": | app/cli.Cli |
+    cmd.run ["baz"] --cli=app
 
 test-subcommands:
   expected/Map? := null
@@ -313,8 +313,8 @@ test-invert-non-flag:
       --run=:: | invocation/cli.Invocation |
         unreachable
 
-  expect-abort "Cannot invert non-boolean flag --foo.": | ui/cli.Ui |
-    cmd.run ["--no-foo"] --ui=ui
+  expect-abort "Cannot invert non-boolean flag --foo.": | app/cli.Cli |
+    cmd.run ["--no-foo"] --cli=app
 
 test-value-for-flag:
   cmd := cli.Command "test"
@@ -324,8 +324,8 @@ test-value-for-flag:
       --run=:: | invocation/cli.Invocation |
         unreachable
 
-  expect-abort "Cannot specify value for boolean flag --foo.": | ui/cli.Ui |
-    cmd.run ["--foo=bar"] --ui=ui
+  expect-abort "Cannot specify value for boolean flag --foo.": | app/cli.Cli |
+    cmd.run ["--foo=bar"] --cli=app
 
 test-missing-args:
   cmd := cli.Command "test"
@@ -335,11 +335,11 @@ test-missing-args:
       --run=:: | invocation/cli.Invocation |
         unreachable
 
-  expect-abort "Option --foo requires an argument.": | ui/cli.Ui |
-    cmd.run ["--foo"] --ui=ui
+  expect-abort "Option --foo requires an argument.": | app/cli.Cli |
+    cmd.run ["--foo"] --cli=app
 
-  expect-abort "Option -f requires an argument.": | ui/cli.Ui |
-    cmd.run ["-f"] --ui=ui
+  expect-abort "Option -f requires an argument.": | app/cli.Cli |
+    cmd.run ["-f"] --cli=app
 
 test-missing-subcommand:
   cmd := cli.Command "test"
@@ -348,8 +348,8 @@ test-missing-subcommand:
             --run=:: unreachable
       ]
 
-  expect-abort "Missing subcommand.": | ui/cli.Ui |
-    cmd.run [] --ui=ui
+  expect-abort "Missing subcommand.": | app/cli.Cli |
+    cmd.run [] --cli=app
 
 test-dash-arg:
   cmd := cli.Command "test"
