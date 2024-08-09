@@ -335,7 +335,6 @@ class Ui:
       if printer_.needs-structured --kind=kind:
         printer_.emit-structured --kind=kind structured.call
       else:
-        global-print_ "calling 'emit'"
         printer_.emit --kind=kind "$(structured.call)"
 
   /**
