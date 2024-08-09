@@ -188,6 +188,22 @@ class Command:
     generator.build-all
     return generator.to-string
 
+  /**
+  The short help string of this command.
+
+  This is the first paragraph of the help string.
+  */
+  short-help -> string:
+    if help := short-help_:
+      return help
+    if long-help := help_:
+      // Take the first paragraph (potentially multiple lines) of the long help.
+      paragraph-index := long-help.index-of "\n\n"
+      if paragraph-index == -1:
+        return long-help.trim
+      return long-help[..paragraph-index].trim
+    return ""
+
   /** Returns the usage string of this command. */
   usage --invoked-command/string=system.program-name -> string:
     generator := HelpGenerator [this] --invoked-command=invoked-command

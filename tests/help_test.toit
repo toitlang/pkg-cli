@@ -15,6 +15,7 @@ main:
   test-commands
   test-options
   test-examples
+  test-short-help
 
 check-output expected/string [block]:
   ui := TestUi
@@ -794,4 +795,46 @@ test-examples:
       app sub2 global1
     """
   actual = build-examples.call [cmd]
+  expect-equals expected actual
+
+test-short-help:
+  cmd := cli.Command "root"
+      --help="Test command."
+      --run=:: unreachable
+
+  expected := "Test command."
+  actual := cmd.short-help
+  expect-equals expected actual
+
+  cmd = cli.Command "root"
+      --help="""
+        Test command.
+        """
+      --run=:: unreachable
+
+  expected = "Test command."
+  actual = cmd.short-help
+  expect-equals expected actual
+
+  cmd = cli.Command "root"
+      --help="""
+        Test command.
+        Second line.
+        """
+      --run=:: unreachable
+
+  expected = "Test command.\nSecond line."
+  actual = cmd.short-help
+  expect-equals expected actual
+
+  cmd = cli.Command "root"
+      --help="""
+        Test command.
+
+        Second paragraph.
+        """
+      --run=:: unreachable
+
+  expected = "Test command."
+  actual = cmd.short-help
   expect-equals expected actual
