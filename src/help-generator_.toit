@@ -281,9 +281,6 @@ class HelpGenerator:
   build-options_ --title/string options/List --add-help/bool=false --rest/bool=false -> none:
     if options.is-empty and not add-help: return
 
-    ensure-vertical-space_
-    writeln_ "$title:"
-
     if add-help:
       has-help-flag := false
       has-short-help-flag := false
@@ -340,6 +337,12 @@ class HelpGenerator:
 
       options-type-defaults-and-help.add [option-str, help-str]
 
+    if options-type-defaults-and-help.is-empty:
+      // All options were hidden.
+      return
+
+    ensure-vertical-space_
+    writeln_ "$title:"
     write-table_ options-type-defaults-and-help --indentation=2
 
   /**
