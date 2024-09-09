@@ -2,15 +2,15 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
-import cli
+import cli show *
 
 main args/List:
-  command := cli.Command "my-app"
+  command := Command "my-app"
     --help="My app does something."
 
-  sub := cli.Command "subcommand"
+  sub := Command "subcommand"
     --help="This is a subcommand."
-    --run=:: | app/cli.Application parsed/cli.Invocation |
+    --run=:: | invocation/Invocation |
       print "This is a subcommand."
   command.add sub
 

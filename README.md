@@ -27,29 +27,29 @@ A command declares
 For example:
 
 ``` toit
-import cli
+import cli show *
 
 main args/List:
-  command := cli.Command "my-app"
+  command := Command "my-app"
     --help="My app does something."
     --options=[
-      cli.Option "some-option"
+      Option "some-option"
         --help="This is an option."
         --required,
-      cli.Flag "some-flag"
+      Flag "some-flag"
         --short-name="f"
         --help="This is a flag.",
     ]
     --rest=[
-      cli.Option "rest-arg"
+      Option "rest-arg"
         --help="This is a rest argument."
         --multi,
     ]
     --examples=[
-      cli.Example "Do something with the flag:"
+      Example "Do something with the flag:"
           --arguments="--some-option=foo --no-some-flag rest1 rest1",
     ]
-    --run=:: | invocation/cli.Invocation |
+    --run=:: | invocation/Invocation |
       print invocation["some-option"]
       print invocation["some-flag"]
       print invocation["rest-arg"]  // A list.
@@ -78,15 +78,15 @@ Subcommands are defined by adding a `Command` object as child to another command
 For example:
 
 ``` toit
-import cli
+import cli show *
 
 main args/List:
-  command := cli.Command "my-app"
+  command := Command "my-app"
     --help="My app does something."
 
-  sub := cli.Command "subcommand"
+  sub := Command "subcommand"
     --help="This is a subcommand."
-    --run=:: | app/cli.Application parsed/cli.Invocation |
+    --run=:: | invocation/Invocation |
       print "This is a subcommand."
   command.add sub
 
@@ -190,6 +190,7 @@ directory in the cache structure. The cache class has the
 
 ``` toit
 import cli show Cli DirectoryStore
+import host.file
 
 store-directory cli/Cli:
   cache := cli.cache
@@ -279,8 +280,8 @@ some-chatty-method cli/Cli:
   ui := cli.ui
   ui.debug "This is a debug message."
   ui.verbose "This is a verbose message."
-  ui.info "This is an info message."
-  ui.warning "This is a warning message."
+  ui.inform "This is an information message."
+  ui.warn "This is a warning message."
   ui.error "This is an error message."
   ui.interactive "This is an interactive message."
   ui.result "This is a result message."

@@ -2,30 +2,20 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
-import cli
-import cli.config as cli
+import cli show Cli DirectoryStore
+import host.file
 
-config-example app/cli.Application:
-  config := app.config
+store-directory cli/Cli:
+  cache := cli.cache
 
-  print "old value: $(config.get "my-key")"
+  directory := cache.get-directory-path "my-dir-key": | store/DirectoryStore |
+    // Block that is called when the key is not found.
+    // The returned directory is stored in the cache.
+    print "Directory is not cached. Computing it."
+    store.with-tmp-directory: | tmp-dir |
+      // Create a few files with some data.
+      file.write-content --path="$tmp-dir/data1.txt" "Hello world"
+      file.write-content --path="$tmp-dir/data2.txt" "Bonjour monde"
+      store.move tmp-dir
 
-  config["my-key"] = "my-value"
-  config.write
-
-dotted-example app/cli.Application:
-  config := app.config
-
-  print "old value: $(config.get "super-key.sub-key")"
-
-  config["super-key.sub-key"] = "my-value"
-  config.write
-
-main args:
-  cmd := cli.Command "my-app"
-      --run=:: | app/cli.Application parsed/cli.Invocation |
-        print "Configuration is stored in $app.config.path"
-        config-example app
-        dotted-example app
-
-  cmd.run args
+  print directory  // Prints the path to the directory.

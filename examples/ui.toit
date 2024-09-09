@@ -8,8 +8,8 @@ some-chatty-method cli/Cli:
   ui := cli.ui
   ui.debug "This is a debug message."
   ui.verbose "This is a verbose message."
-  ui.info "This is an info message."
-  ui.warning "This is a warning message."
+  ui.inform "This is an information message."
+  ui.warn "This is a warning message."
   ui.error "This is an error message."
   ui.interactive "This is an interactive message."
   // By convention, 'result' calls should only happen in the method that

@@ -219,18 +219,18 @@ class Ui:
     As such, the object must be a valid JSON object.
   Otherwise, the $object is converted to a string.
   */
-  info object/any:
+  inform object/any:
     emit --kind=INFO --structured=: object
 
-  /** Alias for $info. */
+  /** Alias for $inform. */
   print object/any:
-    info object
+    inform object
 
-  /** Variant of $info using the $DEBUG kind. */
+  /** Variant of $inform using the $DEBUG kind. */
   debug object/any:
     emit --kind=DEBUG --structured=: "$object"
 
-  /** Variant of $info using the $VERBOSE kind. */
+  /** Variant of $inform using the $VERBOSE kind. */
   verbose object/any:
     emit --kind=VERBOSE --structured=: "$object"
 
@@ -239,7 +239,7 @@ class Ui:
     do_ --kind=VERBOSE generator
 
   /** Emits the given $object at a warning-level as a string. */
-  warning object/any:
+  warn object/any:
     emit --kind=WARNING --structured=: "$object"
 
   /** Emits the given $object at an interactive-level as a string. */
