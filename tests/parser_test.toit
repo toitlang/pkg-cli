@@ -317,15 +317,23 @@ test-invert-non-flag:
     cmd.run ["--no-foo"] --cli=app
 
 test-value-for-flag:
+  expected/Map? := null
   cmd := cli.Command "test"
       --options=[
         cli.Flag "foo" --short-name="f",
       ]
       --run=:: | invocation/cli.Invocation |
-        unreachable
+        check-arguments expected invocation
 
-  expect-abort "Cannot specify value for boolean flag --foo.": | app/cli.Cli |
-    cmd.run ["--foo=bar"] --cli=app
+  expected = {"foo": true}
+  cmd.run ["--foo=true"]
+
+  expected = {"foo": false}
+  cmd.run ["--foo=false"]
+
+  ["on", "off", "yes", "no"].do: | value |
+    expect-abort "Invalid value for boolean flag 'foo': '$value'. Valid values are: true, false.": | app/cli.Cli |
+      cmd.run ["--foo=$value"] --cli=app
 
 test-missing-args:
   cmd := cli.Command "test"

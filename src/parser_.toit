@@ -100,13 +100,13 @@ class Parser_:
 
     index := 0
     while index < arguments.size:
-      argument := arguments[index++]
+      argument/string := arguments[index++]
       if argument == "--":
         rest.add-all arguments[index ..]
         break  // We're done!
 
       if argument.starts-with "--":
-        value := null
+        value/string? := null
         // Get the option name.
         split := argument.index-of "="
         name := (split < 0) ? argument[2..] : argument[2..split]
@@ -125,8 +125,11 @@ class Parser_:
           fatal path "Unknown option: --$name"
 
         if option.is-flag and value != null:
-          fatal path "Cannot specify value for boolean flag --$name."
-        if option.is-flag:
+          if is-inverted:
+            fatal path "Cannot specify value for inverted boolean flag --$name."
+          if value != "true" and value != "false":
+            fatal path "Invalid value for boolean flag '$name': '$value'. Valid values are: true, false."
+        else if option.is-flag and value == null:
           value = is-inverted ? "false" : "true"
         else if is-inverted:
           fatal path "Cannot invert non-boolean flag --$name."

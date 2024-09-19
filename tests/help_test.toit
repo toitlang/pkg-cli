@@ -15,6 +15,7 @@ main:
   test-commands
   test-options
   test-examples
+  test-short-help
 
 check-output expected/string [block]:
   ui := TestUi
@@ -585,6 +586,22 @@ test-options:
   expect-equals sub-local-expected sub-local-actual
   expect-equals sub-global-expected sub-global-actual
 
+  // When the global options are hidden, they are not shown.
+  cmd = cli.Command "root"
+      --options=[
+        cli.OptionInt "option1" --help="Option 1." --default=42 --hidden,
+      ]
+
+  sub = cli.Command "sub"
+      --options=[
+        cli.OptionInt "option_sub1" --help="Option 1." --default=42,
+      ]
+      --run=:: unreachable
+  cmd.add sub
+
+  sub-global-actual = build-global-options.call [cmd, sub]
+  expect-equals "" sub-global-actual
+
   cmd = cli.Command "root"
       --options=[
         cli.OptionInt "option1" --short-name="h" --help="Option 1." --default=42,
@@ -795,4 +812,46 @@ test-examples:
       app sub2 global1
     """
   actual = build-examples.call [cmd]
+  expect-equals expected actual
+
+test-short-help:
+  cmd := cli.Command "root"
+      --help="Test command."
+      --run=:: unreachable
+
+  expected := "Test command."
+  actual := cmd.short-help
+  expect-equals expected actual
+
+  cmd = cli.Command "root"
+      --help="""
+        Test command.
+        """
+      --run=:: unreachable
+
+  expected = "Test command."
+  actual = cmd.short-help
+  expect-equals expected actual
+
+  cmd = cli.Command "root"
+      --help="""
+        Test command.
+        Second line.
+        """
+      --run=:: unreachable
+
+  expected = "Test command.\nSecond line."
+  actual = cmd.short-help
+  expect-equals expected actual
+
+  cmd = cli.Command "root"
+      --help="""
+        Test command.
+
+        Second paragraph.
+        """
+      --run=:: unreachable
+
+  expected = "Test command."
+  actual = cmd.short-help
   expect-equals expected actual
