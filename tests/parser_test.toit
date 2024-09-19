@@ -347,7 +347,7 @@ test-value-for-flag:
   expected = {"foo": false}
   cmd.run ["--foo=false"]
 
-  ["on", "off", "yes", "no"].do: | value |
+  ["on", "off", "yes", "no", " true", " false", "true ", "false "].do: | value |
     expect-abort "Invalid value for boolean flag 'foo': '$value'. Valid values are: true, false.": | ui/cli.Ui |
       cmd.run ["--foo=$value"] --ui=ui
 
