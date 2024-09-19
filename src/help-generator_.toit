@@ -150,10 +150,10 @@ class HelpGenerator:
   build-description -> none:
     if help := command_.help_:
       ensure-vertical-space_
-      writeln_ (help.trim --right)
+      writeln_ help.trim
     else if short-help := command_.short-help_:
       ensure-vertical-space_
-      writeln_ (short-help.trim --right)
+      writeln_ short-help.trim
 
   /**
   Builds the usage section.
@@ -241,18 +241,7 @@ class HelpGenerator:
 
       if subcommand.is-hidden_: continue.do
 
-      help-str := ?
-      if help := subcommand.short-help_:
-        help-str = help
-      else if long-help := subcommand.help_:
-        // Take the first paragraph (potentially multiple lines) of the long help.
-        paragraph-index := long-help.index-of "\n\n"
-        if paragraph-index == -1:
-          help-str = long-help
-        else:
-          help-str = long-help[..paragraph-index]
-      else:
-        help-str = ""
+      help-str := subcommand.short-help
       commands-and-help.add [subcommand.name, help-str]
 
     if not has-help-subcommand and is-root-command_:
