@@ -51,11 +51,11 @@ test-console:
   printer := TestPrinter --no-needs-structured
   ui := Ui --printer=printer
 
-  ui.info "hello"
+  ui.inform "hello"
   expect-equals "hello\n" printer.stdout
   printer.reset
 
-  ui.info ["hello", "world"]
+  ui.inform ["hello", "world"]
   expect-equals "[hello, world]\n" printer.stdout
   printer.reset
 
@@ -118,7 +118,7 @@ test-console:
   """ printer.stdout
   printer.reset
 
-  ui.info {
+  ui.inform {
     "a": "b",
     "c": "d",
   }
@@ -155,7 +155,7 @@ test-console:
   expect-equals "foo\n" printer.stdout
   printer.reset
 
-  ui.warning "foo"
+  ui.warn "foo"
   expect-equals "Warning: foo\n" printer.stdout
   printer.reset
 
@@ -175,7 +175,7 @@ test-structured:
   printer := TestPrinter --needs-structured
   ui := Ui --printer=printer
 
-  ui.info "hello"
+  ui.inform "hello"
   expect-equals ["hello"] printer.structured
   printer.reset
 
@@ -192,7 +192,7 @@ test-structured:
     "foo",
     "bar",
   ]
-  ui.info list
+  ui.inform list
   expect-equals 1 printer.structured.size
   expect-identical list printer.structured[0]
   printer.reset
@@ -217,7 +217,7 @@ test-json:
 
   // Anything that isn't a result is emitted on stderr as if it was
   // a console Ui.
-  ui.info "hello"
+  ui.inform "hello"
   expect-equals "hello\n" printer.stderr
   printer.reset
 
@@ -232,7 +232,7 @@ test-json:
   }
   expect-equals "{\"foo\":1,\"bar\":2}" printer.stdout
 
-  ui.warning "some warning"
+  ui.warn "some warning"
   expect-equals "Warning: some warning\n" printer.stderr
   printer.reset
 

@@ -2,8 +2,7 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
-import cli
-import cli.ui as cli
+import cli show *
 
 /**
 Creates a command-line executable that parses the command-line arguments and
@@ -18,7 +17,7 @@ It can not be used to manage the fleet, for example
   by adding or removing devices.
 
 Usage:
-  examples/main.toit <command>
+  examples/main.toit <command> [<options>]
 
 Commands:
   device  Manage a particular device.
@@ -26,17 +25,20 @@ Commands:
   status  Shows the status of the fleet.
 
 Options:
-  -h, --help  Show help for this command.
+  -h, --help                                             Show help for this command.
+      --output-format text|json                          Specify the format used when printing to the console. (default: text)
+      --verbose                                          Enable verbose output. Shorthand for --verbosity-level=verbose.
+      --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
 
 Examples:
-  # Do a soft-reset of device 'foo':
-  fleet_manager device --device=foo reset -m soft
+  # Uploads the file 'foo.data' to the device 'foo':
+  main.toit device --device=foo upload foo.data
 
   # Show a detailed status of the fleet:
-  fleet_manager status --verbose
+  main.toit --verbose status
 
-  # Uploads the file 'foo.data' to the device 'foo':
-  fleet_manager device --device=foo upload foo.data
+  # Do a soft-reset of device 'foo':
+  main.toit device --device=foo reset -m soft
 ```
 
 The help for the `reset` command looks as follows:
@@ -61,17 +63,17 @@ Global options:
 
 Examples:
   # Do a soft-reset of device 'foo':
-  fleet_manager device --device=foo reset -m soft
+  main.toit device --device=foo reset -m soft
 
   # Do a hard-reset:
-  fleet_manager device reset --mode=hard
+  main.toit device reset --mode=hard
 ```
 */
 
 main arguments:
   // Creates a root command.
   // The name of the root command is not used.
-  root-cmd := cli.Command "fleet_manager"
+  root-cmd := Command "fleet_manager"
       --help="""
         This is an imaginary fleet manager for a fleet of Toit devices.
 
@@ -86,24 +88,25 @@ main arguments:
 
 // ============= Could be in a separate file status.toit. =============
 
-create-status-command -> cli.Command:
-  return cli.Command "status"
+create-status-command -> Command:
+  return Command "status"
       --help="Shows the status of the fleet."
       --options=[
-        cli.OptionInt "max-lines" --help="Maximum number of lines to show." --default=10,
+        OptionInt "max-lines" --help="Maximum number of lines to show." --default=10,
       ]
       --examples=[
-        cli.Example "Show the status of the fleet:" --arguments="",
-        cli.Example "Show a detailed status of the fleet:" --arguments="--verbose"
+        Example "Show the status of the fleet:" --arguments="",
+        Example "Show a detailed status of the fleet:" --arguments="--verbose"
             --global-priority=7,  // Show this example for the root command.
       ]
-      --run=:: | app parsed | fleet-status app parsed
+      --run=:: fleet-status it
 
-fleet-status app/cli.Application parsed/cli.Parsed:
-  max-lines := parsed["max-lines"]
-  verbose := app.ui.level >= cli.Ui.VERBOSE-LEVEL
+fleet-status invocation/Invocation:
+  max-lines := invocation["max-lines"]
+  cli := invocation.cli
+  verbose := cli.ui.level >= Ui.VERBOSE-LEVEL
 
-  app.ui.emit
+  cli.ui.emit
       --structured=: {
           "some": "json",
           "info": "about the status",
@@ -114,8 +117,8 @@ fleet-status app/cli.Application parsed/cli.Parsed:
 
 // ============= Could be in a separate file device.toit. =============
 
-create-device-command -> cli.Command:
-  device-cmd := cli.Command "device"
+create-device-command -> Command:
+  device-cmd := Command "device"
       // Aliases can be used to invoke this command.
       --aliases=[
         "dev",
@@ -128,80 +131,84 @@ create-device-command -> cli.Command:
           last used device is used.
         """
       --options=[
-        cli.Option "device" --short-name="d"
+        Option "device" --short-name="d"
             --help="The device to operate on."
       ]
-  device-cmd.add create-reset-command
   device-cmd.add create-upload-command
+  device-cmd.add create-reset-command
   return device-cmd
 
-with-device app/cli.Application parsed/cli.Parsed [block]:
-  device := parsed["device"]
-  if not device:
-    device = app.config.get "default-device"
-
-  if not device:
-    app.ui.abort "No device specified and no default device set."
-
-  block.call device
-
-create-upload-command -> cli.Command:
-  return cli.Command "upload"
+create-upload-command -> Command:
+  return Command "upload"
       --help="""
         Uploads the given file to the device.
 
         Other useful information here.
         """
       --rest=[
-        cli.OptionString "data"
+        OptionString "data"
             --type="file"
             --help="The data to upload."
             --required,
       ]
       --examples=[
-        cli.Example
+        Example
             "Uploads the file 'foo.data' to the device 'foo':"
             --arguments="--device=foo foo.data"
             --global-priority=8,  // Include this example for super commands.
       ]
-      --run=:: | app parsed | upload-to-device app parsed
+      --run=:: upload-to-device it
 
-upload-to-device app/cli.Application parsed/cli.Parsed:
-  data := parsed["data"]
-
-  with-device app parsed: | device |
-    print "Uploading file '$data' to device '$device'."
-
-create-reset-command -> cli.Command:
-  return cli.Command "reset"
+create-reset-command -> Command:
+  return Command "reset"
       --help="""
         Resets the device.
 
         Other useful information here.
         """
       --options=[
-        cli.OptionEnum "mode" ["hard", "soft"]
+        OptionEnum "mode" ["hard", "soft"]
             --help="The reset mode to use."
             --short-name="m"
             --required,
-        cli.Flag "force" --short-name="f"
+        Flag "force" --short-name="f"
             --help="Force the reset even if the device is active.",
       ]
       --examples=[
-        cli.Example
+        Example
             "Do a soft-reset of device 'foo':"
             --arguments="--device=foo -m soft"
             --global-priority=5,  // Include this example for super commands.
-        cli.Example
+        Example
             "Do a hard-reset:"
             --arguments="--mode=hard",
       ]
-      --run=:: | app parsed | reset-device app parsed
+      --run=:: reset-device it
 
-reset-device app/cli.Application parsed/cli.Parsed:
-  mode := parsed["mode"]
-  force := parsed["force"]
+with-device invocation/Invocation [block]:
+  cli := invocation.cli
 
-  with-device app parsed: | device |
-    app.ui.info "Resetting device '$device' in $(mode)-mode."
-    if force: app.ui.debug "Using the force if necessary."
+  device := invocation["device"]
+  if not device:
+    device = cli.config.get "default-device"
+
+  if not device:
+    cli.ui.abort "No device specified and no default device set."
+
+  block.call device
+
+upload-to-device invocation/Invocation:
+  data := invocation["data"]
+
+  with-device invocation: | device |
+    print "Uploading file '$data' to device '$device'."
+
+reset-device invocation/Invocation:
+  cli := invocation.cli
+
+  mode := invocation["mode"]
+  force := invocation["force"]
+
+  with-device invocation: | device |
+    cli.ui.inform "Resetting device '$device' in $(mode)-mode."
+    if force: cli.ui.debug "Using the force if necessary."

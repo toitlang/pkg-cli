@@ -13,11 +13,58 @@ import .help-generator_
 import .ui
 
 export Ui
+export Cache FileStore DirectoryStore
+export Config
+
+/**
+An object giving access to common operations for CLI programs.
+
+If no ui is given uses $Ui.console.
+*/
+interface Cli:
+  constructor
+      name/string
+      --ui/Ui?=null
+      --cache/Cache?=null
+      --config/Config?=null:
+    if not ui: ui = Ui.console
+    return Cli_ name --ui=ui --cache=cache --config=config
+  /**
+  The name of the application.
+
+  Used to find configurations and caches.
+  */
+  name -> string
+
+  /**
+  The UI object to use for this application.
+
+  Output should be written to this object.
+  */
+  ui -> Ui
+
+  /** The cache object for this application. */
+  cache -> Cache
+
+  /** The configuration object for this application. */
+  config -> Config
+
+  /**
+  Returns a new UI object based on the given arguments.
+
+  All non-null arguments are used to create the UI object. If an argument is null, the
+    current value is used.
+  */
+  with -> Cli
+      --name/string?=null
+      --ui/Ui?=null
+      --cache/Cache?=null
+      --config/Config?=null
 
 /**
 An object giving access to common operations for CLI programs.
 */
-class Application:
+class Cli_ implements Cli:
   /**
   The name of the application.
 
@@ -28,17 +75,37 @@ class Application:
   cache_/Cache? := null
   config_/Config? := null
 
+  /**
+  The UI object to use for this application.
+
+  Output should be written to this object.
+  */
   ui/Ui
 
-  constructor.private_ .name --.ui:
+  constructor .name --.ui --cache/Cache? --config/Config?:
+    cache_ = cache
+    config_ = config
 
+  /** The cache object for this application. */
   cache -> Cache:
     if not cache_: cache_ = Cache --app-name=name
     return cache_
 
+  /** The configuration object for this application. */
   config -> Config:
     if not config_: config_ = Config --app-name=name
     return config_
+
+  with -> Cli
+      --name/string?=null
+      --ui/Ui?=null
+      --cache/Cache?=null
+      --config/Config?=null:
+    return Cli_
+        name or this.name
+        --ui=ui or this.ui
+        --cache=cache or cache_
+        --config=config or config_
 
 /**
 A command.
@@ -48,7 +115,7 @@ The main program is a command, and so are all subcommands.
 class Command:
   /**
   The name of the command.
-  The name of the root command is used as application name for the $Application.
+  The name of the root command is used as application name for the $Cli.
   */
   name/string
 
@@ -105,9 +172,9 @@ class Command:
     indented lines to continue paragraphs (just like toitdoc). The first paragraph of the
     $help is used as short help, and should have meaningful content on its own.
 
-  The $run callback is invoked when the command is executed. It is given the $Application and the
-    $Parsed object. If $run is null, then at least one subcommand must be added to this
-    command.
+  The $run callback is invoked when the command is executed. It is given an
+    $Invocation object. If $run is null, then at least one subcommand must be added
+    to this command.
   */
   constructor name --usage/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
@@ -214,26 +281,28 @@ class Command:
   Runs this command.
 
   Parses the given $arguments and then invokes the command or one of its subcommands
-    with the $Parsed output.
+    with the $Invocation output.
 
   The $invoked-command is used only for the usage message in case of an
     error. It defaults to $system.program-name.
 
-  If no UI is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
-    `--output-format` to create the appropriate UI object. If a $ui is given, then these
-    arguments are ignored.
+  If no $cli is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
+    `--output-format` to create the appropriate UI object. If a $cli object is given,
+    then these arguments are ignored.
 
   The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
-    in the help output. By default it is active if no $ui is provided.
+    in the help output. By default it is active if no $cli is provided.
   */
-  run arguments/List --invoked-command=system.program-name --ui/Ui?=null --add-ui-help/bool=(not ui) -> none:
-    if not ui: ui = create-ui-from-args_ arguments
-    if add-ui-help:
-      add-ui-options_
-    app := Application.private_ name --ui=ui
+  run arguments/List --invoked-command=system.program-name --cli/Cli?=null --add-ui-help/bool=(not cli) -> none:
+    if not cli:
+      ui := create-ui-from-args_ arguments
+      if add-ui-help:
+        add-ui-options_
+      cli = Cli_ name --ui=ui --cache=null --config=null
     parser := Parser_ --invoked-command=invoked-command
-    parsed := parser.parse this arguments
-    parsed.command.run-callback_.call app parsed
+    parser.parse this arguments: | path/List parameters/Parameters |
+      invocation := Invocation.private_ cli path parameters
+      invocation.command.run-callback_.call invocation
 
   add-ui-options_:
     has-output-format-option := false
@@ -361,7 +430,7 @@ class Command:
 An option to a command.
 
 Options are used for any input from the command line to the program. They must have unique names,
-  so that they can be identified in the $Parsed output.
+  so that they can be identified in the $Invocation output.
 
 Non-rest options can be used with '--$name' or '-$short-name' (if provided). Rest options are positional
   and their name is not exposed to the user except for the help.
@@ -425,7 +494,7 @@ abstract class Option:
     which is an alias for the $OptionString constructor.
 
   The $name sets the name of the option. It must be unique among all options of a command.
-    It is also used to extract the parsed value from the $Parsed object. For multi-word
+    It is also used to extract the parsed value from the $Invocation object. For multi-word
     options kebab case ('foo-bar') is recommended. The constructor automatically converts
     snake case ('foo_bar') to kebab case. This also means, that it's not possible to
     have two options that only differ in their case (kebab and snake).
@@ -878,13 +947,51 @@ The result of parsing the command line arguments.
 
 An instance of this class is given to the command's `run` method.
 */
-class Parsed:
+class Invocation:
+  /**
+  The $Cli object representing this application.
+
+  It is common to pass this object to other functions and libraries.
+  */
+  cli/Cli
+
   /**
   A list of $Command objects, representing the commands that were given on the command line.
   The first command is the root command, the last command is the command that should be executed.
   */
   path/List
 
+  /**
+  The parameters passed to the command.
+  */
+  parameters/Parameters
+
+  /**
+  Constructors a new invocation object.
+  */
+  constructor.private_ .cli .path .parameters:
+
+  /**
+  The command that should be executed.
+  */
+  command -> Command: return path.last
+
+  /**
+  Returns the value of the option with the given $name.
+  The $name must be an option of the command or one of its super commands.
+
+  If the given $name is in snake_case, it is automatically converted
+    to kebab-case.
+
+  This method is a shortcut for $parameters[name] ($Parameters.[]).
+  */
+  operator[] name/string -> any:
+    return parameters[name]
+
+/**
+The parameters passed to the command.
+*/
+class Parameters:
   /**
   The parsed options.
   All options, including flags and rest arguments, are stored in this map.
@@ -899,14 +1006,9 @@ class Parsed:
   seen-options_/Set
 
   /**
-  Builds a new $Parsed object.
+  Builds a new parameters object.
   */
-  constructor.private_ .path .options_ .seen-options_:
-
-  /**
-  The command that should be executed.
-  */
-  command -> Command: return path.last
+  constructor.private_ .options_ .seen-options_:
 
   /**
   Returns the value of the option with the given $name.

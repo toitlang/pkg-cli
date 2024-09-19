@@ -2,32 +2,32 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
-import cli
+import cli show *
 
 main args/List:
-  command := cli.Command "my-app"
+  command := Command "my-app"
     --help="My app does something."
     --options=[
-      cli.Option "some-option"
+      Option "some-option"
         --help="This is an option."
         --required,
-      cli.Flag "some-flag"
+      Flag "some-flag"
         --short-name="f"
         --help="This is a flag.",
     ]
     --rest=[
-      cli.Option "rest-arg"
+      Option "rest-arg"
         --help="This is a rest argument."
         --multi,
     ]
     --examples=[
-      cli.Example "Do something with the flag:"
+      Example "Do something with the flag:"
           --arguments="--some-option=foo --no-some-flag rest1 rest1",
     ]
-    --run=:: | app/cli.Application parsed/cli.Parsed |
-      print parsed["some-option"]
-      print parsed["some-flag"]
-      print parsed["rest-arg"]  // A list.
-      app.ui.result "Computed result"
+    --run=:: | invocation/Invocation |
+      print invocation["some-option"]
+      print invocation["some-flag"]
+      print invocation["rest-arg"]  // A list.
+      invocation.cli.ui.result "Computed result"
 
   command.run args

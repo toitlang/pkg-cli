@@ -11,11 +11,11 @@ main:
       cli.Option "first" --required,
       cli.Option "arg" --multi
     ]
-    --run=:: | _ parsed| test-dashdash parsed
+    --run=:: test-dashdash it
   root.run ["--", "prog", "arg1", "arg2", "arg3"]
 
-test-dashdash parsed/cli.Parsed:
-  first := parsed["first"]
-  rest := parsed["arg"]
+test-dashdash invocation/cli.Invocation:
+  first := invocation["first"]
+  rest := invocation["arg"]
   expect-equals "prog" first
   expect-list-equals ["arg1", "arg2", "arg3"] rest

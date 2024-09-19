@@ -242,7 +242,7 @@ snake-kebab:
         cli.Option "foo-bar",
         cli.Option "foo_bar"
       ]
-      --run=:: | parsed/cli.Parsed |
+      --run=:: | parsed/cli.Invocation |
         unreachable
   expect-throw "Ambiguous option of 'root': --foo-bar.":
     root.check --invoked-command="root"
