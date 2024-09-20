@@ -7,9 +7,9 @@ import expect show *
 
 import .test-ui
 
-check-arguments expected/Map parsed/cli.Parsed:
+check-arguments expected/Map invocation/cli.Invocation:
   expected.do: | key value |
-    expect-equals value parsed[key]
+    expect-equals value invocation[key]
 
 main:
   test-options
@@ -33,8 +33,7 @@ test-options:
         cli.Option "bar" --short-name="b",
         cli.OptionInt "gee" --short-name="g",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": "foo_value", "bar": "bar_value", "gee": null}
   cmd.run ["-f", "foo_value", "-b", "bar_value"]
@@ -57,8 +56,7 @@ test-options:
         cli.Flag "bar" --short-name="b",
         cli.Option "fizz" --short-name="iz" --default="default_fizz",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": "default_foo", "bar": true, "fizz": "default_fizz"}
   cmd.run ["-b"]
@@ -87,8 +85,7 @@ test-options:
       --options=[
         cli.Flag "foo" --short-name="f" --default=false,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": false}
   cmd.run []
@@ -103,8 +100,7 @@ test-options:
       --options=[
         cli.Flag "foo" --short-name="f" --default=true,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": true
   }
@@ -117,8 +113,7 @@ test-multi:
         cli.Option "foo" --short-name="f" --multi,
         cli.Option "bar" --short-name="b" --multi --split-commas,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": ["foo_value"], "bar": ["bar_value"]}
   cmd.run ["-f", "foo_value", "-b", "bar_value"]
@@ -147,8 +142,7 @@ test-multi:
       --options=[
         cli.OptionInt "foo" --short-name="f" --multi --split-commas,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": [1, 2, 3]}
   cmd.run ["-f", "1", "-f", "2", "-f", "3"]
@@ -158,8 +152,7 @@ test-multi:
       --options=[
         cli.Flag "foo" --short-name="f" --multi,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": [true, true, true]}
   cmd.run ["-f", "-f", "-f"]
@@ -170,8 +163,7 @@ test-multi:
       --options=[
         cli.OptionEnum "foo" ["a", "b"] --short-name="f" --multi,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": ["a", "b", "a"]}
   cmd.run ["-f", "a", "-f", "b", "-f", "a"]
@@ -183,8 +175,7 @@ test-rest:
         cli.Option "foo",
         cli.OptionInt "bar",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": "foo_value", "bar": 42}
   cmd.run ["foo_value", "42"]
@@ -200,8 +191,7 @@ test-rest:
         cli.Option "foo" --required,
         cli.OptionInt "bar" --default=42,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": "foo_value", "bar": 42}
   cmd.run ["foo_value"]
@@ -209,16 +199,15 @@ test-rest:
   expected = {"foo": "foo_value", "bar": 43}
   cmd.run ["foo_value", "43"]
 
-  expect-abort "Missing required rest argument: 'foo'.": | ui/cli.Ui |
-    cmd.run [] --ui=ui
+  expect-abort "Missing required rest argument: 'foo'.": | app/cli.Cli |
+    cmd.run [] --cli=app
 
   cmd = cli.Command "test"
       --rest=[
         cli.Option "foo" --required,
         cli.Option "bar" --required --multi,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": "foo_value", "bar": ["bar_value"]}
   cmd.run ["foo_value", "bar_value"]
@@ -226,13 +215,13 @@ test-rest:
   expected = {"foo": "foo_value", "bar": ["bar_value", "bar_value2"]}
   cmd.run ["foo_value", "bar_value", "bar_value2"]
 
-  expect-abort "Missing required rest argument: 'bar'.": | ui/cli.Ui |
-    cmd.run ["foo_value"] --ui=ui
+  expect-abort "Missing required rest argument: 'bar'.": | app/cli.Cli |
+    cmd.run ["foo_value"] --cli=app
 
   cmd = cli.Command "test"
       --run=:: null
-  expect-abort "Unexpected rest argument: 'baz'.": | ui/cli.Ui |
-    cmd.run ["baz"] --ui=ui
+  expect-abort "Unexpected rest argument: 'baz'.": | app/cli.Cli |
+    cmd.run ["baz"] --cli=app
 
 test-subcommands:
   expected/Map? := null
@@ -242,17 +231,14 @@ test-subcommands:
             --options=[
               cli.Option "foo" --short-name="f",
             ]
-            --run=:: | app/cli.Application parsed/cli.Parsed |
-              check-arguments expected parsed,
+            --run=:: check-arguments expected it,
         cli.Command "sub2"
             --options=[
               cli.Option "bar" --short-name="b",
             ]
-            --run=:: | app/cli.Application parsed/cli.Parsed |
-              check-arguments expected parsed,
+            --run=:: check-arguments expected it
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": "foo_value"}
   cmd.run ["sub1", "-f", "foo_value"]
@@ -270,8 +256,8 @@ test-subcommands:
 
 test-no-option:
   cmd := cli.Command "test"
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        expect-throw "No option named 'foo'": parsed["foo"]
+      --run=:: | invocation/cli.Invocation |
+        expect-throw "No option named 'foo'": invocation["foo"]
   cmd.run []
 
   cmd = cli.Command "test"
@@ -283,8 +269,8 @@ test-no-option:
             --options=[
               cli.Option "bar" --short-name="b",
             ]
-            --run=:: | app/cli.Application parsed/cli.Parsed |
-              expect-throw "No option named 'gee'": parsed["gee"],
+            --run=:: | invocation/cli.Invocation |
+              expect-throw "No option named 'gee'": invocation["gee"],
       ]
 
   cmd.run ["sub1", "-b", "bar_value"]
@@ -296,8 +282,7 @@ test-invert-flag:
       --options=[
         cli.Flag "foo" --short-name="f",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": null}
   cmd.run []
@@ -312,8 +297,7 @@ test-invert-flag:
       --options=[
         cli.Flag "foo" --short-name="f" --default=true,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: check-arguments expected it
 
   expected = {"foo": true}
   cmd.run []
@@ -326,11 +310,11 @@ test-invert-non-flag:
       --options=[
         cli.Option "foo" --short-name="f",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
+      --run=:: | invocation/cli.Invocation |
         unreachable
 
-  expect-abort "Cannot invert non-boolean flag --foo.": | ui/cli.Ui |
-    cmd.run ["--no-foo"] --ui=ui
+  expect-abort "Cannot invert non-boolean flag --foo.": | app/cli.Cli |
+    cmd.run ["--no-foo"] --cli=app
 
 test-value-for-flag:
   expected/Map? := null
@@ -338,8 +322,8 @@ test-value-for-flag:
       --options=[
         cli.Flag "foo" --short-name="f",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments expected parsed
+      --run=:: | invocation/cli.Invocation |
+        check-arguments expected invocation
 
   expected = {"foo": true}
   cmd.run ["--foo=true"]
@@ -348,22 +332,22 @@ test-value-for-flag:
   cmd.run ["--foo=false"]
 
   ["on", "off", "yes", "no", " true", " false", "true ", "false "].do: | value |
-    expect-abort "Invalid value for boolean flag 'foo': '$value'. Valid values are: true, false.": | ui/cli.Ui |
-      cmd.run ["--foo=$value"] --ui=ui
+    expect-abort "Invalid value for boolean flag 'foo': '$value'. Valid values are: true, false.": | app/cli.Cli |
+      cmd.run ["--foo=$value"] --cli=app
 
 test-missing-args:
   cmd := cli.Command "test"
       --options=[
         cli.Option "foo" --short-name="f",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
+      --run=:: | invocation/cli.Invocation |
         unreachable
 
-  expect-abort "Option --foo requires an argument.": | ui/cli.Ui |
-    cmd.run ["--foo"] --ui=ui
+  expect-abort "Option --foo requires an argument.": | app/cli.Cli |
+    cmd.run ["--foo"] --cli=app
 
-  expect-abort "Option -f requires an argument.": | ui/cli.Ui |
-    cmd.run ["-f"] --ui=ui
+  expect-abort "Option -f requires an argument.": | app/cli.Cli |
+    cmd.run ["-f"] --cli=app
 
 test-missing-subcommand:
   cmd := cli.Command "test"
@@ -372,16 +356,16 @@ test-missing-subcommand:
             --run=:: unreachable
       ]
 
-  expect-abort "Missing subcommand.": | ui/cli.Ui |
-    cmd.run [] --ui=ui
+  expect-abort "Missing subcommand.": | app/cli.Cli |
+    cmd.run [] --cli=app
 
 test-dash-arg:
   cmd := cli.Command "test"
       --options=[
         cli.Option "foo" --short-name="f",
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments {"foo": "-"} parsed
+      --run=:: | invocation/cli.Invocation |
+        check-arguments {"foo": "-"} invocation
 
   cmd.run ["-f", "-"]
 
@@ -396,8 +380,8 @@ test-mixed-rest-named:
       --rest=[
         cli.Option "baz" --required,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} parsed
+      --run=:: | invocation/cli.Invocation |
+        check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "baz_value"} invocation
 
   cmd.run ["--foo", "foo_value", "--bar", "bar_value", "baz_value"]
   cmd.run ["baz_value", "--foo", "foo_value", "--bar", "bar_value"]
@@ -411,8 +395,8 @@ test-mixed-rest-named:
       --rest=[
         cli.Option "baz" --required,
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} parsed
+      --run=:: | invocation/cli.Invocation |
+        check-arguments {"foo": "foo_value", "bar": "bar_value", "baz": "--foo"} invocation
 
   // Because of the '--', the rest argument is not interpreted as a named argument.
   cmd.run ["--foo", "foo_value", "--bar", "bar_value", "--", "--foo"]
@@ -423,9 +407,9 @@ test-snake-kebab:
         cli.Option "foo-bar" --short-name="f",
         cli.Option "toto_titi"
       ]
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        check-arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } parsed
-        check-arguments {"foo_bar": "foo_value", "toto_titi": "toto_value" } parsed
+      --run=:: | invocation/cli.Invocation |
+        check-arguments {"foo-bar": "foo_value", "toto-titi": "toto_value" } invocation
+        check-arguments {"foo_bar": "foo_value", "toto_titi": "toto_value" } invocation
 
   cmd.run ["--foo-bar", "foo_value", "--toto-titi", "toto_value"]
   cmd.run ["--foo_bar", "foo_value", "--toto_titi", "toto_value"]

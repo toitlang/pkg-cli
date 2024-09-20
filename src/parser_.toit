@@ -42,7 +42,15 @@ class Parser_:
     ui.abort
     unreachable
 
-  parse root-command/Command arguments -> Parsed:
+  /**
+  Parses the command line $arguments and calls the given $block with
+    the result.
+
+  Calls the $block with two arguments:
+  - The path (a list of $Command) to the command that was invoked.
+  - The $Parameters that were parsed.
+  */
+  parse root-command/Command arguments/List [block] -> none:
     path := []
     // Populate the options from the default values or empty lists (for multi-options)
     options := {:}
@@ -64,10 +72,11 @@ class Parser_:
 
       seen-options.add option.name
 
-    create-help := : | arguments/List |
-      help-command := Command "help" --run=:: | app/Application _ |
-        help-command_ path arguments --invoked-command=invoked-command_ --ui=app.ui
-      Parsed.private_ [help-command] {:} {}
+    return-help := : | arguments/List |
+      help-command := Command "help" --run=:: | app/Invocation |
+        help-command_ path arguments --invoked-command=invoked-command_ --ui=app.cli.ui
+      block.call [help-command] (Parameters.private_ {:} {})
+      return
 
     command/Command? := null
     set-command := : | new-command/Command |
@@ -112,7 +121,7 @@ class Parser_:
 
         option := all-named-options.get kebab-name
         if not option:
-          if name == "help" and not is-inverted: return create-help.call []
+          if name == "help" and not is-inverted: return-help.call []
           fatal path "Unknown option: --$name"
 
         if option.is-flag and value != null:
@@ -146,7 +155,7 @@ class Parser_:
             option-length++
 
           if not option:
-            if short-name == "h": return create-help.call []
+            if short-name == "h": return-help.call []
             fatal path "Unknown option: -$short-name"
 
           i += option-length
@@ -168,7 +177,7 @@ class Parser_:
         if not subcommand:
           if argument == "help" and command == root-command:
             // Special case for the help command.
-            return create-help.call arguments[index..]
+            return-help.call arguments[index..]
 
           fatal path "Unknown command: $argument"
         set-command.call subcommand
@@ -198,4 +207,4 @@ class Parser_:
     if not command.run-callback_:
       fatal path "Missing subcommand."
 
-    return Parsed.private_ path options seen-options
+    block.call path (Parameters.private_ options seen-options)

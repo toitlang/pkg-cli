@@ -118,6 +118,9 @@ abstract class PrinterBase implements Printer:
 
   emit-list --kind/int list/List --title/string?:
     indentation := print-prefix_ --kind=kind --title=title
+    emit-list_ list --indentation=indentation
+
+  emit-list_ list/List --indentation/string:
     list.do:
       // TODO(florian): should the entries be recursively pretty-printed?
       print_ "$indentation$it"
@@ -131,6 +134,9 @@ abstract class PrinterBase implements Printer:
       if value is Map:
         print_ "$indentation$key:"
         emit-map_ value --indentation="$indentation  "
+      else if value is List:
+        print_ "$indentation$key:"
+        emit-list_ value --indentation="$indentation  "
       else:
         // TODO(florian): should the entries handle lists as well.
         print_ "$indentation$key: $value"
@@ -203,6 +209,9 @@ class Ui:
   constructor.json --level/int=NORMAL-LEVEL:
     return Ui --level=level --printer=JsonPrinter
 
+  constructor.from-args args/List:
+    return create-ui-from-args_ args
+
   /**
   Emits the given $object using the $INFO kind.
 
@@ -210,23 +219,27 @@ class Ui:
     As such, the object must be a valid JSON object.
   Otherwise, the $object is converted to a string.
   */
-  info object/any:
+  inform object/any:
     emit --kind=INFO --structured=: object
 
-  /** Alias for $info. */
+  /** Alias for $inform. */
   print object/any:
-    info object
+    inform object
 
-  /** Variant of $info using the $DEBUG kind. */
+  /** Variant of $inform using the $DEBUG kind. */
   debug object/any:
     emit --kind=DEBUG --structured=: "$object"
 
-  /** Variant of $info using the $VERBOSE kind. */
+  /** Variant of $inform using the $VERBOSE kind. */
   verbose object/any:
     emit --kind=VERBOSE --structured=: "$object"
 
+  /** Variant of $verbose that only calls the block when necessary. */
+  verbose [generator]:
+    do_ --kind=VERBOSE generator
+
   /** Emits the given $object at a warning-level as a string. */
-  warning object/any:
+  warn object/any:
     emit --kind=WARNING --structured=: "$object"
 
   /** Emits the given $object at an interactive-level as a string. */
@@ -315,14 +328,17 @@ class Ui:
     passes the result to the printer.
 
   If the printer does not request a structured representation calls the $text block and
-    passes the result as string to the printer.
+    passes the result as string to the printer. The $text block may return
+    null to indicate that no output should be generated.
   */
   emit --kind/int=RESULT [--structured] [--text]:
     do_ --kind=kind:
       if printer_.needs-structured --kind=kind:
         printer_.emit-structured --kind=kind structured.call
       else:
-        printer_.emit --kind=kind "$text.call"
+        message := text.call
+        if message:
+          printer_.emit --kind=kind "$text.call"
 
   /**
   Variant of $(emit --kind [--structured] [--text]).
@@ -338,6 +354,12 @@ class Ui:
         printer_.emit --kind=kind "$(structured.call)"
 
   /**
+  Whether the UI wants a structured representation for the given $kind.
+  */
+  wants-structured --kind/int=RESULT -> bool:
+    return printer_.needs-structured --kind=kind
+
+  /**
   Aborts the program with the given error message.
 
   # Inheritance
@@ -346,6 +368,20 @@ class Ui:
   */
   abort -> none:
     exit 1
+
+  /**
+  Returns a new Ui object with the given $level and $printer.
+
+  If $level is not provided, the level of the new Ui object is the same as
+    this object.
+
+  If $printer is not provided, the printer of the new Ui object
+    is the same as this object.
+  */
+  with --level/int?=null --printer/Printer?=null -> Ui:
+    return Ui
+        --level=level or this.level
+        --printer=printer or this.printer_
 
 /**
 Prints the given $str using $print.

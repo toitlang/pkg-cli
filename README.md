@@ -27,33 +27,33 @@ A command declares
 For example:
 
 ``` toit
-import cli
+import cli show *
 
 main args/List:
-  command := cli.Command "my-app"
+  command := Command "my-app"
     --help="My app does something."
     --options=[
-      cli.Option "some-option"
+      Option "some-option"
         --help="This is an option."
         --required,
-      cli.Flag "some-flag"
+      Flag "some-flag"
         --short-name="f"
         --help="This is a flag.",
     ]
     --rest=[
-      cli.Option "rest-arg"
+      Option "rest-arg"
         --help="This is a rest argument."
         --multi,
     ]
     --examples=[
-      cli.Example "Do something with the flag:"
+      Example "Do something with the flag:"
           --arguments="--some-option=foo --no-some-flag rest1 rest1",
     ]
-    --run=:: | app/cli.Application parsed/cli.Parsed |
-      print parsed["some-option"]
-      print parsed["some-flag"]
-      print parsed["rest-arg"]  // A list.
-      app.ui.result "Computed result"
+    --run=:: | invocation/Invocation |
+      print invocation["some-option"]
+      print invocation["some-flag"]
+      print invocation["rest-arg"]  // A list.
+      invocation.cli.ui.result "Computed result"
 
   command.run args
 ```
@@ -78,15 +78,15 @@ Subcommands are defined by adding a `Command` object as child to another command
 For example:
 
 ``` toit
-import cli
+import cli show *
 
 main args/List:
-  command := cli.Command "my-app"
+  command := Command "my-app"
     --help="My app does something."
 
-  sub := cli.Command "subcommand"
+  sub := Command "subcommand"
     --help="This is a subcommand."
-    --run=:: | app/cli.Application parsed/cli.Parsed |
+    --run=:: | invocation/Invocation |
       print "This is a subcommand."
   command.add sub
 
@@ -117,17 +117,24 @@ of the library for a complete list.
 
 Users are encouraged to extend the `cli.Option` class and create their own typed options.
 
-## Application
+## Invocation
 
 A call to `command.run` parses the given arguments and then executes the
-appropriate lambda. The lambda receives two arguments: an `Application` object and a
-`Parsed` object.
+appropriate lambda. The lambda receives one argument: an `Invocation` object.
 
-The `Application` object contains getters for the cache, config, and UI objects.
+The `Invocation` object contains:
+- `cli`: A `Cli` object that contains common functionality for CLI applications, like
+  the `cache`, `config`, and `ui` objects. It is common to pass this object to
+  functions that are called from the lambda.
+- `parameters`: An object that contains the parsed options and rest arguments. The
+  `Invocation` object has a shortcut operator `[]` that forwards to the `parameters`.
+- `path`: A list of strings that contains the path to the command that was called.
+- `command`: The command that was called.
 
 ### Cache
 
-The cache is a simple key-value store that persists between runs. It is typically
+The cache is a simple key-value store that persists between runs. Cached data may
+be removed at any point without major implications to the user. It is typically
 stored in `~/.cache/<command-name>`. Environment variables, such as `$XDG_CACHE_HOME`, or
 `$APP_CACHE_DIR` (where `APP` is the capitalized name) can be used to change the
 location of the cache. See the documentation of the `cache` library for more details.
@@ -139,13 +146,12 @@ The cache can either store bytes, or handle paths to cached folders.
 The cache can store bytes. For example:
 
 ``` toit
-import cli
-import cli.cache as cli
+import cli show Cli FileStore
 
-store-bytes app/cli.Application:
-  cache := app.cache
+store-bytes cli/Cli:
+  cache := cli.cache
 
-  data := cache.get "my-key": | store/cli.FileStore |
+  data := cache.get "my-key": | store/FileStore |
     // Block that is called when the key is not found.
     // The returned data is stored in the cache.
     print "Data is not cached. Computing it."
@@ -158,14 +164,13 @@ The `FileStore` class provides convenience methods to store data. For example, i
 allows to store (either copy or move) existing files:
 
 ``` toit
-import cli
-import cli.cache as cli
+import cli show Cli FileStore
 import host.file
 
-store-from-file app/cli.Application:
-  cache := app.cache
+store-from-file cli/Cli:
+  cache := cli.cache
 
-  data := cache.get "my-file-key": | store/cli.FileStore |
+  data := cache.get "my-file-key": | store/FileStore |
     // Block that is called when the key is not found.
     print "Data is not cached. Computing it."
     store.with-tmp-directory: | tmp-dir |
@@ -184,13 +189,13 @@ directory in the cache structure. The cache class has the
 `get-directory-path` method for this use case:
 
 ``` toit
-import cli
-import cli.cache as cli
+import cli show Cli DirectoryStore
+import host.file
 
-store-directory app/cli.Application:
-  cache := app.cache
+store-directory cli/Cli:
+  cache := cli.cache
 
-  directory := cache.get-directory-path "my-dir-key": | store/cli.DirectoryStore |
+  directory := cache.get-directory-path "my-dir-key": | store/DirectoryStore |
     // Block that is called when the key is not found.
     // The returned directory is stored in the cache.
     print "Directory is not cached. Computing it."
@@ -216,11 +221,10 @@ strings, and the values can be any json-serializable object.
 When modifying a configuration it is necessary to `write` the changes back to disk.
 
 ``` toit
-import cli
-import cli.config as cli
+import cli show Cli Config
 
-config-example app/cli.Application:
-  config := app.config
+config-example cli/Cli:
+  config := cli.config
 
   print "old value: $(config.get "my-key")"
 
@@ -231,8 +235,8 @@ config-example app/cli.Application:
 Keys are split at "." to allow for nested values. For example:
 
 ``` toit
-dotted-example app/cli.Application:
-  config := app.config
+dotted-example cli/Cli:
+  config := cli.config
 
   print "old value: $(config.get "super-key.sub-key")"
 
@@ -266,18 +270,18 @@ add the following options to the root command:
   --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
 ```
 
-A corresponding UI object is then available in the `Application` object. Whenever the
+A corresponding UI object is then available in the `Cli` object. Whenever the
 program wants to output something, it should use the `ui` object.
 
 ``` toit
-import cli
+import cli show Cli
 
-some-chatty-method app/cli.Application:
-  ui := app.ui
+some-chatty-method cli/Cli:
+  ui := cli.ui
   ui.debug "This is a debug message."
   ui.verbose "This is a verbose message."
-  ui.info "This is an info message."
-  ui.warning "This is a warning message."
+  ui.inform "This is an information message."
+  ui.warn "This is a warning message."
   ui.error "This is an error message."
   ui.interactive "This is an interactive message."
   ui.result "This is a result message."
@@ -303,22 +307,21 @@ Developers are encouraged to use the `ui.emit --structured` method to emit struc
 data. This is especially true for the result message.
 
 ``` toit
-import cli
-import cli.ui as cli
+import cli show *
 
 main args:
-  cmd := cli.Command "my-app"
+  cmd := Command "my-app"
     --help="My app does something."
-    --run=:: | app/cli.Application parsed/cli.Parsed |
-      run-app app parsed
+    --run=:: run it
 
-run-app app/cli.Application parsed/cli.Parsed:
-  ui := app.ui
+run invocation/Invocation:
+  ui := invocation.cli.ui
   ui.emit
       // Block that is invoked if structured data is needed.
       --structured=: {
         "result": "Computed result"
       }
+      // Block that is invoked if text data is needed.
       --text=: "Computed result as text message."
 ```
 
@@ -329,6 +332,9 @@ The `Ui` class has furthermore convenience methods to print tables, maps and lis
 
 Typically, these methods are used for result messages, but they can be used for
 other messages as well.
+
+The shorthands `ui.info`, `ui.debug`, also dispatch to these methods if they receive a
+  table (list of lists), map or list.
 
 See the documentation of the `ui` library for more details.
 

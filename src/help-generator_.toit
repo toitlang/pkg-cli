@@ -436,24 +436,25 @@ class HelpGenerator:
     // Parse it, to verify that it actually is valid.
     // We are also using the result to reorder the options.
     parser := Parser_ --invoked-command="root" --for-help-example
-    parsed/Parsed? := null
+    invocation-path/List? := null
+    invocation-parameters/Parameters? := null
     exception := catch:
-      parsed = parser.parse example-path.first command-line
+      parser.parse example-path.first command-line: | path parameters |
+        invocation-path = path
+        invocation-parameters = parameters
     if exception:
       throw "Error in example '$arguments-line': $exception"
-
-    parsed-path := parsed.path
 
     // For each command, collect the options that are defined on it and that were
     // used in the example.
     option-to-command := {:}  // Map from option to command.
     command-level := {:}
     flags := {}
-    for j := 0; j < parsed-path.size; j++:
-      current-command/Command := parsed-path[j]
+    for j := 0; j < invocation-path.size; j++:
+      current-command/Command := invocation-path[j]
       command-level[current-command] = j
       current-command.options_.do: | option/Option |
-        if not parsed.was-provided option.name: continue.do
+        if not invocation-parameters.was-provided option.name: continue.do
         option-to-command["--$option.name"] = current-command
         if option.short-name: option-to-command["-$option.short-name"] = current-command
         if option.is-flag:
@@ -470,7 +471,7 @@ class HelpGenerator:
       if argument == "--":
         break
       if not argument.starts-with "-":
-        if path-index >= parsed-path.size - 1:
+        if path-index >= invocation-path.size - 1:
           argument-index--
           break
         else:
@@ -517,7 +518,7 @@ class HelpGenerator:
             list.add command-line[argument-index++]
           list
 
-    options-for-command.update parsed-path.last --init=(: []) : | list/List |
+    options-for-command.update invocation-path.last --init=(: []) : | list/List |
       list.add-all command-line[argument-index..]
       list
 
@@ -528,7 +529,7 @@ class HelpGenerator:
     // For examples, we don't want the full path that was used to invoke the
     // command (like `build/bin/artemis`), but only the basename.
     app-name := basename_ invoked-command_
-    parsed-path.do: | current-command |
+    invocation-path.do: | current-command |
       if is-root:
         is-root = false
         full-command.add app-name

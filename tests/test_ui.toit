@@ -2,6 +2,7 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
+import cli as cli
 import cli.ui as cli
 import cli.parser_ as cli-parser
 import expect show *
@@ -33,8 +34,9 @@ class TestPrinter extends cli.PrinterBase:
 
 expect-abort expected/string [block]:
   ui := TestUi
+  cli := cli.Cli "test" --ui=ui
   exception := catch:
-    block.call ui
+    block.call cli
   expect-equals "abort" exception
   all-output := ui.messages.join "\n"
   if not all-output.starts-with "Error: $expected":

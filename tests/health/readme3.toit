@@ -2,39 +2,15 @@
 // Use of this source code is governed by a Zero-Clause BSD license that can
 // be found in the tests/LICENSE file.
 
-import cli
-import cli.cache as cli
-import host.file
+import cli show Cli FileStore
 
-store-bytes app/cli.Application:
-  cache := app.cache
+store-bytes cli/Cli:
+  cache := cli.cache
 
-  data := cache.get "my-key": | store/cli.FileStore |
+  data := cache.get "my-key": | store/FileStore |
     // Block that is called when the key is not found.
+    // The returned data is stored in the cache.
     print "Data is not cached. Computing it."
     store.save #[0x01, 0x02, 0x03]
 
   print data  // Prints #[0x01, 0x02, 0x03].
-
-store-from-file app/cli.Application:
-  cache := app.cache
-
-  data := cache.get "my-file-key": | store/cli.FileStore |
-    // Block that is called when the key is not found.
-    print "Data is not cached. Computing it."
-    store.with-tmp-directory: | tmp-dir |
-      data-path := "$tmp-dir/data.txt"
-      // Create a file with some data.
-      file.write-content --path=data-path "Hello world"
-      store.move data-path
-
-  print data  // Prints the binary representation of "Hello world".
-
-main args:
-  cmd := cli.Command "my-app"
-      --run=:: | app/cli.Application parsed/cli.Parsed |
-        print "Data is cached in $app.cache.path"
-        store-bytes app
-        store-from-file app
-
-  cmd.run args

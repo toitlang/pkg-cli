@@ -19,7 +19,8 @@ main:
 
 check-output expected/string [block]:
   ui := TestUi
-  block.call ui
+  cli := cli.Cli "test" --ui=ui
+  block.call cli
   all-output := ui.messages.join "\n"
   if expected != all-output and expected.size == all-output.size:
     for i := 0; i < expected.size; i++:
@@ -70,8 +71,8 @@ test-combination:
       # Example 1:
       app --option1 foo rest
     """
-  check-output cmd-help: | ui/cli.Ui |
-    cmd.run ["--help"] --ui=ui --invoked-command="bin/app"
+  check-output cmd-help: | cli/cli.Cli |
+    cmd.run ["--help"] --cli=cli --invoked-command="bin/app"
   expect-equals cmd-help (cmd.help --invoked-command="bin/app")
 
   sub := cli.Command "sub"
@@ -118,8 +119,8 @@ test-combination:
       # Sub Example 2:
       app --option1 foo sub --option_sub1='xyz'
     """
-  check-output cmd-help: | ui/cli.Ui |
-    cmd.run ["--help"] --ui=ui --invoked-command="bin/app"
+  check-output cmd-help: | cli/cli.Cli |
+    cmd.run ["--help"] --cli=cli --invoked-command="bin/app"
 
   expect-equals cmd-help (cmd.help --invoked-command="bin/app")
 
@@ -148,8 +149,8 @@ test-combination:
       app --option1 foo sub --option_sub1='xyz'
     """
 
-  check-output sub-help: | ui/cli.Ui |
-    cmd.run ["help", "sub"] --ui=ui --invoked-command="bin/app"
+  check-output sub-help: | cli/cli.Cli |
+    cmd.run ["help", "sub"] --cli=cli --invoked-command="bin/app"
 
 test-usage:
   build-usage := : | path/List |
