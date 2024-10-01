@@ -228,10 +228,19 @@ class Ui:
   emit --debug/bool object/any:
     emit --kind=DEBUG --structured=: object
 
+  /** Variant of $(emit --debug object) that only calls the given $generator when needed. */
+  emit --debug/bool [generator] -> none:
+    emit --kind=DEBUG --structured=generator
+
   /** Variant of $emit using the $VERBOSE kind. */
   // TODO(florian): change the bool type to 'True'.
   emit --verbose/bool object/any:
     emit --kind=VERBOSE --structured=: object
+
+  /** Variant of $(emit --verbose object) that only calls the given $generator when needed. */
+  // TODO(florian): change the bool type to 'True'.
+  emit --verbose/bool [generator]:
+    emit --kind=VERBOSE --structured=generator
 
   /** Variant of $emit using the $WARNING kind. */
   // TODO(florian): change the bool type to 'True'.
