@@ -37,7 +37,7 @@ class Parser_:
     // Otherwise, ignore the ui that was determined through the command line and
     // print the usage on stderr, followed by an exit 1.
     ui := test-ui_ or (Ui --level=Ui.QUIET-LEVEL --printer=StderrPrinter_)
-    ui.error str
+    ui.emit --error str
     help-command_ path [] --invoked-command=invoked-command_ --ui=ui
     ui.abort
     unreachable

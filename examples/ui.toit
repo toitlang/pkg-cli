@@ -6,16 +6,16 @@ import cli show *
 
 some-chatty-method cli/Cli:
   ui := cli.ui
-  ui.debug "This is a debug message."
-  ui.verbose "This is a verbose message."
-  ui.inform "This is an information message."
-  ui.warn "This is a warning message."
-  ui.error "This is an error message."
-  ui.interactive "This is an interactive message."
+  ui.emit --debug "This is a debug message."
+  ui.emit --verbose "This is a verbose message."
+  ui.emit --info "This is an information message."
+  ui.emit --warning "This is a warning message."
+  ui.emit --error "This is an error message."
+  ui.emit --interactive "This is an interactive message."
   // By convention, 'result' calls should only happen in the method that
   // initially received the Invocation object.
   // For demonstration purposes, we call it here.
-  ui.result "This is a result message."
+  ui.emit --result "This is a result message."
 
 emit-structured cli/Cli:
   ui := cli.ui
