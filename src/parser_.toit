@@ -8,7 +8,7 @@ import .ui
 import .utils_
 import host.pipe
 
-class StderrPrinter_ extends PrinterBase:
+class StderrPrinter_ extends HumanPrinterBase:
   needs-structured --kind/int -> bool: return false
   emit-structured --kind/int o/any: unreachable
   print_ o:

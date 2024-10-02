@@ -19,7 +19,7 @@ export Config
 /**
 An object giving access to common operations for CLI programs.
 
-If no ui is given uses $Ui.console.
+If no ui is given uses $Ui.human.
 */
 interface Cli:
   constructor
@@ -27,7 +27,7 @@ interface Cli:
       --ui/Ui?=null
       --cache/Cache?=null
       --config/Config?=null:
-    if not ui: ui = Ui.console
+    if not ui: ui = Ui.human
     return Cli_ name --ui=ui --cache=cache --config=config
   /**
   The name of the application.
@@ -319,9 +319,9 @@ class Command:
       options_ = options_.copy
       is-copied = true
       option := OptionEnum "output-format"
-        ["text", "json"]
+        ["human", "plain", "json"]
         --help="Specify the format used when printing to the console."
-        --default="text"
+        --default="human"
       options_.add option
     if not has-verbose-flag:
       if not is-copied:

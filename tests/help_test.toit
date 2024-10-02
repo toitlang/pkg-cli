@@ -635,7 +635,7 @@ test-options:
   cmd.run --add-ui-help []
   expected = """
     Global options:
-          --output-format text|json                          Specify the format used when printing to the console. (default: text)
+          --output-format human|plain|json                   Specify the format used when printing to the console. (default: human)
           --verbose                                          Enable verbose output. Shorthand for --verbosity-level=verbose.
           --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)
     """

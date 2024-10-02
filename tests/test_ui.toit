@@ -19,7 +19,7 @@ class TestUi extends cli.Ui:
   abort:
     throw "abort"
 
-class TestPrinter extends cli.PrinterBase:
+class TestPrinter extends cli.HumanPrinterBase:
   ui_/TestUi? := null
 
   constructor:
