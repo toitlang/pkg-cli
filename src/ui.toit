@@ -220,41 +220,49 @@ class Ui:
   Otherwise, the $object is converted to a string.
   */
   // TODO(florian): change the bool type to 'True'.
-  emit --info/bool object/any:
+  emit --info/bool object/any -> none:
+    if not info: throw "INVALID_ARGUMENT"
     emit --kind=INFO --structured=: object
 
   /** Variant of $emit using the $DEBUG kind. */
   // TODO(florian): change the bool type to 'True'.
-  emit --debug/bool object/any:
+  emit --debug/bool object/any -> none:
+    if not debug: throw "INVALID_ARGUMENT"
     emit --kind=DEBUG --structured=: object
 
   /** Variant of $(emit --debug object) that only calls the given $generator when needed. */
   emit --debug/bool [generator] -> none:
+    if not debug: throw "INVALID_ARGUMENT"
     emit --kind=DEBUG --structured=generator
 
   /** Variant of $emit using the $VERBOSE kind. */
   // TODO(florian): change the bool type to 'True'.
-  emit --verbose/bool object/any:
+  emit --verbose/bool object/any -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit --kind=VERBOSE --structured=: object
 
   /** Variant of $(emit --verbose object) that only calls the given $generator when needed. */
   // TODO(florian): change the bool type to 'True'.
-  emit --verbose/bool [generator]:
+  emit --verbose/bool [generator] -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit --kind=VERBOSE --structured=generator
 
   /** Variant of $emit using the $WARNING kind. */
   // TODO(florian): change the bool type to 'True'.
-  emit --warning/bool object/any:
+  emit --warning/bool object/any -> none:
+    if not warning: throw "INVALID_ARGUMENT"
     emit --kind=WARNING --structured=: object
 
   /** Variant of $emit using the $INTERACTIVE kind. */
   // TODO(florian): change the bool type to 'True'.
-  emit --interactive/bool object/any:
+  emit --interactive/bool object/any -> none:
+    if not interactive: throw "INVALID_ARGUMENT"
     emit --kind=INTERACTIVE --structured=: object
 
   /** Variant of $emit using the $ERROR kind. */
   // TODO(florian): change the bool type to 'True'.
-  emit --error/bool object/any:
+  emit --error/bool object/any -> none:
+    if not error: throw "INVALID_ARGUMENT"
     emit --kind=ERROR --structured=: object
 
   /**
@@ -263,14 +271,15 @@ class Ui:
   A program should do only a single result output per run.
   */
   // TODO(florian): change the bool type to 'True'.
-  emit --result/bool object/any:
+  emit --result/bool object/any -> none:
+    if not result: throw "INVALID_ARGUMENT"
     emit --kind=RESULT --structured=: object
 
   /**
   Aborts the program with the given error message.
   First emits $object at an error-level as as tring, then calls $abort.
   */
-  abort object/any:
+  abort object/any -> none:
     emit --error object
     abort
 
@@ -302,7 +311,7 @@ class Ui:
     key entries into the $table. The values are used in the header row. Printers
     are *not* required to use the $header.
   */
-  emit-table --kind/int table/List --title/string?=null --header/Map?=null:
+  emit-table --kind/int table/List --title/string?=null --header/Map?=null -> none:
     do_ --kind=kind:
       if printer_.needs-structured --kind=kind:
         printer_.emit-structured --kind=kind table
@@ -310,27 +319,39 @@ class Ui:
         printer_.emit-table --kind=kind --title=title --header=header table
 
   /** Variant of $(emit-table --kind table) using the $DEBUG kind. */
-  emit-table --debug/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --debug/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not debug: throw "INVALID_ARGUMENT"
     emit-table --kind=DEBUG table --title=title --header=header
 
   /** Variant of $(emit-table --kind table) using the $VERBOSE kind. */
-  emit-table --verbose/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --verbose/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit-table --kind=VERBOSE table --title=title --header=header
 
   /** Variant of $(emit-table --kind table) using the $INFO kind. */
-  emit-table --info/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --info/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not info: throw "INVALID_ARGUMENT"
     emit-table --kind=INFO table --title=title --header=header
 
   /** Variant of $(emit-table --kind table) using the $WARNING kind. */
-  emit-table --warning/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --warning/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not warning: throw "INVALID_ARGUMENT"
     emit-table --kind=WARNING table --title=title --header=header
 
   /** Variant of $(emit-table --kind table) using the $INTERACTIVE kind. */
-  emit-table --interactive/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --interactive/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not interactive: throw "INVALID_ARGUMENT"
     emit-table --kind=INTERACTIVE table --title=title --header=header
 
   /** Variant of $(emit-table --kind table) using the $ERROR kind. */
-  emit-table --error/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --error/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not error: throw "INVALID_ARGUMENT"
     emit-table --kind=ERROR table --title=title --header=header
 
   /**
@@ -338,7 +359,9 @@ class Ui:
 
   A program should do only a single result output per run.
   */
-  emit-table --result/bool table/List --title/string?=null --header/Map?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-table --result/bool table/List --title/string?=null --header/Map?=null -> none:
+    if not result: throw "INVALID_ARGUMENT"
     emit-table --kind=RESULT table --title=title --header=header
 
   /**
@@ -346,7 +369,7 @@ class Ui:
 
   Printers are *not* required to display the title.
   */
-  emit-list --kind/int list/List --title/string?=null:
+  emit-list --kind/int list/List --title/string?=null -> none:
     do_ --kind=kind:
       if printer_.needs-structured --kind=kind:
         printer_.emit-structured --kind=kind list
@@ -354,27 +377,39 @@ class Ui:
         printer_.emit-list --kind=kind --title=title list
 
   /** Variant of $(emit-list --kind list) using the $DEBUG kind. */
-  emit-list --debug/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --debug/bool list/List --title/string?=null -> none:
+    if not debug: throw "INVALID_ARGUMENT"
     emit-list --kind=DEBUG list --title=title
 
   /** Variant of $(emit-list --kind list) using the $VERBOSE kind. */
-  emit-list --verbose/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --verbose/bool list/List --title/string?=null -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit-list --kind=VERBOSE list --title=title
 
   /** Variant of $(emit-list --kind list) using the $INFO kind. */
-  emit-list --info/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --info/bool list/List --title/string?=null -> none:
+    if not info: throw "INVALID_ARGUMENT"
     emit-list --kind=INFO list --title=title
 
   /** Variant of $(emit-list --kind list) using the $WARNING kind. */
-  emit-list --warning/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --warning/bool list/List --title/string?=null -> none:
+    if not warning: throw "INVALID_ARGUMENT"
     emit-list --kind=WARNING list --title=title
 
   /** Variant of $(emit-list --kind list) using the $INTERACTIVE kind. */
-  emit-list --interactive/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --interactive/bool list/List --title/string?=null -> none:
+    if not interactive: throw "INVALID_ARGUMENT"
     emit-list --kind=INTERACTIVE list --title=title
 
   /** Variant of $(emit-list --kind list) using the $ERROR kind. */
-  emit-list --error/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --error/bool list/List --title/string?=null -> none:
+    if not error: throw "INVALID_ARGUMENT"
     emit-list --kind=ERROR list --title=title
 
   /**
@@ -382,7 +417,9 @@ class Ui:
 
   A program should do only a single result output per run.
   */
-  emit-list --result/bool list/List --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-list --result/bool list/List --title/string?=null -> none:
+    if not result: throw "INVALID_ARGUMENT"
     emit-list --kind=RESULT list --title=title
 
   /**
@@ -390,7 +427,7 @@ class Ui:
 
   Printers are *not* required to display the title.
   */
-  emit-map --kind/int map/Map --title/string?=null:
+  emit-map --kind/int map/Map --title/string?=null -> none:
     do_ --kind=kind:
       if printer_.needs-structured --kind=kind:
         printer_.emit-structured --kind=kind map
@@ -398,27 +435,39 @@ class Ui:
         printer_.emit-map --kind=kind --title=title map
 
   /** Variant of $(emit-map --kind map) using the $DEBUG kind. */
-  emit-map --debug/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --debug/bool map/Map --title/string?=null -> none:
+    if not debug: throw "INVALID_ARGUMENT"
     emit-map --kind=DEBUG map --title=title
 
   /** Variant of $(emit-map --kind map) using the $VERBOSE kind. */
-  emit-map --verbose/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --verbose/bool map/Map --title/string?=null -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit-map --kind=VERBOSE map --title=title
 
   /** Variant of $(emit-map --kind map) using the $INFO kind. */
-  emit-map --info/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --info/bool map/Map --title/string?=null -> none:
+    if not info: throw "INVALID_ARGUMENT"
     emit-map --kind=INFO map --title=title
 
   /** Variant of $(emit-map --kind map) using the $WARNING kind. */
-  emit-map --warning/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --warning/bool map/Map --title/string?=null -> none:
+    if not warning: throw "INVALID_ARGUMENT"
     emit-map --kind=WARNING map --title=title
 
   /** Variant of $(emit-map --kind map) using the $INTERACTIVE kind. */
-  emit-map --interactive/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --interactive/bool map/Map --title/string?=null -> none:
+    if not interactive: throw "INVALID_ARGUMENT"
     emit-map --kind=INTERACTIVE map --title=title
 
   /** Variant of $(emit-map --kind map) using the $ERROR kind. */
-  emit-map --error/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --error/bool map/Map --title/string?=null -> none:
+    if not error: throw "INVALID_ARGUMENT"
     emit-map --kind=ERROR map --title=title
 
   /**
@@ -426,7 +475,9 @@ class Ui:
 
   A program should do only a single result output per run.
   */
-  emit-map --result/bool map/Map --title/string?=null:
+  // TODO(florian): change the bool type to 'True'.
+  emit-map --result/bool map/Map --title/string?=null -> none:
+    if not result: throw "INVALID_ARGUMENT"
     emit-map --kind=RESULT map --title=title
 
   /**
@@ -453,23 +504,33 @@ class Ui:
     emit --kind=DEBUG --structured=structured --text=text
 
   /** Variant of $(emit --kind [--structured] [--text]) using the $VERBOSE kind. */
-  emit --verbose/bool [--structured] [--text]:
+  // TODO(florian): change the bool type to 'True'.
+  emit --verbose/bool [--structured] [--text] -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit --kind=VERBOSE --structured=structured --text=text
 
   /** Variant of $(emit --kind [--structured] [--text]) using the $INFO kind. */
-  emit --info/bool [--structured] [--text]:
+  // TODO(florian): change the bool type to 'True'.
+  emit --info/bool [--structured] [--text] -> none:
+    if not info: throw "INVALID_ARGUMENT"
     emit --kind=INFO --structured=structured --text=text
 
   /** Variant of $(emit --kind [--structured] [--text]) using the $WARNING kind. */
-  emit --warning/bool [--structured] [--text]:
+  // TODO(florian): change the bool type to 'True'.
+  emit --warning/bool [--structured] [--text] -> none:
+    if not warning: throw "INVALID_ARGUMENT"
     emit --kind=WARNING --structured=structured --text=text
 
   /** Variant of $(emit --kind [--structured] [--text]) using the $INTERACTIVE kind. */
-  emit --interactive/bool [--structured] [--text]:
+  // TODO(florian): change the bool type to 'True'.
+  emit --interactive/bool [--structured] [--text] -> none:
+    if not interactive: throw "INVALID_ARGUMENT"
     emit --kind=INTERACTIVE --structured=structured --text=text
 
   /** Variant of $(emit --kind [--structured] [--text]) using the $ERROR kind. */
-  emit --error/bool [--structured] [--text]:
+  // TODO(florian): change the bool type to 'True'.
+  emit --error/bool [--structured] [--text] -> none:
+    if not error: throw "INVALID_ARGUMENT"
     emit --kind=ERROR --structured=structured --text=text
 
   /**
@@ -477,7 +538,9 @@ class Ui:
 
   A program should do only a single result output per run.
   */
-  emit --result/bool [--structured] [--text]:
+  // TODO(florian): change the bool type to 'True'.
+  emit --result/bool [--structured] [--text] -> none:
+    if not result: throw "INVALID_ARGUMENT"
     emit --kind=RESULT --structured=structured --text=text
 
   /**
@@ -494,27 +557,39 @@ class Ui:
         printer_.emit --kind=kind "$(structured.call)"
 
   /** Variant of $(emit --kind [--structured]) using the $DEBUG kind. */
-  emit --debug/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --debug/bool [--structured] -> none:
+    if not debug: throw "INVALID_ARGUMENT"
     emit --kind=DEBUG --structured=structured
 
   /** Variant of $(emit --kind [--structured]) using the $VERBOSE kind. */
-  emit --verbose/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --verbose/bool [--structured] -> none:
+    if not verbose: throw "INVALID_ARGUMENT"
     emit --kind=VERBOSE --structured=structured
 
   /** Variant of $(emit --kind [--structured]) using the $INFO kind. */
-  emit --info/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --info/bool [--structured] -> none:
+    if not info: throw "INVALID_ARGUMENT"
     emit --kind=INFO --structured=structured
 
   /** Variant of $(emit --kind [--structured]) using the $WARNING kind. */
-  emit --warning/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --warning/bool [--structured] -> none:
+    if not warning: throw "INVALID_ARGUMENT"
     emit --kind=WARNING --structured=structured
 
   /** Variant of $(emit --kind [--structured]) using the $INTERACTIVE kind. */
-  emit --interactive/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --interactive/bool [--structured] -> none:
+    if not interactive: throw "INVALID_ARGUMENT"
     emit --kind=INTERACTIVE --structured=structured
 
   /** Variant of $(emit --kind [--structured]) using the $ERROR kind. */
-  emit --error/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --error/bool [--structured] -> none:
+    if not error: throw "INVALID_ARGUMENT"
     emit --kind=ERROR --structured=structured
 
   /**
@@ -522,7 +597,9 @@ class Ui:
 
   A program should do only a single result output per run.
   */
-  emit --result/bool [--structured]:
+  // TODO: change the bool type to 'True'.
+  emit --result/bool [--structured] -> none:
+    if not result: throw "INVALID_ARGUMENT"
     emit --kind=RESULT --structured=structured
 
   /**
