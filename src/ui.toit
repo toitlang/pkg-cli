@@ -88,15 +88,22 @@ interface Printer:
   /** Emits the given $json-object of the given message-$kind. */
   emit-structured --kind/int json-object/any
 
+  /** Whether the printer wants a human representation for the given $kind. */
+  wants-human --kind/int -> bool
+
 /**
 A printer that prints human-readable output.
 */
 abstract class HumanPrinterBase implements Printer:
 
-  abstract needs-structured --kind/int -> bool
   abstract emit-structured --kind/int object/any
-
   abstract print_ str/string
+
+  needs-structured --kind/int -> bool:
+    return false
+
+  wants-human --kind/int -> bool:
+    return true
 
   emit --kind/int msg/string:
     prefix := ""
@@ -190,10 +197,14 @@ Typically, this printer is used in shell scripts or other non-interactive
 */
 abstract class PlainPrinterBase implements Printer:
 
-  abstract needs-structured --kind/int -> bool
   abstract emit-structured --kind/int object/any
-
   abstract print_ str/string
+
+  needs-structured --kind/int -> bool:
+    return false
+
+  wants-human --kind/int -> bool:
+    return false
 
   emit --kind/int msg/string:
     print_ msg
@@ -674,6 +685,12 @@ class Ui:
     return printer_.needs-structured --kind=kind
 
   /**
+  Whether the UI wants a human representation for the given $kind.
+  */
+  wants-human --kind/int=RESULT -> bool:
+    return printer_.wants-human --kind=kind
+
+  /**
   Aborts the program with the given error message.
 
   # Inheritance
@@ -698,8 +715,6 @@ class Ui:
         --printer=printer or this.printer_
 
 class HumanPrinter extends HumanPrinterBase:
-  needs-structured --kind/int -> bool: return false
-
   print_ str/string:
     print str
 
@@ -707,16 +722,15 @@ class HumanPrinter extends HumanPrinterBase:
     unreachable
 
 class PlainPrinter extends PlainPrinterBase:
-  needs-structured --kind/int -> bool: return false
-
   print_ str/string:
     print str
 
   emit-structured --kind/int object/any:
     unreachable
 
-class JsonPrinter extends PlainPrinterBase:
-  needs-structured --kind/int -> bool: return kind == Ui.RESULT
+class JsonPrinter extends HumanPrinterBase:
+  needs-structured --kind/int -> bool:
+    return kind == Ui.RESULT
 
   print_ str/string:
     print-on-stderr_ str

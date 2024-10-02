@@ -347,7 +347,7 @@ test-json:
   ui := Ui --printer=printer
 
   // Anything that isn't a result is emitted on stderr as if it was
-  // a console Ui.
+  // a human Ui.
   ui.emit --info "hello"
   expect-equals "hello\n" printer.stderr
   printer.reset
@@ -364,9 +364,9 @@ test-json:
   expect-equals "{\"foo\":1,\"bar\":2}" printer.stdout
 
   ui.emit --warning "some warning"
-  expect-equals "some warning\n" printer.stderr
+  expect-equals "Warning: some warning\n" printer.stderr
   printer.reset
 
   ui.emit --error "some error"
-  expect-equals "some error\n" printer.stderr
+  expect-equals "Error: some error\n" printer.stderr
   printer.reset
