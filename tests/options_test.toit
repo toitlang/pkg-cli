@@ -4,7 +4,7 @@
 
 import cli
 import expect show *
-import uuid
+import uuid show Uuid
 
 main:
   test-string
@@ -131,14 +131,14 @@ test-uuid:
   expect-null option.default
   expect-equals "uuid" option.type
 
-  option = cli.OptionUuid "uuid" --default=uuid.NIL
-  expect-equals uuid.NIL option.default
+  option = cli.OptionUuid "uuid" --default=Uuid.NIL
+  expect-equals Uuid.NIL option.default
 
   value := option.parse "00000000-0000-0000-0000-000000000000"
-  expect-equals uuid.NIL value
+  expect-equals Uuid.NIL value
 
   value = option.parse "00000000-0000-0000-0000-000000000001"
-  expect-equals (uuid.parse "00000000-0000-0000-0000-000000000001") value
+  expect-equals (Uuid.parse "00000000-0000-0000-0000-000000000001") value
 
   expect-throw "Invalid value for option 'uuid': 'foo'. Expected a UUID.":
     option.parse "foo"

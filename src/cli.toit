@@ -2,7 +2,7 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
-import uuid
+import uuid show Uuid
 import system
 
 import .cache
@@ -816,7 +816,7 @@ class OptionPatterns extends Option:
 A Uuid option.
 */
 class OptionUuid extends Option:
-  default/uuid.Uuid?
+  default/Uuid?
 
   /**
   Creates a new Uuid option.
@@ -845,8 +845,8 @@ class OptionUuid extends Option:
 
   type -> string: return "uuid"
 
-  parse str/string --for-help-example/bool=false -> uuid.Uuid:
-    return uuid.parse str --on-error=:
+  parse str/string --for-help-example/bool=false -> Uuid:
+    return Uuid.parse str --on-error=:
       throw "Invalid value for option '$name': '$str'. Expected a UUID."
 
 
