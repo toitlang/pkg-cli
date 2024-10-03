@@ -38,7 +38,7 @@ create-ui-from-args_ args/List:
       output-format = arg["--output-format=".size..]
 
   if verbose-level == null: verbose-level = "info"
-  if output-format == null: output-format = "text"
+  if output-format == null: output-format = "human"
 
   level/int := ?
   if verbose-level == "debug": level = Ui.DEBUG-LEVEL
@@ -50,8 +50,12 @@ create-ui-from-args_ args/List:
 
   if output-format == "json":
     return Ui.json --level=level
+  else if output-format == "plain":
+    return Ui.plain --level=level
+  else if output-format == "human":
+    return Ui.human --level=level
   else:
-    return Ui.console --level=level
+    throw "Invalid output format: $output-format"
 
 interface Printer:
   /** Emits the given $msg of the given message-$kind. */
@@ -84,12 +88,22 @@ interface Printer:
   /** Emits the given $json-object of the given message-$kind. */
   emit-structured --kind/int json-object/any
 
-abstract class PrinterBase implements Printer:
+  /** Whether the printer wants a human representation for the given $kind. */
+  wants-human --kind/int -> bool
 
-  abstract needs-structured --kind/int -> bool
+/**
+A printer that prints human-readable output.
+*/
+abstract class HumanPrinterBase implements Printer:
+
   abstract emit-structured --kind/int object/any
-
   abstract print_ str/string
+
+  needs-structured --kind/int -> bool:
+    return false
+
+  wants-human --kind/int -> bool:
+    return true
 
   emit --kind/int msg/string:
     prefix := ""
@@ -176,6 +190,65 @@ abstract class PrinterBase implements Printer:
     print_ "└─$(bars.join "─┴─")─┘"
 
 /**
+A printer that prints output in simple text format.
+
+Typically, this printer is used in shell scripts or other non-interactive
+  environments, where JSON output is not desired.
+*/
+abstract class PlainPrinterBase implements Printer:
+
+  abstract emit-structured --kind/int object/any
+  abstract print_ str/string
+
+  needs-structured --kind/int -> bool:
+    return false
+
+  wants-human --kind/int -> bool:
+    return false
+
+  emit --kind/int msg/string:
+    print_ msg
+
+  emit-list --kind/int list/List --title/string?:
+    emit-list_ list
+
+  emit-list_ list/List:
+    list.do:
+      // TODO(florian): should the entries be recursively pretty-printed?
+      print_ "$it"
+
+  emit-map --kind/int map/Map --title/string?:
+    emit-map_ map --prefix=""
+
+  emit-map_ map/Map --prefix/string:
+    map.do: | key value |
+      if value is Map:
+        emit-map_ value --prefix="$prefix$key."
+      else if value is List:
+        print_ "$prefix$key: $(value.join ", ")"
+      else:
+        // TODO(florian): should the entries handle lists as well.
+        print_ "$prefix$key: $value"
+
+  emit-table --kind/int table/List --title/string?=null --header/Map:
+    column-count := header.size
+    column-sizes := header.map: 0
+
+    table.do: | row/Map |
+      header.do --keys: | key/string |
+        entry/string := "$row[key]"
+        column-sizes.update key: | old/int | max old (entry.size --runes)
+
+    table.do: | row |
+      out := ""
+      spacing := ""
+      column-sizes.do: | key size |
+        entry := "$row[key]"
+        out += "$spacing$entry"
+        spacing = " " * (1 + size - (entry.size --runes))
+      print_ out
+
+/**
 A class for handling input/output from the user.
 
 The Ui class is used to display text to the user and to get input from the user.
@@ -203,8 +276,11 @@ class Ui:
     if not DEBUG-LEVEL >= level >= SILENT-LEVEL:
       throw "Invalid level: $level"
 
-  constructor.console --level/int=NORMAL-LEVEL:
-    return Ui --level=level --printer=ConsolePrinter
+  constructor.human --level/int=NORMAL-LEVEL:
+    return Ui --level=level --printer=HumanPrinter
+
+  constructor.plain --level/int=NORMAL-LEVEL:
+    return Ui --level=level --printer=PlainPrinter
 
   constructor.json --level/int=NORMAL-LEVEL:
     return Ui --level=level --printer=JsonPrinter
@@ -609,6 +685,12 @@ class Ui:
     return printer_.needs-structured --kind=kind
 
   /**
+  Whether the UI wants a human representation for the given $kind.
+  */
+  wants-human --kind/int=RESULT -> bool:
+    return printer_.wants-human --kind=kind
+
+  /**
   Aborts the program with the given error message.
 
   # Inheritance
@@ -632,29 +714,26 @@ class Ui:
         --level=level or this.level
         --printer=printer or this.printer_
 
-/**
-Prints the given $str using $print.
-
-This function is necessary, as $ConsolePrinter has its own 'print' method,
-  which shadows the global one.
-*/
-global-print_ str/string:
-  print str
-
-class ConsolePrinter extends PrinterBase:
-  needs-structured --kind/int -> bool: return false
-
+class HumanPrinter extends HumanPrinterBase:
   print_ str/string:
-    global-print_ str
+    print str
 
   emit-structured --kind/int object/any:
     unreachable
 
-class JsonPrinter extends PrinterBase:
-  needs-structured --kind/int -> bool: return kind == Ui.RESULT
+class PlainPrinter extends PlainPrinterBase:
+  print_ str/string:
+    print str
+
+  emit-structured --kind/int object/any:
+    unreachable
+
+class JsonPrinter extends HumanPrinterBase:
+  needs-structured --kind/int -> bool:
+    return kind == Ui.RESULT
 
   print_ str/string:
     print-on-stderr_ str
 
   emit-structured --kind/int object/any:
-    global-print_ (json.stringify object)
+    print (json.stringify object)
