@@ -370,3 +370,10 @@ test-json:
   ui.emit --error "some error"
   expect-equals "Error: some error\n" printer.stderr
   printer.reset
+
+  expect ui.wants-structured  // By default the kind is "Ui.RESULT".
+  expect (ui.wants-structured --kind=Ui.RESULT)
+  expect-not (ui.wants-structured --kind=Ui.INFO)
+  expect-not ui.wants-human  // By default the kind is "Ui.RESULT".
+  expect-not (ui.wants-human --kind=Ui.RESULT)
+  expect (ui.wants-human --kind=Ui.INFO)
