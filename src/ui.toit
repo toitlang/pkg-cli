@@ -732,6 +732,9 @@ class JsonPrinter extends HumanPrinterBase:
   needs-structured --kind/int -> bool:
     return kind == Ui.RESULT
 
+  wants-human --kind/int -> bool:
+    return kind != Ui.RESULT
+
   print_ str/string:
     print-on-stderr_ str
 
