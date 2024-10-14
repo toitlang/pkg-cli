@@ -4,6 +4,7 @@
 
 import cli
 import cli.help-generator_ show HelpGenerator
+import cli.path_ show Path
 import expect show *
 
 import .test-ui
@@ -153,8 +154,9 @@ test-combination:
     cmd.run ["help", "sub"] --cli=cli --invoked-command="bin/app"
 
 test-usage:
-  build-usage := : | path/List |
-    help := HelpGenerator path --invoked-command="bin/app"
+  build-usage := : | commands/List |
+    path := Path.private_ commands --invoked-command="bin/app"
+    help := HelpGenerator path
     help.build-usage
     help.to-string
 
@@ -281,8 +283,9 @@ test-usage:
   expect-equals expected-usage "Usage:\n  $(cmd.usage --invoked-command="bin/app")\n"
 
 test-aliases:
-  build-aliases := : | path/List |
-    help := HelpGenerator path --invoked-command="bin/app"
+  build-aliases := : | commands/List |
+    path := Path.private_ commands --invoked-command="bin/app"
+    help := HelpGenerator path
     help.build-aliases
     help.to-string
 
@@ -317,8 +320,9 @@ test-aliases:
   expect-equals expected (build-aliases.call [cmd, sub])
 
 test-commands:
-  build-commands := : | path/List |
-    help := HelpGenerator path --invoked-command="bin/app"
+  build-commands := : | commands/List |
+    path := Path.private_ commands --invoked-command="bin/app"
+    help := HelpGenerator path
     help.build-commands
     help.to-string
 
@@ -446,13 +450,15 @@ test-commands:
   expect-equals expected (build-commands.call [cmd])
 
 test-options:
-  build-local-options := : | path/List |
-    help := HelpGenerator path --invoked-command="bin/app"
+  build-local-options := : | commands/List |
+    path := Path.private_ commands --invoked-command="bin/app"
+    help := HelpGenerator path
     help.build-local-options
     help.to-string
 
-  build-global-options := : | path/List |
-    help := HelpGenerator path --invoked-command="bin/app"
+  build-global-options := : | commands/List |
+    path := Path.private_ commands --invoked-command="bin/app"
+    help := HelpGenerator path
     help.build-global-options
     help.to-string
 
@@ -643,8 +649,9 @@ test-options:
   expect-equals expected actual
 
 test-examples:
-  build-examples := : | path/List |
-    help := HelpGenerator path --invoked-command="bin/app"
+  build-examples := : | commands/List |
+    path := Path.private_ commands --invoked-command="bin/app"
+    help := HelpGenerator path
     help.build-examples
     help.to-string
 

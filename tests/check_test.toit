@@ -14,6 +14,7 @@ main:
   rest
   hidden-rest
   snake-kebab
+  example
 
 missing-run:
   root := cli.Command "root"
@@ -245,4 +246,20 @@ snake-kebab:
       --run=:: | parsed/cli.Invocation |
         unreachable
   expect-throw "Ambiguous option of 'root': --foo-bar.":
+    root.check --invoked-command="root"
+
+example:
+  root := cli.Command "root"
+      --options=[
+        cli.Option "foo" --short-name="f",
+      ]
+      --rest=[
+        cli.Option "rest" --multi,
+      ]
+      --examples=[
+        cli.Example "text" --arguments="--gee"
+      ]
+      --run=:: | parsed/cli.Invocation |
+        unreachable
+  expect-throw "Error in example '--gee': Unknown option: --gee.":
     root.check --invoked-command="root"

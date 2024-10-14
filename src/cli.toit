@@ -7,9 +7,10 @@ import system
 
 import .cache
 import .config
-import .parser_
-import .utils_
 import .help-generator_
+import .parser_
+import .path_
+import .utils_
 import .ui
 
 export Ui
@@ -251,7 +252,8 @@ class Command:
 
   /** Returns the help string of this command. */
   help --invoked-command/string=system.program-name -> string:
-    generator := HelpGenerator [this] --invoked-command=invoked-command
+    path := Path this --invoked-command=invoked-command
+    generator := HelpGenerator path
     generator.build-all
     return generator.to-string
 
@@ -273,7 +275,8 @@ class Command:
 
   /** Returns the usage string of this command. */
   usage --invoked-command/string=system.program-name -> string:
-    generator := HelpGenerator [this] --invoked-command=invoked-command
+    path := Path this --invoked-command=invoked-command
+    generator := HelpGenerator path
     generator.build-usage --as-section=false
     return generator.to-string
 
@@ -300,8 +303,8 @@ class Command:
         add-ui-options_
       cli = Cli_ name --ui=ui --cache=null --config=null
     parser := Parser_ --invoked-command=invoked-command
-    parser.parse this arguments: | path/List parameters/Parameters |
-      invocation := Invocation.private_ cli path parameters
+    parser.parse this arguments: | path/Path parameters/Parameters |
+      invocation := Invocation.private_ cli path.commands parameters
       invocation.command.run-callback_.call invocation
 
   add-ui-options_:
@@ -343,9 +346,15 @@ class Command:
 
   /**
   Checks this command and all subcommands for errors.
+
+  If an error is found, an exception is thrown with a message describing the error.
+
+  Typically, a call to this method is added to the program's main function in an
+    assert block.
   */
   check --invoked-command=system.program-name:
-    check_ --path=[invoked-command]
+    path := Path this --invoked-command=invoked-command
+    check_ --path=path --invoked-command=invoked-command
 
   are-prefix-of-each-other_ str1/string str2/string -> bool:
     m := min str1.size str2.size
@@ -357,7 +366,7 @@ class Command:
   The $outer-long-options and $outer-short-options are the options that are
     available through supercommands.
   */
-  check_ --path/List --outer-long-options/Set={} --outer-short-options/Set={}:
+  check_ --path/Path --invoked-command/string --outer-long-options/Set={} --outer-short-options/Set={}:
     examples_.do: it as Example
     aliases_.do: it as string
 
@@ -365,31 +374,31 @@ class Command:
     short-options := {}
     options_.do: | option/Option |
       if long-options.contains option.name:
-        throw "Ambiguous option of '$(path.join " ")': --$option.name."
+        throw "Ambiguous option of '$path.to-string': --$option.name."
       if outer-long-options.contains option.name:
-        throw "Ambiguous option of '$(path.join " ")': --$option.name conflicts with global option."
+        throw "Ambiguous option of '$path.to-string': --$option.name conflicts with global option."
       long-options.add option.name
 
       if option.short-name:
         if (short-options.any: are-prefix-of-each-other_ it option.short-name):
-          throw "Ambiguous option of '$(path.join " ")': -$option.short-name."
+          throw "Ambiguous option of '$path.to-string': -$option.short-name."
         if (outer-short-options.any: are-prefix-of-each-other_ it option.short-name):
-          throw "Ambiguous option of '$(path.join " ")': -$option.short-name conflicts with global option."
+          throw "Ambiguous option of '$path.to-string': -$option.short-name conflicts with global option."
         short-options.add option.short-name
 
     have-seen-optional-rest := false
     for i := 0; i < rest_.size; i++:
       option/Option := rest_[i]
       if option.is-multi and not i == rest_.size - 1:
-        throw "Multi-option '$option.name' of '$(path.join " ")' must be the last rest argument."
+        throw "Multi-option '$option.name' of '$path.to-string' must be the last rest argument."
       if long-options.contains option.name:
-        throw "Rest name '$option.name' of '$(path.join " ")' already used."
+        throw "Rest name '$option.name' of '$path.to-string' already used."
       if outer-long-options.contains option.name:
-        throw "Rest name '$option.name' of '$(path.join " ")' already a global option."
+        throw "Rest name '$option.name' of '$path.to-string' already a global option."
       if have-seen-optional-rest and option.is-required:
-        throw "Required rest argument '$option.name' of '$(path.join " ")' cannot follow optional rest argument."
+        throw "Required rest argument '$option.name' of '$path.to-string' cannot follow optional rest argument."
       if option.is-hidden:
-        throw "Rest argument '$option.name' of '$(path.join " ")' cannot be hidden."
+        throw "Rest argument '$option.name' of '$path.to-string' cannot be hidden."
       have-seen-optional-rest = not option.is-required
       long-options.add option.name
 
@@ -407,10 +416,12 @@ class Command:
       names := [command.name] + command.aliases_
       names.do: | name/string? |
         if subnames.contains name:
-          throw "Ambiguous subcommand of '$(path.join " ")': '$name'."
+          throw "Ambiguous subcommand of '$path.to-string': '$name'."
         subnames.add name
 
-      command.check_ --path=(path + [command.name])
+      command.check_
+          --path=(path + command)
+          --invoked-command=invoked-command
           --outer-long-options=outer-long-options
           --outer-short-options=outer-short-options
 
@@ -418,7 +429,12 @@ class Command:
     // As such, we could also allow commands without either. If desired, it should be
     // safe to remove the following check.
     if subcommands_.is-empty and not run-callback_:
-      throw "Command '$(path.join " ")' has no subcommands and no run callback."
+      throw "Command '$path.to-string' has no subcommands and no run callback."
+
+    if not examples_.is-empty:
+      generator := HelpGenerator path
+      examples_.do: | example/Example |
+        generator.build-example_ example --example-path=path
 
   find-subcommand_ name/string -> Command?:
     subcommands_.do: | command/Command |
