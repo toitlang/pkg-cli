@@ -262,11 +262,11 @@ class Ui:
   static ERROR ::= 5
   static RESULT ::= 6
 
-  static DEBUG-LEVEL ::= -1
-  static VERBOSE-LEVEL ::= -2
-  static NORMAL-LEVEL ::= -3
-  static QUIET-LEVEL ::= -4
   static SILENT-LEVEL ::= -5
+  static QUIET-LEVEL ::= -4
+  static NORMAL-LEVEL ::= -3
+  static VERBOSE-LEVEL ::= -2
+  static DEBUG-LEVEL ::= -1
 
   level/int
   printer_/Printer
