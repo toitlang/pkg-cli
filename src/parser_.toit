@@ -4,6 +4,7 @@
 
 import .cli
 import .help-generator_
+import .path_
 import .ui
 import .utils_
 import host.pipe
@@ -29,7 +30,7 @@ class Parser_:
 
   The program was called with wrong arguments.
   */
-  fatal path/List str/string:
+  fatal path/Path str/string:
     if for-help-example_:
       throw str
 
@@ -38,7 +39,7 @@ class Parser_:
     // print the usage on stderr, followed by an exit 1.
     ui := test-ui_ or (Ui --level=Ui.QUIET-LEVEL --printer=StderrPrinter_)
     ui.emit --error str
-    help-command_ path [] --invoked-command=invoked-command_ --ui=ui
+    help-command_ path [] --ui=ui
     ui.abort
     unreachable
 
@@ -51,7 +52,7 @@ class Parser_:
   - The $Parameters that were parsed.
   */
   parse root-command/Command arguments/List [block] -> none:
-    path := []
+    path := Path root-command --invoked-command=invoked-command_
     // Populate the options from the default values or empty lists (for multi-options)
     options := {:}
 
@@ -74,12 +75,13 @@ class Parser_:
 
     return-help := : | arguments/List |
       help-command := Command "help" --run=:: | app/Invocation |
-        help-command_ path arguments --invoked-command=invoked-command_ --ui=app.cli.ui
-      block.call [help-command] (Parameters.private_ {:} {})
+        help-command_ path arguments --ui=app.cli.ui
+      help-path := Path help-command --invoked-command=invoked-command_
+      block.call help-path (Parameters.private_ {:} {})
       return
 
     command/Command? := null
-    set-command := : | new-command/Command |
+    set-command := : | new-command/Command add-to-path/bool |
       new-command.options_.do: | option/Option |
         all-named-options[option.name] = option
         if option.short-name: all-short-options[option.short-name] = option
@@ -92,9 +94,9 @@ class Parser_:
           options[option.name] = option.default
 
       command = new-command
-      path.add command
+      if add-to-path: path += command
 
-    set-command.call root-command
+    set-command.call root-command false
 
     rest := []
 
@@ -180,7 +182,7 @@ class Parser_:
             return-help.call arguments[index..]
 
           fatal path "Unknown command: $argument"
-        set-command.call subcommand
+        set-command.call subcommand true
 
       else:
         rest.add argument

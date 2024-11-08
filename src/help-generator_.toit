@@ -4,6 +4,7 @@
 
 import .cli
 import .parser_
+import .path_
 import .utils_
 import .ui
 import system
@@ -13,10 +14,7 @@ The 'help' command that can be executed on the root command.
 
 It finds the selected command and prints its help.
 */
-help-command_ path/List arguments/List --invoked-command/string --ui/Ui:
-  // We are modifying the path, so make a copy.
-  path = path.copy
-
+help-command_ path/Path arguments/List --ui/Ui:
   command/Command := path.last
 
   for i := 0; i < arguments.size; i++:
@@ -32,25 +30,25 @@ help-command_ path/List arguments/List --invoked-command/string --ui/Ui:
       ui.abort "Unknown command: $argument"
       unreachable
     command = subcommand
-    path.add command
+    path += command
 
-  emit-help_ path --invoked-command=invoked-command --ui=ui
+  emit-help_ path --ui=ui
 
 /**
 Emits the help for the given command.
 
 The command is identified by the $path where the command is the last element.
 */
-emit-help_ path/List --invoked-command/string --ui/Ui:
+emit-help_ path/Path --ui/Ui:
   ui.emit --kind=Ui.RESULT
       --structured=:
-        build-json-help_ path --invoked-command=invoked-command
+        build-json-help_ path
       --text=:
-        generator := HelpGenerator path --invoked-command=invoked-command
+        generator := HelpGenerator path
         generator.build-all
         generator.to-string
 
-build-json-help_ path/List --invoked-command/string -> Map:
+build-json-help_ path/Path -> Map:
   // Local block to build json objects for the given command.
   // Adds the converted json object to the out-map.
   extract-options := : | command/Command out-map/Map |
@@ -88,7 +86,8 @@ build-json-help_ path/List --invoked-command/string -> Map:
 
   return {
     "name": command.name,
-    "path": path.map: | command/Command | command.name,
+    "path": path.commands.map: | command/Command | command.name,
+    "invoked-command": path.invoked-command,
     "help": command.help_,
     "aliases": command.aliases_,
     "options": extract-options.call command {:},
@@ -105,14 +104,12 @@ The class also serves as a string builder for the `build_X` methods. The methods
 */
 class HelpGenerator:
   command_/Command
-  path_/List
-  invoked-command_/string
+  path_/Path
   buffer_/List := []  // Buffered string.
   // The index in the buffer of the last separator.
   last-separator-pos_/int := 0
 
-  constructor .path_ --invoked-command/string:
-    invoked-command_ = invoked-command
+  constructor .path_:
     command_=path_.last
 
   /**
@@ -181,7 +178,7 @@ class HelpGenerator:
     // They are sorted by name.
     // For the usage line we don't care for the short names of options.
 
-    write_ invoked-command_ --indentation=indentation
+    write_ path_.invoked-command --indentation=indentation
     has-more-options := false
     for i := 0; i < path_.size; i++:
       current-command/Command := path_[i]
@@ -376,7 +373,7 @@ class HelpGenerator:
       if i != 0: writeln_
       example-and-path := all-examples[i]
       example/Example := example-and-path[0]
-      example-path/List := example-and-path[1]
+      example-path/Path := example-and-path[1]
 
       build-example_ example --example-path=example-path
 
@@ -389,14 +386,14 @@ class HelpGenerator:
   If $skip-first-level is true, then does not add the examples of this command, but only
     those of subcommands.
   */
-  add-global-examples_ command/Command all-examples/List --path/List --skip-first-level/bool=false -> none:
+  add-global-examples_ command/Command all-examples/List --path/Path --skip-first-level/bool=false -> none:
     if not skip-first-level:
       global-examples := (command.examples_.filter: it.global-priority > 0)
       all-examples.add-all (global-examples.map: [it, path])
 
     command.subcommands_.do: | subcommand/Command |
       if subcommand.is-hidden_: continue.do
-      add-global-examples_ subcommand all-examples --path=(path + [subcommand])
+      add-global-examples_ subcommand all-examples --path=(path + subcommand)
 
   /**
   Builds a single example.
@@ -404,7 +401,7 @@ class HelpGenerator:
   The $example contains the description and arguments, and the $example-path is
     the path to the command that contains the example.
   */
-  build-example_ example/Example --example-path/List:
+  build-example_ example/Example --example-path/Path:
     description := example.description.trim --right
     description-lines := ?
     if description.contains "\n": description-lines = description.split "\n"
@@ -423,11 +420,11 @@ class HelpGenerator:
   Builds the example command line for the given $arguments-line.
   The command that defined the example is identified by the $example-path.
   */
-  build-example-command-line_ arguments-line/string --example-path/List:
+  build-example-command-line_ arguments-line/string --example-path/Path:
     // Start by constructing a valid command line.
 
     // The prefix consists of the subcommands.
-    prefix := example-path[1..].map: | command/Command | command.name
+    prefix := example-path.commands[1..].map: | command/Command | command.name
     // Split the arguments line into individual arguments.
     // For example, `"foo --bar \"my password\""` is split into `["foo", "--bar", "my password"]`.
     example-arguments := split-arguments_ arguments-line
@@ -436,14 +433,14 @@ class HelpGenerator:
     // Parse it, to verify that it actually is valid.
     // We are also using the result to reorder the options.
     parser := Parser_ --invoked-command="root" --for-help-example
-    invocation-path/List? := null
+    invocation-path/Path? := null
     invocation-parameters/Parameters? := null
     exception := catch:
       parser.parse example-path.first command-line: | path parameters |
         invocation-path = path
         invocation-parameters = parameters
     if exception:
-      throw "Error in example '$arguments-line': $exception"
+      throw "Error in example '$arguments-line': $exception."
 
     // For each command, collect the options that are defined on it and that were
     // used in the example.
@@ -528,8 +525,8 @@ class HelpGenerator:
     is-root := true
     // For examples, we don't want the full path that was used to invoke the
     // command (like `build/bin/artemis`), but only the basename.
-    app-name := basename_ invoked-command_
-    invocation-path.do: | current-command |
+    app-name := basename_ example-path.invoked-command
+    invocation-path.commands.do: | current-command |
       if is-root:
         is-root = false
         full-command.add app-name
