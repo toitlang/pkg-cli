@@ -6,7 +6,7 @@ import crypto.sha256
 import encoding.base64
 import encoding.json
 import fs
-import fs.xdg
+import desktop
 import host.os
 import host.file
 import host.directory
@@ -50,7 +50,7 @@ class Cache:
     if env-path:
       return Cache --app-name=app-name --path=env-path
 
-    cache-home := xdg.cache-home
+    cache-home := desktop.cache-home
     return Cache --app-name=app-name --path="$cache-home/$(app-name)"
 
   /**

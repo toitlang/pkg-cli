@@ -2,13 +2,12 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import desktop
+import encoding.json
+import fs
 import host.os
 import host.file
 import host.directory
-import encoding.json
-import writer
-import fs.xdg
-import fs
 import .utils_
 
 /**
@@ -58,10 +57,10 @@ class Config:
       data := read-config-file_ env-path --if_absent=: init.call
       return Config --app-name=app-name --path=env-path --data=data
 
-    config-home := xdg.config-home
+    config-home := desktop.config-home
 
     // The path we are using to write configurations to.
-    all-dirs := [config-home] + xdg.config-dirs
+    all-dirs := [config-home] + desktop.config-dirs
     all-dirs.do: | dir/string |
       path := "$dir/$app-name/config"
       data := read-config-file_ path --if_absent=: null

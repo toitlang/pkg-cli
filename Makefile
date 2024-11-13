@@ -24,4 +24,9 @@ rebuild-cmake:
 	# The build-type is otherwise unused.
 	cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
-.PHONY: all test rebuild-cmake install-pkgs
+update-pkgs:
+	for d in $$(git ls-files | grep package.yaml | grep -v tests/pkg | grep -v tests/lsp/project-root-multi); do \
+	  toit pkg update --project-root $$(dirname $$d); \
+	done
+
+.PHONY: all test rebuild-cmake install-pkgs update-pkgs

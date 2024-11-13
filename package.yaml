@@ -3,9 +3,12 @@ description: Tools, like an argument parser, to create command-line applications
 environment:
   sdk: ^2.0.0-alpha.161
 dependencies:
+  desktop:
+    url: github.com/toitlang/pkg-desktop
+    version: ^1.0.0
   fs:
     url: github.com/toitlang/pkg-fs
-    version: ^2.2.0
+    version: ^2.3.1
   host:
     url: github.com/toitlang/pkg-host
-    version: ^1.15.0
+    version: ^1.15.3
