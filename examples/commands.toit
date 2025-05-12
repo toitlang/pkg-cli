@@ -106,7 +106,7 @@ fleet-status invocation/Invocation:
   cli := invocation.cli
   verbose := cli.ui.level >= Ui.VERBOSE-LEVEL
 
-  cli.ui.emit
+  cli.ui.emit --kind=Ui.RESULT
       --structured=: {
           "some": "json",
           "info": "about the status",
@@ -210,5 +210,5 @@ reset-device invocation/Invocation:
   force := invocation["force"]
 
   with-device invocation: | device |
-    cli.ui.inform "Resetting device '$device' in $(mode)-mode."
-    if force: cli.ui.debug "Using the force if necessary."
+    cli.ui.emit --info "Resetting device '$device' in $(mode)-mode."
+    if force: cli.ui.emit --debug "Using the force if necessary."
