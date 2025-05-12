@@ -13,7 +13,7 @@ class StderrPrinter_ extends HumanPrinterBase:
   needs-structured --kind/int -> bool: return false
   emit-structured --kind/int o/any: unreachable
   print_ o:
-    pipe.stderr.write "$o\n"
+    pipe.stderr.out.write "$o\n"
 
 test-ui_/Ui? := null
 

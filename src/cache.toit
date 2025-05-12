@@ -111,7 +111,7 @@ class Cache:
   */
   get key/string [block] -> ByteArray:
     key-path := get-file-path key block
-    return file.read-content key-path
+    return file.read-contents key-path
 
   /**
   Returns the path to the cached directory item with the given $key.
@@ -326,7 +326,7 @@ class FileStore_ implements FileStore:
   */
   save bytes/ByteArray:
     store_: | file-path/string |
-      file.write-content bytes --path=file-path
+      file.write-contents bytes --path=file-path
 
   /**
   Calls the given $block with a $io.Writer.

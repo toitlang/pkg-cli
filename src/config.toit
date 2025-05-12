@@ -90,7 +90,7 @@ class Config:
 
     data := null
     exception := catch:
-      content := file.read-content path
+      content := file.read-contents path
       data = json.decode content
     if exception: throw "Invalid configuration file '$path': $exception."
     if data is not Map: throw "Invalid JSON in configuration file '$path'."

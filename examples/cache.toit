@@ -25,8 +25,8 @@ store-directory cli/Cli:
     print "Directory is not cached. Computing it."
     store.with-tmp-directory: | tmp-dir |
       // Create a few files with some data.
-      file.write-content --path="$tmp-dir/data1.txt" "Hello world"
-      file.write-content --path="$tmp-dir/data2.txt" "Bonjour monde"
+      file.write-contents --path="$tmp-dir/data1.txt" "Hello world"
+      file.write-contents --path="$tmp-dir/data2.txt" "Bonjour monde"
       store.move tmp-dir
 
   print directory  // Prints the path to the directory.

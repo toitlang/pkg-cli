@@ -30,7 +30,7 @@ test-file-cache:
     path := c.get-file-path key: | store |
       throw "Should not be called"
     expect-equals path "$cache-dir/key"
-    content := file.read-content path
+    content := file.read-contents path
     expect-equals content #[1, 2, 3]
 
     key2 := "dir/nested/many/levels/key2"
@@ -46,7 +46,7 @@ test-file-cache:
     path2 := c.get-file-path key2: | store |
       throw "Should not be called"
     expect-equals path2 "$cache-dir/$key2"
-    content2 := file.read-content path2
+    content2 := file.read-contents path2
     expect-equals content2 #[4, 5, 6]
 
     // Make sure we didn't leave any temporary directories behind.
@@ -222,7 +222,7 @@ test-dir-cache:
         write-content --path="$dir/file" --content=#[1, 2, 3]
         store.move dir
     expect-equals value2 "$cache-dir/$key2"
-    expect-equals #[1, 2, 3] (file.read-content "$value2/file")
+    expect-equals #[1, 2, 3] (file.read-contents "$value2/file")
 
     // Test nested directories.
     key3 := "dir/key3"
@@ -232,7 +232,7 @@ test-dir-cache:
         write-content --path="$dir/file" --content=#[4, 5, 6]
         store.move dir
     expect-equals value3 "$cache-dir/$key3"
-    expect-equals #[4, 5, 6] (file.read-content "$value3/file")
+    expect-equals #[4, 5, 6] (file.read-contents "$value3/file")
 
     // Test concurrent accesses to the cache.
 
@@ -259,7 +259,7 @@ test-dir-cache:
 
     expect-equals value4 "$cache-dir/$key4"
     // The first task wins.
-    expect-equals #[7, 8, 9] (file.read-content "$value4/file")
+    expect-equals #[7, 8, 9] (file.read-contents "$value4/file")
 
     // Make sure we didn't leave any temporary directories behind.
     dir-streamer := directory.DirectoryStream cache-dir
