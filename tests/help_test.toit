@@ -5,9 +5,8 @@
 import cli
 import cli.help-generator_ show HelpGenerator
 import cli.path_ show Path
+import cli.test show TestUi
 import expect show *
-
-import .test-ui
 
 main:
   test-combination
@@ -22,13 +21,14 @@ check-output expected/string [block]:
   ui := TestUi
   cli := cli.Cli "test" --ui=ui
   block.call cli
-  all-output := ui.messages.join "\n"
+  all-output := ui.stdout + ui.stderr
   if expected != all-output and expected.size == all-output.size:
     for i := 0; i < expected.size; i++:
       if expected[i] != all-output[i]:
         print "Mismatch at index $i: '$(string.from-rune expected[i])' != '$(string.from-rune all-output[i])'"
         break
-  expect-equals expected all-output
+  // The library prints the output with a trailing newline.
+  expect-equals (expected + "\n") all-output
 
 test-combination:
   create-root := : | subcommands/List |

@@ -3,9 +3,9 @@
 // be found in the tests/LICENSE file.
 
 import cli
+import cli.test show *
 import expect show *
 
-import .test-ui
 
 check-arguments expected/Map invocation/cli.Invocation:
   expected.do: | key value |
