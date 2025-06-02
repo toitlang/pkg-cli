@@ -43,7 +43,7 @@ main:
 
 class TestAbort:
 
-interface TestPrinter:
+interface TestPrinter extends Printer:
   set-test-ui_ test-ui/TestUi?
 
 class TestHumanPrinter extends HumanPrinter implements TestPrinter:
@@ -51,7 +51,27 @@ class TestHumanPrinter extends HumanPrinter implements TestPrinter:
 
   print_ str/string:
     if not test-ui_.quiet_: super str
-    test-ui_.stdout += "$str\n"
+    test-ui_.stdout-messages.add "$str\n"
+
+  set-test-ui_ test-ui/TestUi:
+    test-ui_ = test-ui
+
+class TestPlainPrinter extends PlainPrinter implements TestPrinter:
+  test-ui_/TestUi? := null
+  needs-structured_/bool
+
+  constructor --needs-structured/bool:
+    needs-structured_ = needs-structured
+
+  needs-structured --kind/int -> bool:
+    return needs-structured_
+
+  print_ str/string:
+    if not test-ui_.quiet_: super str
+    test-ui_.stdout-messages.add "$str\n"
+
+  emit-structured --kind/int data:
+    test-ui_.stdout-messages.add (json.stringify data)
 
   set-test-ui_ test-ui/TestUi:
     test-ui_ = test-ui
@@ -61,31 +81,52 @@ class TestJsonPrinter extends JsonPrinter implements TestPrinter:
 
   print_ str/string:
     if not test-ui_.quiet_: super str
-    test-ui_.stderr += "$str\n"
+    test-ui_.stderr-messages.add "$str\n"
 
   emit-structured --kind/int data:
-    test-ui_.stdout += json.stringify data
+    test-ui_.stdout-messages.add (json.stringify data)
 
   set-test-ui_ test-ui/TestUi:
     test-ui_ = test-ui
 
 class TestUi extends Ui:
-  stdout/string := ""
-  stderr/string := ""
+  stdout-messages/List ::= []
+  stderr-messages/List ::= []
   quiet_/bool
-  json_/bool
 
   constructor --level/int=Ui.NORMAL-LEVEL --quiet/bool=true --json/bool=false:
-    quiet_ = quiet
-    json_ = json
     printer := create-printer_ --json=json
+    return TestUi --printer=printer --level=level --quiet=quiet
+
+  constructor --level/int=Ui.NORMAL-LEVEL --quiet/bool=true --printer/TestPrinter:
+    quiet_ = quiet
     super --printer=printer --level=level
     (printer as TestPrinter).set-test-ui_ this
     test-ui_ = this
 
-  static create-printer_ --json/bool -> Printer:
+  static create-printer_ --json/bool -> TestPrinter:
     if json: return TestJsonPrinter
     return TestHumanPrinter
+
+  stdout -> string:
+    return stdout-messages.join ""
+
+  stdout= str/string:
+    stdout-messages.clear
+    if str != "":
+      stdout-messages.add str
+
+  stderr -> string:
+    return stderr-messages.join ""
+
+  stderr= str/string:
+    stderr-messages.clear
+    if str != "":
+      stderr-messages.add str
+
+  reset -> none:
+    stdout-messages.clear
+    stderr-messages.clear
 
   abort:
     throw TestAbort
