@@ -3,68 +3,30 @@
 // be found in the tests/LICENSE file.
 
 import cli.ui show *
+import cli.test show TestUi TestHumanPrinter TestPlainPrinter TestJsonPrinter TestPrinter
 import encoding.json
 import expect show *
 
-class TestHumanPrinter extends HumanPrinterBase:
-  stdout/string := ""
-  structured/List := []
+class TestStructuredPrinter extends HumanPrinterBase implements TestPrinter:
+  test-ui_/TestUi? := null
+  structured/List ::= []
 
-  reset:
-    stdout = ""
+  needs-structured --kind/int -> bool: return true
+
+  print_ str/string:
+    if not test-ui_.quiet_: print "str"
+    test-ui_.stdout-messages.add "$str\n"
+
+  emit-structured --kind/int data:
+    structured.add data
+    if not test-ui_.quiet_:
+      test-ui_.stdout-messages.add (json.stringify data)
+
+  set-test-ui_ test-ui/TestUi:
+    test-ui_ = test-ui
+
+  reset -> none:
     structured.clear
-
-  needs-structured_/bool
-
-  constructor --needs-structured/bool:
-    needs-structured_ = needs-structured
-
-  needs-structured --kind/int -> bool:
-    return needs-structured_
-
-  print_ str/string:
-    stdout += "$str\n"
-
-  emit-structured --kind/int o:
-    structured.add o
-
-
-class TestPlainPrinter extends PlainPrinterBase:
-  needs-structured_/bool
-
-  stdout/string := ""
-  stderr/string := ""
-
-  constructor --needs-structured/bool:
-    needs-structured_ = needs-structured
-
-  needs-structured --kind/int -> bool:
-    return needs-structured_
-
-  reset:
-    stdout = ""
-    stderr = ""
-
-  print_ str/string:
-    stdout += "$str\n"
-
-  emit-structured --kind/int structured:
-    stdout += (json.stringify structured)
-
-
-class TestJsonPrinter extends JsonPrinter:
-  stdout/string := ""
-  stderr/string := ""
-
-  reset:
-    stdout = ""
-    stderr = ""
-
-  print_ str/string:
-    stderr += "$str\n"
-
-  emit-structured --kind/int structured:
-    stdout += (json.stringify structured)
 
 main:
   test-human
@@ -73,24 +35,24 @@ main:
   test-json
 
 test-human:
-  printer := TestHumanPrinter --no-needs-structured
-  ui := Ui --printer=printer
+  printer := TestHumanPrinter
+  ui := TestUi --printer=printer
 
   ui.emit --info "hello"
-  expect-equals "hello\n" printer.stdout
-  printer.reset
+  expect-equals "hello\n" ui.stdout
+  ui.reset
 
   ui.emit --info ["hello", "world"]
-  expect-equals "[hello, world]\n" printer.stdout
-  printer.reset
+  expect-equals "[hello, world]\n" ui.stdout
+  ui.reset
 
   ui.emit-list --result ["hello", "world"]
-  expect-equals "hello\nworld\n" printer.stdout
-  printer.reset
+  expect-equals "hello\nworld\n" ui.stdout
+  ui.reset
 
   ui.emit-list --result --title="French" ["bonjour", "monde"]
-  expect-equals "French:\n  bonjour\n  monde\n" printer.stdout
-  printer.reset
+  expect-equals "French:\n  bonjour\n  monde\n" ui.stdout
+  ui.reset
 
   ui.emit-table --result --header={"x": "x", "y": "y"} [
     { "x": "a", "y": "b" },
@@ -103,8 +65,8 @@ test-human:
   │ a   b │
   │ c   d │
   └───┴───┘
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
   ui.emit-table --result --header={ "left": "long", "right": "even longer" } [
     { "left": "a",      "right": "short" },
@@ -117,8 +79,8 @@ test-human:
   │ a        short       │
   │ longer   d           │
   └────────┴─────────────┘
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
   ui.emit-table --result --header={"left": "no", "right": "rows"} []
   expect-equals """
@@ -126,8 +88,8 @@ test-human:
   │ no   rows │
   ├────┼──────┤
   └────┴──────┘
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
   ui.emit-table --result --header={"left": "with", "right": "ints"} [
     { "left": 1, "right": 2, },
@@ -140,15 +102,15 @@ test-human:
   │ 1      2    │
   │ 3      4    │
   └──────┴──────┘
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
   ui.emit --info {
     "a": "b",
     "c": "d",
   }
-  expect-equals "{a: b, c: d}\n" printer.stdout
-  printer.reset
+  expect-equals "{a: b, c: d}\n" ui.stdout
+  ui.reset
 
   ui.emit-map --result {
     "a": "b",
@@ -157,8 +119,8 @@ test-human:
   expect-equals """
   a: b
   c: d
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
   // Nested maps.
   ui.emit-map --result {
@@ -173,48 +135,48 @@ test-human:
     b: c
     d: e
   f: g
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
   ui.emit --info "foo"
-  expect-equals "foo\n" printer.stdout
-  printer.reset
+  expect-equals "foo\n" ui.stdout
+  ui.reset
 
   ui.emit --warning "foo"
-  expect-equals "Warning: foo\n" printer.stdout
-  printer.reset
+  expect-equals "Warning: foo\n" ui.stdout
+  ui.reset
 
   ui.emit --error "foo"
-  expect-equals "Error: foo\n" printer.stdout
-  printer.reset
+  expect-equals "Error: foo\n" ui.stdout
+  ui.reset
 
   ui.emit-map --result {
     "entry with int": 499,
   }
   expect-equals """
   entry with int: 499
-  """ printer.stdout
-  printer.reset
+  """ ui.stdout
+  ui.reset
 
 test-plain:
     printer := TestPlainPrinter --no-needs-structured
-    ui := Ui --printer=printer
+    ui := TestUi --printer=printer
 
     ui.emit --info "hello"
-    expect-equals "hello\n" printer.stdout
-    printer.reset
+    expect-equals "hello\n" ui.stdout
+    ui.reset
 
     ui.emit --info ["hello", "world"]
-    expect-equals "[hello, world]\n" printer.stdout
-    printer.reset
+    expect-equals "[hello, world]\n" ui.stdout
+    ui.reset
 
     ui.emit-list --result ["hello", "world"]
-    expect-equals "hello\nworld\n" printer.stdout
-    printer.reset
+    expect-equals "hello\nworld\n" ui.stdout
+    ui.reset
 
     ui.emit-list --result --title="French" ["bonjour", "monde"]
-    expect-equals "bonjour\nmonde\n" printer.stdout
-    printer.reset
+    expect-equals "bonjour\nmonde\n" ui.stdout
+    ui.reset
 
     ui.emit-table --result --header={"x": "x", "y": "y"} [
       { "x": "a", "y": "b" },
@@ -223,8 +185,8 @@ test-plain:
     expect-equals """
     a b
     c d
-    """ printer.stdout
-    printer.reset
+    """ ui.stdout
+    ui.reset
 
     ui.emit-table --result --header={ "left": "long", "right": "even longer" } [
       { "left": "a",      "right": "short" },
@@ -233,12 +195,12 @@ test-plain:
     expect-equals """
     a      short
     longer d
-    """ printer.stdout
-    printer.reset
+    """ ui.stdout
+    ui.reset
 
     ui.emit-table --result --header={"left": "no", "right": "rows"} []
-    expect-equals "" printer.stdout
-    printer.reset
+    expect-equals "" ui.stdout
+    ui.reset
 
     ui.emit-table --result --header={"left": "with", "right": "ints"} [
       { "left": 1, "right": 2, },
@@ -247,15 +209,15 @@ test-plain:
     expect-equals """
     1 2
     3 4
-    """ printer.stdout
-    printer.reset
+    """ ui.stdout
+    ui.reset
 
     ui.emit --info {
       "a": "b",
       "c": "d",
     }
-    expect-equals "{a: b, c: d}\n" printer.stdout
-    printer.reset
+    expect-equals "{a: b, c: d}\n" ui.stdout
+    ui.reset
 
     ui.emit-map --result {
       "a": "b",
@@ -264,8 +226,8 @@ test-plain:
     expect-equals """
     a: b
     c: d
-    """ printer.stdout
-    printer.reset
+    """ ui.stdout
+    ui.reset
 
     // Nested maps.
     ui.emit-map --result {
@@ -279,32 +241,32 @@ test-plain:
     a.b: c
     a.d: e
     f: g
-    """ printer.stdout
-    printer.reset
+    """ ui.stdout
+    ui.reset
 
     ui.emit --info "foo"
-    expect-equals "foo\n" printer.stdout
-    printer.reset
+    expect-equals "foo\n" ui.stdout
+    ui.reset
 
     ui.emit --warning "foo"
-    expect-equals "foo\n" printer.stdout
-    printer.reset
+    expect-equals "foo\n" ui.stdout
+    ui.reset
 
     ui.emit --error "foo"
-    expect-equals "foo\n" printer.stdout
-    printer.reset
+    expect-equals "foo\n" ui.stdout
+    ui.reset
 
     ui.emit-map --result {
       "entry with int": 499,
     }
     expect-equals """
     entry with int: 499
-    """ printer.stdout
-    printer.reset
+    """ ui.stdout
+    ui.reset
 
 test-structured:
-  printer := TestHumanPrinter --needs-structured
-  ui := Ui --printer=printer
+  printer := TestStructuredPrinter
+  ui := TestUi --printer=printer
 
   ui.emit --info "hello"
   expect-equals ["hello"] printer.structured
@@ -344,32 +306,32 @@ test-structured:
 
 test-json:
   printer := TestJsonPrinter
-  ui := Ui --printer=printer
+  ui := TestUi --printer=printer
 
   // Anything that isn't a result is emitted on stderr as if it was
   // a human Ui.
   ui.emit --info "hello"
-  expect-equals "hello\n" printer.stderr
-  printer.reset
+  expect-equals "hello\n" ui.stderr
+  ui.reset
 
   // Results are emitted on stdout as JSON.
   ui.emit --result "hello"
-  expect-equals "\"hello\"" printer.stdout
-  printer.reset
+  expect-equals "\"hello\"" ui.stdout
+  ui.reset
 
   ui.emit-map --result {
     "foo": 1,
     "bar": 2,
   }
-  expect-equals "{\"foo\":1,\"bar\":2}" printer.stdout
+  expect-equals "{\"foo\":1,\"bar\":2}" ui.stdout
 
   ui.emit --warning "some warning"
-  expect-equals "Warning: some warning\n" printer.stderr
-  printer.reset
+  expect-equals "Warning: some warning\n" ui.stderr
+  ui.reset
 
   ui.emit --error "some error"
-  expect-equals "Error: some error\n" printer.stderr
-  printer.reset
+  expect-equals "Error: some error\n" ui.stderr
+  ui.reset
 
   expect ui.wants-structured  // By default the kind is "Ui.RESULT".
   expect (ui.wants-structured --kind=Ui.RESULT)
