@@ -23,6 +23,14 @@ Typically, caches are stored in the user's home: \$(HOME)/.cache, but users can
 
 To simplify testing, the environment variable '<app-name>_CACHE_DIR' can be used to
   override the cache directory.
+
+This library is thread-safe. The library uses atomic moves to
+  guarantee that cache entries are always complete. If two processes
+  try to write the same cache entry then the first one to finish wins
+  and the second one is ignored.
+
+The cache has no way to update an existing entry. If you want to
+  update an entry, you must remove it first.
 */
 
 /**
@@ -78,6 +86,15 @@ class Cache:
     return file.is-file key-path or file.is-directory key-path
 
   /**
+  Returns a path to the cache entry with the given $key.
+
+  If the cache entry doesn't exist yet, then the returned string
+    points to a non-existing file.
+  */
+  get-file-path key/string -> string:
+    return key-path_ key
+
+  /**
   Variant of $(get key [block]).
 
   Returns a path to the cache entry, instead of the content.
@@ -112,6 +129,15 @@ class Cache:
   get key/string [block] -> ByteArray:
     key-path := get-file-path key block
     return file.read-contents key-path
+
+  /**
+  Returns the path to the directory item with the given $key.
+
+  If the cache entry doesn't exist yet, then the returned string
+    points to a non-existing directory.
+  */
+  get-directory-path key/string -> string:
+    return key-path_ key
 
   /**
   Returns the path to the cached directory item with the given $key.
@@ -221,7 +247,7 @@ interface FileStore:
   Calls the given $block with the path as argument.
   The temporary directory is deleted after the block returns.
   */
-  with-tmp-directory [block]
+  with-tmp-directory [block] -> none
 
   /**
   Saves the given $bytes as the content of $key.
@@ -229,7 +255,7 @@ interface FileStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  save bytes/ByteArray
+  save bytes/io.Data -> none
 
   /**
   Calls the given $block with a $io.Writer.
@@ -237,7 +263,7 @@ interface FileStore:
   The $block must write its chunks to the writer.
   The writer is closed after the block returns.
   */
-  save-via-writer [block]
+  save-via-writer [block] -> none
 
   /**
   Copies the content of $path to the cache under $key.
@@ -245,7 +271,7 @@ interface FileStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  copy path/string
+  copy path/string -> none
 
   /**
   Moves the file at $path to the cache under $key.
@@ -253,7 +279,7 @@ interface FileStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  move path/string
+  move path/string -> none
 
   // TODO(florian): add "download" method.
   // download url/string --compressed/bool=false --path/string="":
@@ -275,7 +301,7 @@ interface DirectoryStore:
   Calls the given $block with the path as argument.
   The temporary directory is deleted after the block returns.
   */
-  with-tmp-directory [block]
+  with-tmp-directory [block] -> none
 
   /**
   Copies the content of the directory $path to the cache under $key.
@@ -283,7 +309,7 @@ interface DirectoryStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  copy path/string
+  copy path/string -> none
 
   /**
   Moves the directory at $path to the cache under $key.
@@ -291,7 +317,7 @@ interface DirectoryStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  move path/string
+  move path/string -> none
 
   // TODO(florian): add "download" method.
   // Must be a tar, tar.gz, tgz, or zip.
@@ -315,7 +341,7 @@ class FileStore_ implements FileStore:
   Calls the given $block with the path as argument.
   The temporary directory is deleted after the block returns.
   */
-  with-tmp-directory [block]:
+  with-tmp-directory [block] -> none:
     cache_.with-tmp-directory_ block
 
   /**
@@ -324,7 +350,7 @@ class FileStore_ implements FileStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  save bytes/ByteArray:
+  save bytes/io.Data -> none:
     store_: | file-path/string |
       file.write-contents bytes --path=file-path
 
@@ -334,7 +360,7 @@ class FileStore_ implements FileStore:
   The $block must write its chunks to the writer.
   The writer is closed after the block returns.
   */
-  save-via-writer [block]:
+  save-via-writer [block] -> none:
     store_: | file-path/string |
       stream := file.Stream.for-write file-path
       try:
@@ -348,7 +374,7 @@ class FileStore_ implements FileStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  copy path/string:
+  copy path/string -> none:
     store_: | file-path/string |
       copy-file_ --source=path --target=file-path
 
@@ -358,7 +384,7 @@ class FileStore_ implements FileStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  move path/string:
+  move path/string -> none:
     if has-stored_: throw "Already saved content for key: $key"
     if is-closed_: throw "FileStore is closed"
 
@@ -402,7 +428,7 @@ class DirectoryStore_ implements DirectoryStore:
   Calls the given $block with the path as argument.
   The temporary directory is deleted after the block returns.
   */
-  with-tmp-directory [block]:
+  with-tmp-directory [block] -> none:
     cache_.with-tmp-directory_ block
 
   /**
@@ -411,7 +437,7 @@ class DirectoryStore_ implements DirectoryStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  copy path/string:
+  copy path/string -> none:
     store_: | dir-path/string |
       copy-directory --source=path --target=dir-path
 
@@ -421,7 +447,7 @@ class DirectoryStore_ implements DirectoryStore:
   If the key already exists, the generated content is dropped.
   This can happen if two processes try to access the cache at the same time.
   */
-  move path/string:
+  move path/string -> none:
     store_: | dir-path/string |
       // TODO(florian): we should be able to test whether the rename should succeed.
       exception := catch: file.rename path dir-path
