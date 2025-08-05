@@ -35,6 +35,10 @@ test-file-cache:
 
     key2 := "dir/nested/many/levels/key2"
     expect-not (c.contains key2)
+    key2-path := c.get-file-path key2
+    expect-equals "$cache-dir/$key2" key2-path
+    expect-not (file.is-file key2-path)
+
     value2 := c.get key2: | store/cache.FileStore |
       store.save #[4, 5, 6]
     expect-equals value2 #[4, 5, 6]
@@ -42,6 +46,9 @@ test-file-cache:
     value2 = c.get key2: | store |
       throw "Should not be called"
     expect-equals value2 #[4, 5, 6]
+
+    path = c.get-file-path key2
+    expect-equals "$cache-dir/$key2" path
 
     path2 := c.get-file-path key2: | store |
       throw "Should not be called"
@@ -56,6 +63,9 @@ test-file-cache:
       dir-entries.add entry
 
     key3 := "dir/key3"
+    path = c.get-directory-path key3
+    expect-equals "$cache-dir/$key3" path
+
     expect-not (c.contains key3)
     value3 := c.get key3: | store/cache.FileStore |
       store.with-tmp-directory: | tmp-dir |
