@@ -3,8 +3,11 @@
 // found in the package's LICENSE file.
 
 import encoding.json
+import io
+import log
+import log as log-lib
 
-create-ui-from-args_ args/List:
+create-ui-from-args_ args/List -> Ui:
   verbose-level/string? := null
   output-format/string? := null
 
@@ -287,6 +290,23 @@ class Ui:
 
   constructor.from-args args/List:
     return create-ui-from-args_ args
+
+  /**
+  Returns the log-level (like $log.DEBUG-LEVEL) of this instance.
+  */
+  log-level -> int:
+    if level == Ui.SILENT-LEVEL: return log.FATAL-LEVEL
+    else if level == Ui.QUIET-LEVEL: return log.ERROR-LEVEL
+    else if level == Ui.NORMAL-LEVEL: return log.WARN-LEVEL
+    else if level == Ui.VERBOSE-LEVEL: return log.INFO-LEVEL
+    else: return log.DEBUG-LEVEL
+
+  /**
+  Creates a logger that logs to this UI instance.
+  */
+  logger --name/string?=null -> log.Logger:
+    target := UiLogTarget this
+    return log.Logger log-level target --name=name
 
   /**
   Emits the given $object using the $INFO kind.
@@ -740,3 +760,54 @@ class JsonPrinter extends HumanPrinterBase:
 
   emit-structured --kind/int object/any:
     print (json.stringify object)
+
+/**
+A log target that emits log messages to a Ui instance.
+*/
+class UiLogTarget implements log.Target:
+  ui_/Ui
+  log-level_/int
+
+  constructor .ui_:
+    log-level_ = ui_.log-level
+
+  log level/int message/string names/List? keys/List? values/List? -> none:
+    full-message := message
+    buffer := io.Buffer.with-capacity 64
+
+    if names and names.size > 0:
+      buffer.write "["
+      names.size.repeat:
+        if it > 0: buffer.write "."
+        buffer.write names[it]
+      buffer.write "] "
+
+    buffer.write ": "
+    buffer.write message
+
+    if keys and keys.size > 0:
+      buffer.write " {"
+      keys.size.repeat:
+        if it > 0: buffer.write ", "
+        buffer.write keys[it]
+        buffer.write ": "
+        buffer.write values[it]
+      buffer.write "}"
+
+    // Printing the constructed message may block, so we have to
+    // be careful and clear the buffer before doing so. Otherwise,
+    // another task might start using the non-empty buffer and
+    // interleaving the output in strange ways.
+    constructed ::= buffer.to-string
+    buffer.clear
+
+    if level == log-lib.FATAL-LEVEL:
+      ui_.emit --error constructed
+    else if level == log-lib.ERROR-LEVEL:
+      ui_.emit --error constructed
+    else if level == log-lib.WARN-LEVEL:
+      ui_.emit --warning constructed
+    else if level == log-lib.INFO-LEVEL:
+      ui_.emit --info constructed
+    else:
+      ui_.emit --debug constructed
