@@ -794,12 +794,7 @@ class UiLogTarget implements log.Target:
         buffer.write values[it]
       buffer.write "}"
 
-    // Printing the constructed message may block, so we have to
-    // be careful and clear the buffer before doing so. Otherwise,
-    // another task might start using the non-empty buffer and
-    // interleaving the output in strange ways.
     constructed ::= buffer.to-string
-    buffer.clear
 
     if level == log-lib.FATAL-LEVEL:
       ui_.emit --error constructed
