@@ -2,6 +2,7 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import log
 import uuid show Uuid
 import system
 
@@ -296,9 +297,13 @@ class Command:
   The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
     in the help output. By default it is active if no $cli is provided.
   */
-  run arguments/List --invoked-command=system.program-name --cli/Cli?=null --add-ui-help/bool=(not cli) -> none:
+  run arguments/List -> none
+      --invoked-command=system.program-name
+      --cli/Cli?=null
+      --add-ui-help/bool=(not cli):
     if not cli:
       ui := create-ui-from-args_ arguments
+      log.set-default (ui.logger --name=name)
       if add-ui-help:
         add-ui-options_
       cli = Cli_ name --ui=ui --cache=null --config=null
