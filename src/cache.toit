@@ -11,6 +11,8 @@ import host.os
 import host.file
 import host.directory
 import io
+import lockfile
+import log
 import system
 
 import .utils_
@@ -24,13 +26,8 @@ Typically, caches are stored in the user's home: \$(HOME)/.cache, but users can
 To simplify testing, the environment variable '<app-name>_CACHE_DIR' can be used to
   override the cache directory.
 
-This library is thread-safe. The library uses atomic moves to
-  guarantee that cache entries are always complete. If two processes
-  try to write the same cache entry then the first one to finish wins
-  and the second one is ignored.
-
-The cache has no way to update an existing entry. If you want to
-  update an entry, you must remove it first.
+This library is thread-safe with respect to creation of entries. It uses file locks,
+  to ensure that only one process is creating a cache entry at a time.
 */
 
 /**
@@ -66,6 +63,11 @@ class Cache:
   */
   constructor --.app-name --.path:
 
+  with-lock_ key/string --lock/lockfile.Lock? [--on-stale-lock] [block] -> none:
+    if not lock: lock = lockfile.Lock (get-lockfile-path key)
+    lock.do --on-stale=on-stale-lock block
+    unreachable
+
   /**
   Removes the cache entry with the given $key.
   */
@@ -74,7 +76,9 @@ class Cache:
     if file.is-file key-path:
       file.delete key-path
     else if file.is-directory key-path:
-      directory.rmdir --recursive key-path
+      tmp-path := directory.mkdtemp key-path
+      file.rename key-path tmp-path
+      directory.rmdir --recursive --force tmp-path
 
   /**
   Whether the cache contains the given $key.
@@ -94,26 +98,80 @@ class Cache:
   get-file-path key/string -> string:
     return key-path_ key
 
+  get-lockfile-path key/string -> string:
+    return "$(key-path_ key).lock"
+
   /**
   Variant of $(get key [block]).
 
   Returns a path to the cache entry, instead of the content.
   */
-  get-file-path key/string [block] -> string:
+  get-file-path --lock/lockfile.Lock?=null key/string [block] -> string:
+    return get-file-path key
+        --lock=lock
+        --on-stale-lock=(: directory.rmdir it)
+        block
+
+  /**
+  Variant of $(get key [--on-stale-lock] [block]).
+
+  Returns a path to the cache entry, instead of the content.
+  */
+  get-file-path key/string -> string
+      --lock/lockfile.Lock?=null
+      [--on-stale-lock]
+      [block]:
+    key-path := key-path_ key
+    if file.is-file key-path: return key-path
+    return update-file_ key
+        --lock=lock
+        --no-is-update
+        --on-stale-lock=on-stale-lock: | path/string store/FileStore_ |
+      if file.is-file path:
+        // The entry was created in the meantime.
+        return path
+      block.call store
+
+  /**
+  Updates the content of the cache entry with the given $key.
+
+  Calls the $block with the path to the cache entry and an instance of
+    $FileStore, which can be used to store the value that should be in the cache.
+  */
+  update-file_ key/string -> string
+      --lock/lockfile.Lock?=null
+      --is-update/bool
+      [--on-stale-lock]
+      [block]:
+    with-lock_ key --lock=lock --on-stale-lock=on-stale-lock:
+      return update-file-holding-lock_ key --is-update=is-update block
+    unreachable
+
+  update-file-holding-lock_ key --is-update/bool [block] -> string:
     key-path := key-path_ key
     if file.is-directory key-path:
       throw "Cache entry '$(key)' is a directory."
 
-    if not file.is-file key-path:
-      file-store := FileStore_ this key
-      try:
-        block.call file-store
-        if not file-store.has-stored_:
-          throw "Generator callback didn't store anything."
-      finally:
-        file-store.close_
+    file-store := FileStore_ this key --is-update=is-update
+    try:
+      block.call key-path file-store
+      if (not is-update or not file.is-file key-path) and
+          not file-store.has-stored_:
+        throw "Generator callback didn't store anything."
+    finally:
+      file-store.close_
 
     return key-path
+
+  /**
+  Variant of $(get key [--on-stale-lock] [block]).
+
+  If a stale lock is detected deletes it. This is an unsafe operation, as
+    there is no guarantee that the deleted lock isn't already a new one from
+    another process that went through the same logic at the same time.
+  */
+  get key/string --lock/lockfile.Lock?=null [block] -> ByteArray:
+    return get key --lock=lock block --on-stale-lock=(: directory.rmdir it)
 
   /**
   Returns the content of the cache entry with the given $key.
@@ -125,10 +183,88 @@ class Cache:
 
   Throws, if there already exists a cache entry with the given $key, but
     that entry is not a file.
+
+  Guards the creation of the cache entry with a lockfile. If multiple processes
+    try to create the same cache entry at the same time, then only one
+    process will call the $block callback, while the other processes wait
+    for the lock to be released.
+
+  Reading the cache entry is not guarded by the lock.
+
+  If the lock is detected to be stale, then the $on-stale-lock is called with
+    the path to the lock directory as argument.
+
+  If no $lock is given, creates one with the default parameters of $lockfile.Lock,
+    at $get-lockfile-path
   */
-  get key/string [block] -> ByteArray:
-    key-path := get-file-path key block
-    return file.read-contents key-path
+  get key/string -> ByteArray
+      --lock/lockfile.Lock?=null
+      [--on-stale-lock]
+      [block]:
+    key-path := key-path_ key
+
+    if file.is-file key-path:
+      // Catch in case there is a concurrent update that deletes the file.
+      // If that happens, we try again while holding the lock. The catch
+      // might hide a different error (not a file-not-found error), but
+      // we are OK with retrying in that case too.
+      catch: return file.read-contents key-path
+
+    with-lock_ key --lock=lock --on-stale-lock=on-stale-lock:
+      if file.is-file key-path:
+        return file.read-contents key-path
+
+      new-path := update-file-holding-lock_ key --is-update=true: | _ store/FileStore_ |
+        block.call store
+      assert: new-path == key-path
+      return file.read-contents new-path
+    unreachable
+
+  /**
+  Variant of $(update key [--on-stale-lock] [block]).
+
+  If a stale lock is detected deletes it. This is an unsafe operation, as
+    there is no guarantee that the deleted lock isn't already a new one from
+    another process that went through the same logic at the same time.
+  */
+  update key/string -> ByteArray
+      --lock/lockfile.Lock?=null
+      [block]:
+    return update key --lock=lock block --on-stale-lock=(: directory.rmdir it)
+
+  /**
+  Updates the content of the cache entry with the given $key.
+
+  Calls the $block with the path to the cache entry and an instance of
+    $FileStore, which can be used to store the value that should be in the cache.
+    The path to the cache entry may point to a non-existing file.
+
+  If no entry exists yet, the $block must store a value in the cache. If
+    an entry already exists, the $block may choose to not store a new value.
+
+  Returns the content of the cache entry after the update. Always holds the
+    lock while reading the content.
+
+  Guards the update of the cache entry with a lockfile. If multiple processes
+    try to create the same cache entry at the same time, then only one
+    process will call the $block callback, while the other processes wait
+    for the lock to be released.
+
+  If the lock is detected to be stale, then the $on-stale-lock is called with
+    the path to the lock directory as argument.
+
+  If no $lock is given, creates one with the default parameters of $lockfile.Lock,
+    at $get-lockfile-path
+  */
+  update key/string -> ByteArray
+      --lock/lockfile.Lock?=null
+      [--on-stale-lock]
+      [block]:
+    with-lock_ key --lock=lock --on-stale-lock=on-stale-lock:
+      key-path := update-file-holding-lock_ key --is-update block
+      return file.read-contents key-path
+
+    unreachable
 
   /**
   Returns the path to the directory item with the given $key.
@@ -138,6 +274,20 @@ class Cache:
   */
   get-directory-path key/string -> string:
     return key-path_ key
+
+  /**
+  Variant of $(get-directory-path key [--on-stale-lock] [block]).
+
+
+  If a stale lock is detected deletes it. This is an unsafe operation, as
+    there is no guarantee that the deleted lock isn't already a new one from
+    another process that went through the same logic at the same time.
+  */
+  get-directory-path key/string --lock/lockfile.Lock?=null [block] -> string:
+    return get-directory-path key
+        --lock=lock
+        --on-stale-lock=(: directory.rmdir it)
+        block
 
   /**
   Returns the path to the cached directory item with the given $key.
@@ -150,23 +300,28 @@ class Cache:
   Throws, if there already exists a cache entry with the given $key, but
     that entry is a file.
   */
-  get-directory-path key/string [block] -> string:
-    key-path := key-path_ key
-    if file.is-file key-path:
-      throw "Cache entry '$(key)' is a file."
+  get-directory-path key/string -> string
+      --lock/lockfile.Lock?=null
+      [--on-stale-lock]
+      [block]:
 
-    if not file.is-directory key-path:
-      directory-store := DirectoryStore_ this key
-      try:
-        block.call directory-store
-        if not directory-store.has-stored_:
-          throw "Generator callback didn't store anything."
-      finally:
-        directory-store.close_
+    if not lock: lock = lockfile.Lock (get-lockfile-path key)
+    lock.do --on-stale=on-stale-lock:
+      key-path := key-path_ key
+      if file.is-file key-path:
+        throw "Cache entry '$(key)' is a file."
 
-    return key-path
+      if not file.is-directory key-path:
+        directory-store := DirectoryStore_ this key
+        try:
+          block.call directory-store
+          if not directory-store.has-stored_:
+            throw "Generator callback didn't store anything."
+        finally:
+          directory-store.close_
 
-  // TODO(florian): add a `delete` method.
+      return key-path
+    unreachable
 
   ensure-cache-directory_:
     directory.mkdir --recursive path
@@ -200,6 +355,12 @@ class Cache:
       // Note that this still guarantees uniqueness, because
       // a space would normally not be escaped.
       escaped-path = "$escaped-path#20"
+
+    // We reserve the suffix ".lock" for lock files.
+    // If the escaped path ends with ".lock_*", we add an extra "_".
+    without-trailing-underscore := escaped-path.trim --right "_"
+    if without-trailing-underscore.ends-with ".lock":
+      escaped-path = "$(escaped-path)_"
     return escaped-path
 
   key-path_ key/string -> string:
@@ -329,8 +490,10 @@ class FileStore_ implements FileStore:
   key/string
   has-stored_/bool := false
   is-closed_/bool := false
+  is-update_/bool := ?
 
-  constructor .cache_ .key:
+  constructor .cache_ .key --is-update/bool:
+    is-update_ = is-update
 
   close_: is-closed_ = true
 
@@ -407,6 +570,9 @@ class FileStore_ implements FileStore:
       key-path := cache_.key-path_ key
       key-dir := fs.dirname key-path
       directory.mkdir --recursive key-dir
+      if is-update_ and file.is-file key-path:
+        // When updating, we may need to delete the old file first.
+        file.delete key-path
       atomic-move-file_ tmp-path key-path
 
     has-stored_ = true
@@ -476,13 +642,15 @@ class DirectoryStore_ implements DirectoryStore:
 
 
 atomic-move-file_ source-path/string target-path/string -> none:
-  // There is a race condition here, but not much we can do about it.
-  if file.is-file target-path: return
+  if file.is-file target-path:
+    // This shouldn't happen, as cache creations are guarded by locks.
+    return
   file.rename source-path target-path
 
 atomic-move-directory_ source-path/string target-path/string -> none:
-  // There is a race condition here, but not much we can do about it.
-  if file.is-directory target-path: return
+  if file.is-directory target-path:
+    // This shouldn't happen, as cache creations are guarded by locks.
+    return
   file.rename source-path target-path
 
 copy-file_ --source/string --target/string -> none:

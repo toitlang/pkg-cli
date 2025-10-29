@@ -1,14 +1,17 @@
 name: cli
 description: Tools, like an argument parser, to create command-line applications.
 environment:
-  sdk: ^2.0.0-alpha.170
+  sdk: ^2.0.0-alpha.189
 dependencies:
   desktop:
     url: github.com/toitlang/pkg-desktop
-    version: ^1.0.0
+    version: ^1.1.0
   fs:
     url: github.com/toitlang/pkg-fs
     version: ^2.3.1
   host:
     url: github.com/toitlang/pkg-host
-    version: ^1.16.2
+    version: ^1.17.0
+  lockfile:
+    url: github.com/toitware/toit-lockfile
+    version: ^1.0.0

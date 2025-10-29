@@ -137,15 +137,14 @@ test-file-cache:
 
     key7 := "dir/key7"
     task::
-      semaphore1.down
       c.get key7: | store/cache.FileStore |
+        semaphore1.down
         store.save #[19, 20, 21]
-        semaphore2.up
+        sleep --ms=1
 
+    semaphore1.up
     value7 := c.get key7: | store/cache.FileStore |
-      semaphore1.up
-      semaphore2.down
-      store.save #[22, 23, 24]
+      unreachable
 
     // The first task wins.
     expect-equals value7 #[19, 20, 21]
@@ -153,17 +152,16 @@ test-file-cache:
     // Test concurrent access with copy.
     key9 := "dir/key9"
     task::
-      semaphore1.down
       c.get key9: | store/cache.FileStore |
+        semaphore1.down
+        sleep --ms=1
         store.with-tmp-directory: | tmp-dir |
           tmp-file := "$tmp-dir/file"
           write-content --path=tmp-file --content=#[31, 32, 33]
           store.copy tmp-file
-          semaphore2.up
 
+    semaphore1.up
     value9 := c.get key9: | store/cache.FileStore |
-      semaphore1.up
-      semaphore2.down
       store.with-tmp-directory: | tmp-dir |
         tmp-file := "$tmp-dir/file"
         write-content --path=tmp-file --content=#[34, 35, 36]
@@ -175,17 +173,16 @@ test-file-cache:
     // Test concurrent access with move.
     key11 := "dir/key11"
     task::
-      semaphore1.down
       c.get key11: | store/cache.FileStore |
+        semaphore1.down
+        sleep --ms=1
         store.with-tmp-directory: | tmp-dir |
           tmp-file := "$tmp-dir/file"
           write-content --path=tmp-file --content=#[43, 44, 45]
           store.move tmp-file
-          semaphore2.up
 
+    semaphore1.up
     value11 := c.get key11: | store/cache.FileStore |
-      semaphore1.up
-      semaphore2.down
       store.with-tmp-directory: | tmp-dir |
         tmp-file := "$tmp-dir/file"
         write-content --path=tmp-file --content=#[46, 47, 48]
@@ -197,6 +194,54 @@ test-file-cache:
     expect-equals 2 dir-entries.size
     expect (dir-entries.contains "key")
     expect (dir-entries.contains "dir")
+
+    key12 := "dir/key12"
+    expect-not (c.contains key12)
+    value12 := c.update key12: | path/string store/cache.FileStore |
+      expect-not (file.is-file path)
+      store.save #[49, 50, 51]
+    expect-equals value12 #[49, 50, 51]
+
+    value12 = c.get key12: | store |
+      throw "Should not be called"
+    expect-equals value12 #[49, 50, 51]
+
+    value12 = c.update key12: | path/string store |
+      old := file.read-contents path
+      expect-equals old #[49, 50, 51]
+      store.save #[52, 53, 54]
+    expect-equals value12 #[52, 53, 54]
+
+    value12 = c.update key12: | path/string store |
+      old := file.read-contents path
+      expect-equals old #[52, 53, 54]
+      // Not required to save anything.
+    expect-equals value12 #[52, 53, 54]
+
+    in-update-semaphore := monitor.Semaphore
+    continue-semaphore := monitor.Semaphore
+    task::
+      value12-in-task := c.update key12: | path/string store/cache.FileStore |
+        old := file.read-contents path
+        expect-equals old #[52, 53, 54]
+        in-update-semaphore.up
+        // continue-semaphore.down
+        sleep --ms=10
+        store.save #[55, 56, 57]
+      expect-equals value12-in-task #[55, 56, 57]
+
+    in-update-semaphore.down
+    // Get doesn't wait for any update to finish.
+    value12 = c.get key12: | store |
+      throw "Should not be called"
+    expect-equals value12 #[52, 53, 54]
+
+    continue-semaphore.up
+    value12 = c.update key12: | path/string store/cache.FileStore |
+      old := file.read-contents path
+      expect-equals old #[55, 56, 57]
+      store.save #[58, 59, 60]
+    expect-equals value12 #[58, 59, 60]
 
   finally:
     directory.rmdir --recursive cache-dir
@@ -248,21 +293,18 @@ test-dir-cache:
 
     // Incremented, when the task is allowed to save the cache value.
     semaphore1 := monitor.Semaphore
-    // Incremented, when the task has finished writing the cache value.
-    semaphore2 := monitor.Semaphore
 
     key4 := "dir/key4"
     task::
-      semaphore1.down
       c.get-directory-path key4: | store/cache.DirectoryStore |
+        semaphore1.down
+        sleep --ms=1
         store.with-tmp-directory: | dir |
           write-content --path="$dir/file" --content=#[7, 8, 9]
           store.move dir
-          semaphore2.up
 
+    semaphore1.up
     value4 := c.get-directory-path key4: | store/cache.DirectoryStore |
-      semaphore1.up
-      semaphore2.down
       store.with-tmp-directory: | dir |
         write-content --path="$dir/file" --content=#[10, 11, 12]
         store.move dir
