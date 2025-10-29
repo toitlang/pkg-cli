@@ -772,7 +772,7 @@ class OptionInt extends Option:
   is-flag: return false
 
   parse str/string --for-help-example/bool=false -> int:
-    return int.parse str --on-error=:
+    return int.parse str --if-error=:
       throw "Invalid integer value for option '$name': '$str'."
 
 /**
@@ -804,7 +804,7 @@ class OptionPatterns extends Option:
         --required=required --hidden=hidden --multi=multi \
         --split-commas=split-commas
     if default:
-      parse_ default --on-error=:
+      parse_ default --if-error=:
         throw "Default value of '$name' is not a valid value: $default"
 
   is-flag -> bool: return false
@@ -813,12 +813,12 @@ class OptionPatterns extends Option:
   Returns the pattern that matches the given $str in a map with the pattern as key.
   */
   parse str/string --for-help-example/bool=false -> any:
-    return parse_ str --on-error=:
+    return parse_ str --if-error=:
       throw "Invalid value for option '$name': '$str'. Valid values are: $(patterns.join ", ")."
 
-  parse_ str/string [--on-error]:
+  parse_ str/string [--if-error]:
     if not str.contains ":" and not str.contains "=":
-      if not patterns.contains str: on-error.call
+      if not patterns.contains str: if-error.call
       return str
 
     separator-index := str.index-of ":"
@@ -827,7 +827,7 @@ class OptionPatterns extends Option:
     key-with-equals := "$key="
     key-with-colon := "$key:"
     if not (patterns.any: it.starts-with key-with-equals or it.starts-with key-with-colon):
-      on-error.call
+      if-error.call
 
     return {
       key: str[separator-index + 1..]
@@ -867,7 +867,7 @@ class OptionUuid extends Option:
   type -> string: return "uuid"
 
   parse str/string --for-help-example/bool=false -> Uuid:
-    return Uuid.parse str --on-error=:
+    return Uuid.parse str --if-error=:
       throw "Invalid value for option '$name': '$str'. Expected a UUID."
 
 
