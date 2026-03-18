@@ -21,6 +21,11 @@ The directive indicating that the shell should fall back to file completion.
 DIRECTIVE-FILE-COMPLETION_ ::= 4
 
 /**
+The directive indicating that the shell should fall back to directory-only completion.
+*/
+DIRECTIVE-DIRECTORY-COMPLETION_ ::= 8
+
+/**
 A completion candidate with a value and an optional description.
 */
 class CompletionCandidate_:
@@ -134,7 +139,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
         --seen-options=seen-options
         --prefix=current-word
     completions := pending-option.complete context
-    directive := completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+    directive := pending-option.completion-directive
+    if not directive:
+      directive = completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
     return CompletionResult_
         completions.map: to-candidate_ it
         --directive=directive
@@ -162,7 +169,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
       option-prefix := current-word[..split + 1]
       candidates := completions.map: | c/CompletionCandidate |
         CompletionCandidate_ "$option-prefix$c.value" --description=c.description
-      directive := completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+      directive := option.completion-directive
+      if not directive:
+        directive = completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
       return CompletionResult_ candidates --directive=directive
     return CompletionResult_ [] --directive=DIRECTIVE-DEFAULT_
 
@@ -263,6 +272,7 @@ Completes rest arguments.
 Returns file completion directive since rest arguments are often file paths.
 */
 complete-rest_ command/Command seen-options/Map current-word/string -> CompletionResult_:
+  // TODO(florian): rest arguments should only suggest paths if the option is an OptionPath.
   // If there are rest options with completion callbacks, use them.
   command.rest_.do: | option/Option |
     context := CompletionContext.private_
@@ -271,9 +281,12 @@ complete-rest_ command/Command seen-options/Map current-word/string -> Completio
         --seen-options=seen-options
         --prefix=current-word
     completions := option.complete context
-    if not completions.is-empty:
+    directive := option.completion-directive
+    if not directive:
+      directive = completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+    if not completions.is-empty or directive != DIRECTIVE-DEFAULT_:
       candidates := completions.map: to-candidate_ it
-      return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
+      return CompletionResult_ candidates --directive=directive
 
   return CompletionResult_ [] --directive=DIRECTIVE-FILE-COMPLETION_
 
