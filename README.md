@@ -8,6 +8,7 @@ It provides:
 * Composable subcommands: `myapp subcommand`
 * Type options/flags that parse arguments: `myapp --int-flag=49 enum_rest_arg`
 * Automatic help generation
+* Shell completion for bash, zsh, and fish
 * Command aliases
 * Functionality to cache data between runs
 * Functionality to store configurations
@@ -316,7 +317,7 @@ main args:
 
 run invocation/Invocation:
   ui := invocation.cli.ui
-  ui.emit
+  ui.emit --result
       // Block that is invoked if structured data is needed.
       --structured=: {
         "result": "Computed result"
@@ -337,6 +338,51 @@ The shorthands `ui.info`, `ui.debug`, also dispatch to these methods if they rec
   table (list of lists), map or list.
 
 See the documentation of the `ui` library for more details.
+
+## Shell Completion
+
+Programs built with this package automatically get a `completion` subcommand that
+generates shell completion scripts for bash, zsh, and fish. Users enable completions
+by sourcing the output:
+
+``` sh
+# Bash (~/.bashrc):
+source <(myapp completion bash)
+
+# Zsh (~/.zshrc):
+source <(myapp completion zsh)
+
+# Fish (~/.config/fish/config.fish):
+myapp completion fish | source
+```
+
+Enum options and subcommands are completed automatically. For custom completions
+(e.g., completing device IDs from a database), pass a `--completion` callback when
+creating an option:
+
+``` toit
+import cli show *
+
+create-command -> Command:
+  return Command "deploy"
+      --options=[
+        Option "device"
+            --help="The device to deploy to."
+            --completion=:: | context/CompletionContext |
+              [
+                CompletionCandidate "device-001" --description="Living Room Sensor",
+                CompletionCandidate "device-002" --description="Garden Monitor",
+              ]
+      ]
+      --run=:: | invocation/Invocation |
+        print "Deploying to $(invocation["device"])"
+```
+
+The callback receives a `CompletionContext` with the current prefix, option,
+command, and already-provided options. It returns a list of `CompletionCandidate`
+objects, which can include descriptions shown by shells that support them (zsh, fish).
+
+See `examples/completion.toit` for a complete example.
 
 ## Features and bugs
 

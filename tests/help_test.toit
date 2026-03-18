@@ -106,8 +106,9 @@ test-combination:
       bin/app <command> [<options>]
 
     Commands:
-      help  Show help for a command.
-      sub   Long sub.
+      completion  Generate shell completion scripts.
+      help        Show help for a command.
+      sub         Long sub.
 
     Options:
       -h, --help            Show help for this command.
@@ -338,7 +339,8 @@ test-commands:
 
   expected := """
     Commands:
-      help  Show help for a command.
+      completion  Generate shell completion scripts.
+      help        Show help for a command.
       sub
     """
   expect-equals expected (build-commands.call [cmd])
@@ -351,8 +353,9 @@ test-commands:
 
   expected = """
     Commands:
-      help  Show help for a command.
-      sub   Subcommand.
+      completion  Generate shell completion scripts.
+      help        Show help for a command.
+      sub         Subcommand.
     """
   expect-equals expected (build-commands.call [cmd])
 
@@ -368,10 +371,11 @@ test-commands:
   // Commands are sorted.
   expected = """
     Commands:
-      asub3  Subcommand 3.
-      help   Show help for a command.
-      sub    Subcommand.
-      sub2   Subcommand 2.
+      asub3       Subcommand 3.
+      completion  Generate shell completion scripts.
+      help        Show help for a command.
+      sub         Subcommand.
+      sub2        Subcommand 2.
     """
   expect-equals expected (build-commands.call [cmd])
 
@@ -390,9 +394,10 @@ test-commands:
   // If a command has only a long help text, show the first paragraph.
   expected = """
     Commands:
-      help  Show help for a command.
-      sub   First
-            paragraph.
+      completion  Generate shell completion scripts.
+      help        Show help for a command.
+      sub         First
+                  paragraph.
     """
   expect-equals expected (build-commands.call [cmd])
 
@@ -414,11 +419,12 @@ test-commands:
 
   expected = """
     Commands:
-      help  Show help for a command.
+      completion  Generate shell completion scripts.
+      help        Show help for a command.
       sub
-      sub2  Long
-            shorthelp.
-      sub3  Short help3.
+      sub2        Long
+                  shorthelp.
+      sub3        Short help3.
     """
   expect-equals expected (build-commands.call [cmd])
 
@@ -431,7 +437,8 @@ test-commands:
   // The automatically added help command is not added.
   expected = """
     Commands:
-      help  My own help.
+      completion  Generate shell completion scripts.
+      help        My own help.
     """
   expect-equals expected (build-commands.call [cmd])
 
@@ -445,7 +452,8 @@ test-commands:
   // The automatically added help command is not added.
   expected = """
     Commands:
-      sub  Sub with 'help' alias.
+      completion  Generate shell completion scripts.
+      sub         Sub with 'help' alias.
     """
   expect-equals expected (build-commands.call [cmd])
 

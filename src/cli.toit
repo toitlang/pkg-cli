@@ -7,6 +7,8 @@ import uuid show Uuid
 import system
 
 import .cache
+import .completion_
+import .completion-scripts_
 import .config
 import .help-generator_
 import .parser_
@@ -300,7 +302,23 @@ class Command:
   run arguments/List -> none
       --invoked-command=system.program-name
       --cli/Cli?=null
-      --add-ui-help/bool=(not cli):
+      --add-ui-help/bool=(not cli)
+      --add-completion/bool=true:
+    if add-completion:
+      add-completion-command_ --program-path=invoked-command
+
+    // Handle __complete requests before any other processing.
+    if add-completion and not arguments.is-empty and arguments[0] == "__complete":
+      if add-ui-help: add-ui-options_
+      completion-args := arguments[1..]
+      if not completion-args.is-empty and completion-args[0] == "--":
+        completion-args = completion-args[1..]
+      result := complete_ this completion-args
+      result.candidates.do: | candidate/CompletionCandidate_ |
+        print candidate.to-string
+      print ":$result.directive"
+      return
+
     if not cli:
       ui := create-ui-from-args_ arguments
       log.set-default (ui.logger --name=name)
@@ -311,6 +329,60 @@ class Command:
     parser.parse this arguments: | path/Path parameters/Parameters |
       invocation := Invocation.private_ cli path.commands parameters
       invocation.command.run-callback_.call invocation
+
+  add-completion-command_ --program-path/string:
+    // Don't add if the user already has a "completion" subcommand.
+    if find-subcommand_ "completion": return
+    // Can't add subcommands to a command with rest args or a run callback
+    //   that already has subcommands handled.
+    if run-callback_: return
+
+    prog-name := basename_ program-path
+    completion-command := Command "completion"
+        --help="""
+          Generate shell completion scripts.
+
+          To enable completions, add the appropriate command to your shell
+            configuration:
+
+            Bash (~/.bashrc):
+              source <($program-path completion bash)
+
+            Zsh (~/.zshrc):
+              source <($program-path completion zsh)
+
+            Fish (~/.config/fish/config.fish):
+              $program-path completion fish | source
+
+          Alternatively, install the script to the system completion directory
+            so it loads automatically for all sessions:
+
+            Bash:
+              $program-path completion bash > /etc/bash_completion.d/$prog-name
+
+            Zsh:
+              $program-path completion zsh > \$fpath[1]/_$prog-name
+
+            Fish:
+              $program-path completion fish > ~/.config/fish/completions/$(prog-name).fish"""
+        --rest=[
+          OptionEnum "shell" ["bash", "zsh", "fish"]
+              --help="The shell to generate completions for."
+              --required,
+        ]
+        --run=:: | invocation/Invocation |
+          shell := invocation["shell"]
+          script/string := ?
+          if shell == "bash":
+            script = bash-completion-script_ --program-path=program-path
+          else if shell == "zsh":
+            script = zsh-completion-script_ --program-path=program-path
+          else if shell == "fish":
+            script = fish-completion-script_ --program-path=program-path
+          else:
+            unreachable
+          print script
+    subcommands_.add completion-command
 
   add-ui-options_:
     has-output-format-option := false
@@ -348,6 +420,22 @@ class Command:
         --help="Specify the verbosity level."
         --default="info"
       options_.add option
+
+  /**
+  Returns a shell completion script for this command.
+
+  The $shell must be one of "bash", "zsh", or "fish".
+  The $program-path is the path to the executable. The basename of this path
+    is used to register the completion with the shell.
+  */
+  completion-script --shell/string --program-path/string=name -> string:
+    if shell == "bash":
+      return bash-completion-script_ --program-path=program-path
+    if shell == "zsh":
+      return zsh-completion-script_ --program-path=program-path
+    if shell == "fish":
+      return fish-completion-script_ --program-path=program-path
+    throw "Unknown shell: $shell. Supported shells: bash, zsh, fish."
 
   /**
   Checks this command and all subcommands for errors.
@@ -448,6 +536,58 @@ class Command:
     return null
 
 /**
+A completion candidate returned by completion callbacks.
+
+Contains a $value and an optional $description. The $description is shown
+  alongside the value in shells that support it (zsh, fish).
+*/
+class CompletionCandidate:
+  /** The completion value. */
+  value/string
+
+  /**
+  An optional description shown alongside the value.
+  For example, if the value is a UUID, the description could be the
+    human-readable name of the entity.
+  */
+  description/string?
+
+  /**
+  Creates a completion candidate with the given $value and optional $description.
+  */
+  constructor .value --.description=null:
+
+/**
+Context provided to completion callbacks.
+
+Contains the prefix being completed, the option being completed, the
+  current command, and the options that have already been seen.
+*/
+class CompletionContext:
+  /**
+  The text the user has typed so far for the value being completed.
+  */
+  prefix/string
+
+  /**
+  The option whose value is being completed.
+  */
+  option/Option
+
+  /**
+  The command that is currently being completed.
+  */
+  command/Command
+
+  /**
+  A map from option name to a list of values that have been provided
+    for that option so far.
+  */
+  seen-options/Map
+
+  constructor.private_ --.prefix --.option --.command --.seen-options:
+
+/**
 An option to a command.
 
 Options are used for any input from the command line to the program. They must have unique names,
@@ -464,6 +604,7 @@ abstract class Option:
   is-hidden/bool
   is-multi/bool
   should-split-commas/bool
+  completion-callback_/Lambda?
 
   /** Deprecated. Use '--help' instead of '--short-help'. */
   constructor name/string
@@ -474,7 +615,8 @@ abstract class Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     return OptionString name
         --default=default
         --type=type
@@ -484,6 +626,7 @@ abstract class Option:
         --hidden=hidden
         --multi=multi
         --split-commas=split-commas
+        --completion=completion
 
   /** An alias for $OptionString. */
   constructor name/string
@@ -494,7 +637,8 @@ abstract class Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     return OptionString name
         --default=default
         --type=type
@@ -504,6 +648,7 @@ abstract class Option:
         --hidden=hidden
         --multi=multi
         --split-commas=split-commas
+        --completion=completion
 
   /** Deprecated. Use $help instead. */
   short-help -> string?: return help
@@ -536,13 +681,14 @@ abstract class Option:
   If $split-commas is true, then $multi must be true too. Values given to this option are then
     split on commas. For example, `--option a,b,c` will result in the list `["a", "b", "c"]`.
   */
-  constructor.from-subclass .name --.short-name --help/string? --required --hidden --multi --split-commas:
+  constructor.from-subclass .name --.short-name --help/string? --required --hidden --multi --split-commas --completion/Lambda?=null:
     this.help = help
     name = to-kebab name
     is-required = required
     is-hidden = hidden
     is-multi = multi
     should-split-commas = split-commas
+    completion-callback_ = completion
     if name.contains "=" or name.starts-with "no-": throw "Invalid option name: $name"
     if short-name and not is-alpha-num-string_ short-name:
       throw "Invalid short option name: '$short-name'"
@@ -552,13 +698,14 @@ abstract class Option:
       throw "Option can't be hidden and required."
 
   /** Deprecated. Use --help instead of '--short-help'. */
-  constructor.from-subclass .name --.short-name --short-help/string --required --hidden --multi --split-commas:
+  constructor.from-subclass .name --.short-name --short-help/string --required --hidden --multi --split-commas --completion/Lambda?=null:
     help = short-help
     name = to-kebab name
     is-required = required
     is-hidden = hidden
     is-multi = multi
     should-split-commas = split-commas
+    completion-callback_ = completion
     if name.contains "=" or name.starts-with "no-": throw "Invalid option name: $name"
     if short-name and not is-alpha-num-string_ short-name:
       throw "Invalid short option name: '$short-name'"
@@ -602,6 +749,26 @@ abstract class Option:
   */
   abstract parse str/string --for-help-example/bool=false -> any
 
+  /**
+  Returns the default completion candidates for this option.
+
+  Subclasses override this to provide type-specific completions.
+    For example, $OptionEnum returns its $OptionEnum.values list.
+  */
+  abstract options-for-completion -> List
+
+  /**
+  Returns completion candidates for this option's value.
+
+  If a completion callback was provided via `--completion` in the constructor, it is
+    called with the given $context and must return a list of $CompletionCandidate
+    objects. Otherwise, the default completions from $options-for-completion are
+    wrapped as candidates without descriptions.
+  */
+  complete context/CompletionContext -> List:
+    if completion-callback_: return completion-callback_.call context
+    return options-for-completion.map: CompletionCandidate it
+
 
 /**
 A string option.
@@ -628,12 +795,13 @@ class OptionString extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
 
   /** Deprecated. Use '--help' instead of '--short-help'. */
   constructor name/string
@@ -644,14 +812,17 @@ class OptionString extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=short-help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
 
   is-flag: return false
+
+  options-for-completion -> List: return []
 
   parse str/string --for-help-example/bool=false -> string:
     return str
@@ -687,12 +858,13 @@ class OptionEnum extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
     if default and not values.contains default:
       throw "Default value of '$name' is not a valid value: $default"
 
@@ -705,16 +877,19 @@ class OptionEnum extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=short-help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
     if default and not values.contains default:
       throw "Default value of '$name' is not a valid value: $default"
 
   is-flag: return false
+
+  options-for-completion -> List: return values
 
   parse str/string --for-help-example/bool=false -> string:
     if not values.contains str:
@@ -746,12 +921,13 @@ class OptionInt extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
 
   /** Deprecated. Use '--help' instead of '--short-help'. */
   constructor name/string
@@ -762,14 +938,17 @@ class OptionInt extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=short-help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
 
   is-flag: return false
+
+  options-for-completion -> List: return []
 
   parse str/string --for-help-example/bool=false -> int:
     return int.parse str --if-error=:
@@ -797,17 +976,20 @@ class OptionPatterns extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
     if default:
       parse_ default --if-error=:
         throw "Default value of '$name' is not a valid value: $default"
 
   is-flag -> bool: return false
+
+  options-for-completion -> List: return patterns
 
   /**
   Returns the pattern that matches the given $str in a map with the pattern as key.
@@ -834,6 +1016,11 @@ class OptionPatterns extends Option:
     }
 
 /**
+// TODO(florian): Add OptionPath that can be configured for file or directory
+//   completion. Shells support completing only directories (bash: compopt -o
+//   dirnames, zsh: _directories, fish: __fish_complete_directories), so the
+//   completion engine could use a directory-only directive.
+
 A Uuid option.
 */
 class OptionUuid extends Option:
@@ -855,14 +1042,17 @@ class OptionUuid extends Option:
       --required/bool=false
       --hidden/bool=false
       --multi/bool=false
-      --split-commas/bool=false:
+      --split-commas/bool=false
+      --completion/Lambda?=null:
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
         --required=required --hidden=hidden --multi=multi \
-        --split-commas=split-commas
+        --split-commas=split-commas --completion=completion
 
   is-flag: return false
+
+  options-for-completion -> List: return []
 
   type -> string: return "uuid"
 
@@ -897,11 +1087,13 @@ class Flag extends Option:
       --help/string?=null
       --required/bool=false
       --hidden/bool=false
-      --multi/bool=false:
+      --multi/bool=false
+      --completion/Lambda?=null:
     if multi and default != null: throw "Multi option can't have default value."
     if required and default != null: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
-        --required=required --hidden=hidden --multi=multi --no-split-commas
+        --required=required --hidden=hidden --multi=multi --no-split-commas \
+        --completion=completion
 
   /** Deprecated. Use '--help' instead of '--short-help'. */
   constructor name/string
@@ -910,16 +1102,20 @@ class Flag extends Option:
       --short-help/string?
       --required/bool=false
       --hidden/bool=false
-      --multi/bool=false:
+      --multi/bool=false
+      --completion/Lambda?=null:
     if multi and default != null: throw "Multi option can't have default value."
     if required and default != null: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=short-help \
-        --required=required --hidden=hidden --multi=multi --no-split-commas
+        --required=required --hidden=hidden --multi=multi --no-split-commas \
+        --completion=completion
 
   type -> string:
     return "true|false"
 
   is-flag: return true
+
+  options-for-completion -> List: return ["true", "false"]
 
   parse str/string --for-help-example/bool=false -> bool:
     if str == "true": return true

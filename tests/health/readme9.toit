@@ -11,7 +11,7 @@ main args:
 
 run invocation/Invocation:
   ui := invocation.cli.ui
-  ui.emit
+  ui.emit --result
       // Block that is invoked if structured data is needed.
       --structured=: {
         "result": "Computed result"
