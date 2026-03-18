@@ -27,6 +27,12 @@ main:
   test-completion-with-descriptions
   test-help-only-at-root
   test-flags-hidden-without-dash-prefix
+  test-rest-positional-index
+  test-rest-positional-index-after-dashdash
+  test-rest-multi-not-skipped
+  test-short-option-marks-seen
+  test-short-option-pending-value
+  test-packed-short-options
 
 test-empty-input:
   root := cli.Command "app"
@@ -381,3 +387,110 @@ test-flags-hidden-without-dash-prefix:
   expect (values.contains "-h")
   // Subcommands should not appear when prefix starts with "-".
   expect (not (values.contains "serve"))
+
+test-rest-positional-index:
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "action" ["start", "stop", "restart"]
+            --help="Action to perform.",
+        cli.OptionEnum "target" ["dev", "staging", "prod"]
+            --help="Target environment.",
+      ]
+      --run=:: null
+  // With no prior positional args, should complete the first rest option.
+  result := complete_ root [""]
+  values := result.candidates.map: it.value
+  expect (values.contains "start")
+  expect (not (values.contains "dev"))
+
+  // After providing the first positional, should complete the second rest option.
+  result = complete_ root ["start", ""]
+  values = result.candidates.map: it.value
+  expect (not (values.contains "start"))
+  expect (values.contains "dev")
+  expect (values.contains "staging")
+  expect (values.contains "prod")
+
+test-rest-positional-index-after-dashdash:
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "action" ["start", "stop"]
+            --help="Action to perform.",
+        cli.OptionEnum "target" ["dev", "prod"]
+            --help="Target environment.",
+      ]
+      --run=:: null
+  // After -- and one positional, should complete the second rest option.
+  result := complete_ root ["--", "start", ""]
+  values := result.candidates.map: it.value
+  expect (not (values.contains "start"))
+  expect (values.contains "dev")
+  expect (values.contains "prod")
+
+test-rest-multi-not-skipped:
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "files" ["a.txt", "b.txt"] --multi
+            --help="Input files.",
+      ]
+      --run=:: null
+  // Multi rest options should still complete even after prior positionals.
+  result := complete_ root ["a.txt", ""]
+  values := result.candidates.map: it.value
+  expect (values.contains "a.txt")
+  expect (values.contains "b.txt")
+
+test-short-option-marks-seen:
+  root := cli.Command "app"
+      --options=[
+        cli.Option "output" --short-name="o" --help="Output path.",
+        cli.Option "input" --short-name="i" --help="Input path.",
+      ]
+      --run=:: null
+  // After providing -o with a value, --output should not be suggested again.
+  result := complete_ root ["-o", "foo", "-"]
+  values := result.candidates.map: it.value
+  expect (not (values.contains "--output"))
+  expect (not (values.contains "-o"))
+  expect (values.contains "--input")
+  expect (values.contains "-i")
+
+test-short-option-pending-value:
+  root := cli.Command "app"
+      --options=[
+        cli.OptionEnum "format" ["json", "text"] --short-name="f" --help="Format.",
+      ]
+      --run=:: null
+  // After -f, the next word should complete the option's values.
+  result := complete_ root ["-f", ""]
+  values := result.candidates.map: it.value
+  expect (values.contains "json")
+  expect (values.contains "text")
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
+
+test-packed-short-options:
+  root := cli.Command "app"
+      --options=[
+        cli.Flag "verbose" --short-name="v" --help="Be verbose.",
+        cli.Option "output" --short-name="o" --help="Output path.",
+        cli.Flag "force" --short-name="F" --help="Force.",
+      ]
+      --run=:: null
+  // Packed flags: -vF should mark both as seen.
+  result := complete_ root ["-vF", "--"]
+  values := result.candidates.map: it.value
+  expect (not (values.contains "--verbose"))
+  expect (not (values.contains "--force"))
+  expect (values.contains "--output")
+
+  // Packed flag + value option: -vo should set pending for output.
+  result = complete_ root ["-vo", "out.txt", "--"]
+  values = result.candidates.map: it.value
+  expect (not (values.contains "--verbose"))
+  expect (not (values.contains "--output"))
+
+  // Packed with inline value: -ofile.txt should consume the value.
+  result = complete_ root ["-ofile.txt", "--"]
+  values = result.candidates.map: it.value
+  expect (not (values.contains "--output"))
+  expect (values.contains "--verbose")

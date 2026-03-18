@@ -70,6 +70,8 @@ complete_ root/Command arguments/List -> CompletionResult_:
   past-dashdash := false
   // The option that is expecting a value (the previous arg was a non-flag option).
   pending-option/Option? := null
+  // How many positional (rest) arguments have been consumed so far.
+  positional-index := 0
 
   // Process all arguments except the last one (which is the word being completed).
   args-to-process := arguments.is-empty ? [] : arguments[..arguments.size - 1]
@@ -78,7 +80,8 @@ complete_ root/Command arguments/List -> CompletionResult_:
     arg/string := args-to-process[index]
 
     if past-dashdash:
-      // After --, everything is a rest argument. Nothing to track.
+      // After --, everything is a rest argument. Track positional index.
+      positional-index++
       continue.repeat
 
     if pending-option:
@@ -110,9 +113,33 @@ complete_ root/Command arguments/List -> CompletionResult_:
       continue.repeat
 
     if arg.starts-with "-":
-      // Short option. For simplicity, just mark it as seen.
-      // Short options can be packed (-abc), so we'd need complex parsing.
-      // Just skip for tracking purposes.
+      // Parse short options. They can be packed (-abc) and short names
+      // can be multi-character, so we search for matching prefixes like
+      // the parser does.
+      for i := 1; i < arg.size; :
+        option-length := 1
+        option/Option? := null
+        while i + option-length <= arg.size:
+          short-name := arg[i..i + option-length]
+          option = all-short-options.get short-name
+          if option: break
+          option-length++
+        if not option:
+          // Unknown short option; stop parsing this arg.
+          break
+        i += option-length
+        if option.is-flag:
+          if not option.is-multi:
+            (seen-options.get option.name --init=:[]).add "true"
+        else:
+          if i < arg.size:
+            // Value is the rest of the argument (e.g., -oValue).
+            value := arg[i..]
+            (seen-options.get option.name --init=:[]).add value
+          else:
+            // Next argument is the value.
+            pending-option = option
+          break
       continue.repeat
 
     // Not an option — try to descend into a subcommand.
@@ -121,7 +148,11 @@ complete_ root/Command arguments/List -> CompletionResult_:
       if subcommand:
         current-command = subcommand
         is-root = false
+        positional-index = 0
         add-options-for-command_ current-command all-named-options all-short-options
+    else:
+      // It's a positional/rest argument.
+      positional-index++
 
   // Now determine what to complete for the last argument (the word being typed).
   current-word := arguments.is-empty ? "" : arguments.last
@@ -141,7 +172,7 @@ complete_ root/Command arguments/List -> CompletionResult_:
 
   // After --, only rest arguments (no option completions).
   if past-dashdash:
-    return complete-rest_ current-command seen-options current-word
+    return complete-rest_ current-command seen-options current-word --positional-index=positional-index
 
   // Completing an option value with --option=prefix.
   if current-word.starts-with "--" and (current-word.index-of "=") >= 0:
@@ -174,7 +205,7 @@ complete_ root/Command arguments/List -> CompletionResult_:
   if not current-command.run-callback_:
     return complete-subcommands_ current-command all-named-options seen-options current-word --is-root=is-root
   else:
-    return complete-rest_ current-command seen-options current-word
+    return complete-rest_ current-command seen-options current-word --positional-index=positional-index
 
 /**
 Adds the options of the given $command to the option maps.
@@ -262,9 +293,16 @@ Completes rest arguments.
 
 Returns file completion directive since rest arguments are often file paths.
 */
-complete-rest_ command/Command seen-options/Map current-word/string -> CompletionResult_:
+complete-rest_ command/Command seen-options/Map current-word/string --positional-index/int=0 -> CompletionResult_:
   // If there are rest options with completion callbacks, use them.
+  // Skip rest options that have already been consumed by earlier positional args.
+  // Multi options absorb all remaining positionals, so we stop skipping once we
+  // reach a multi option.
+  skip := positional-index
   command.rest_.do: | option/Option |
+    if skip > 0 and not option.is-multi:
+      skip--
+      continue.do
     context := CompletionContext.private_
         --option=option
         --command=command
