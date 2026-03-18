@@ -245,10 +245,12 @@ complete-option-names_ command/Command all-named-options/Map seen-options/Map cu
       if short.starts-with current-word:
         candidates.add (CompletionCandidate_ short --description=option.help)
 
-  // Also suggest --help / -h.
-  if "--help".starts-with current-word:
+  // Also suggest --help / -h if those names are not already in use.
+  has-help-option := all-named-options.contains "help"
+  has-h-short := all-named-options.any: | _ option/Option | option.short-name == "h"
+  if not has-help-option and "--help".starts-with current-word:
     candidates.add (CompletionCandidate_ "--help" --description="Show help for this command.")
-  if "-h".starts-with current-word:
+  if not has-h-short and "-h".starts-with current-word:
     candidates.add (CompletionCandidate_ "-h" --description="Show help for this command.")
 
   return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
@@ -284,10 +286,12 @@ complete-subcommands_ command/Command all-named-options/Map seen-options/Map cur
       if long-name.starts-with current-word:
         candidates.add (CompletionCandidate_ long-name --description=option.help)
 
-    // Also suggest --help / -h.
-    if "--help".starts-with current-word:
+    // Also suggest --help / -h if those names are not already in use.
+    has-help-option := all-named-options.contains "help"
+    has-h-short := all-named-options.any: | _ option/Option | option.short-name == "h"
+    if not has-help-option and "--help".starts-with current-word:
       candidates.add (CompletionCandidate_ "--help" --description="Show help for this command.")
-    if "-h".starts-with current-word:
+    if not has-h-short and "-h".starts-with current-word:
       candidates.add (CompletionCandidate_ "-h" --description="Show help for this command.")
 
   return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_

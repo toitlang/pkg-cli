@@ -34,6 +34,7 @@ main:
   test-short-option-pending-value
   test-packed-short-options
   test-custom-completer-no-file-fallback
+  test-help-gated-on-availability
 
 test-empty-input:
   root := cli.Command "app"
@@ -524,3 +525,31 @@ test-custom-completer-no-file-fallback:
   result = complete_ root2 ["--file", ""]
   expect-equals 0 result.candidates.size
   expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+
+test-help-gated-on-availability:
+  // When a command defines its own "help" option, --help should not be suggested.
+  root := cli.Command "app"
+      --options=[
+        cli.Option "help" --help="Custom help option.",
+      ]
+      --run=:: null
+  result := complete_ root ["--"]
+  values := result.candidates.map: it.value
+  // The user's own --help is in all-named-options and will appear.
+  expect (values.contains "--help")
+  // But it should appear only once (from the user's option, not the synthetic one).
+  expect-equals 1 (values.filter: it == "--help").size
+
+  // When a command uses short-name "h", -h should not be suggested as help.
+  root2 := cli.Command "app"
+      --options=[
+        cli.Flag "hack" --short-name="h" --help="Hack mode.",
+      ]
+      --run=:: null
+  result = complete_ root2 ["-"]
+  values = result.candidates.map: it.value
+  // -h should appear (for --hack), but only once.
+  expect (values.contains "-h")
+  expect-equals 1 (values.filter: it == "-h").size
+  // --help should still appear since "help" as a name is not taken.
+  expect (values.contains "--help")
