@@ -2,8 +2,6 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
-// TODO(florian): Add support for PowerShell (Register-ArgumentCompleter).
-
 /**
 Extracts the basename from the given $path, stripping any directory components.
 */
@@ -137,3 +135,49 @@ fish-completion-script_ --program-path/string -> string:
     end
 
     complete -c $program-name -f -a '(__$(func-name)_completions)'"""
+
+/**
+Returns a PowerShell completion script for the given $program-path.
+*/
+powershell-completion-script_ --program-path/string -> string:
+  program-name := basename_ program-path
+  return """
+    Register-ArgumentCompleter -Native -CommandName '$program-name' -ScriptBlock {
+        param(\$wordToComplete, \$commandAst, \$cursorPosition)
+
+        \$tokens = \$commandAst.ToString() -split '\\s+'
+        \$args = \$tokens[1..(\$tokens.Length - 1)]
+
+        \$output = & $program-path __complete -- @args 2>\$null
+        if (\$LASTEXITCODE -ne 0) { return }
+
+        \$lines = \$output -split '\\n'
+        \$directive = (\$lines[-1] -replace '^:', '')
+        \$lines = \$lines[0..(\$lines.Length - 2)]
+
+        foreach (\$line in \$lines) {
+            if (-not \$line) { continue }
+            if (\$line -match '^([^\\t]+)\\t(.+)\$') {
+                \$value = \$Matches[1]
+                \$desc = \$Matches[2]
+            } else {
+                \$value = \$line
+                \$desc = \$line
+            }
+            [System.Management.Automation.CompletionResult]::new(
+                \$value,
+                \$value,
+                'ParameterValue',
+                \$desc
+            )
+        }
+
+        if (\$directive -eq '4') {
+            [System.Management.Automation.CompletionResult]::new(
+                '',
+                '',
+                'ProviderContainer',
+                'File completion'
+            )
+        }
+    }"""

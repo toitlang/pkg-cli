@@ -364,9 +364,12 @@ class Command:
               $program-path completion zsh > \$fpath[1]/_$prog-name
 
             Fish:
-              $program-path completion fish > ~/.config/fish/completions/$(prog-name).fish"""
+              $program-path completion fish > ~/.config/fish/completions/$(prog-name).fish
+
+            PowerShell:
+              $program-path completion powershell >> \$PROFILE"""
         --rest=[
-          OptionEnum "shell" ["bash", "zsh", "fish"]
+          OptionEnum "shell" ["bash", "zsh", "fish", "powershell"]
               --help="The shell to generate completions for."
               --required,
         ]
@@ -379,6 +382,8 @@ class Command:
             script = zsh-completion-script_ --program-path=program-path
           else if shell == "fish":
             script = fish-completion-script_ --program-path=program-path
+          else if shell == "powershell":
+            script = powershell-completion-script_ --program-path=program-path
           else:
             unreachable
           print script
