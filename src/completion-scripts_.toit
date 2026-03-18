@@ -151,6 +151,10 @@ fish-completion-script_ --program-path/string -> string:
                 end
             end
         end
+
+        if test "\$directive" = "4"
+            __fish_complete_path (commandline -ct)
+        end
     end
 
     complete -c "$program-name" -f -a '(__$(func-name)_completions)'"""

@@ -30,6 +30,17 @@ jobs:
         with:
           toit-version: ${{ matrix.toit-version }}
 
+      - name: Install tmux and fish (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux fish
+
+      - name: Install tmux and fish (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install tmux fish
+
       - name: Test
         run: |
           make test
