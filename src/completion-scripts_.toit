@@ -31,7 +31,7 @@ bash-completion-script_ --program-path/string -> string:
 
         local directive
         directive=\$(echo "\$completions" | tail -n 1)
-        completions=\$(echo "\$completions" | head -n -1)
+        completions=\$(echo "\$completions" | sed '\$d')
 
         directive="\${directive#:}"
 
@@ -79,7 +79,7 @@ zsh-completion-script_ --program-path/string -> string:
         directive="\${directive#:}"
 
         local -a lines
-        lines=("\${(@f)\$(echo "\$output" | head -n -1)}")
+        lines=("\${(@f)\$(echo "\$output" | sed '\$d')}")
 
         local -a candidates
         for line in "\${lines[@]}"; do
