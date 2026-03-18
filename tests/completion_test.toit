@@ -33,6 +33,7 @@ main:
   test-short-option-marks-seen
   test-short-option-pending-value
   test-packed-short-options
+  test-custom-completer-no-file-fallback
 
 test-empty-input:
   root := cli.Command "app"
@@ -494,3 +495,32 @@ test-packed-short-options:
   values = result.candidates.map: it.value
   expect (not (values.contains "--output"))
   expect (values.contains "--verbose")
+
+test-custom-completer-no-file-fallback:
+  root := cli.Command "app"
+      --options=[
+        cli.Option "host" --help="Target host."
+            --completion=:: | context/cli.CompletionContext |
+              hosts := ["localhost", "staging.example.com"]
+              (hosts.filter: it.starts-with context.prefix).map: cli.CompletionCandidate it,
+      ]
+      --run=:: null
+  // When a custom completer returns no matches, should NOT fall back to file completion.
+  result := complete_ root ["--host", "xyz"]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
+
+  // Same with --option=prefix form.
+  result = complete_ root ["--host=xyz"]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
+
+  // A plain string option with no completer SHOULD fall back to file completion.
+  root2 := cli.Command "app"
+      --options=[
+        cli.Option "file" --help="Input file.",
+      ]
+      --run=:: null
+  result = complete_ root2 ["--file", ""]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive

@@ -165,7 +165,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
         --seen-options=seen-options
         --prefix=current-word
     completions := pending-option.complete context
-    directive := completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+    directive := has-completer_ pending-option
+        ? DIRECTIVE-NO-FILE-COMPLETION_
+        : DIRECTIVE-FILE-COMPLETION_
     return CompletionResult_
         completions.map: to-candidate_ it
         --directive=directive
@@ -193,7 +195,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
       option-prefix := current-word[..split + 1]
       candidates := completions.map: | c/CompletionCandidate |
         CompletionCandidate_ "$option-prefix$c.value" --description=c.description
-      directive := completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+      directive := has-completer_ option
+          ? DIRECTIVE-NO-FILE-COMPLETION_
+          : DIRECTIVE-FILE-COMPLETION_
       return CompletionResult_ candidates --directive=directive
     return CompletionResult_ [] --directive=DIRECTIVE-DEFAULT_
 
@@ -314,6 +318,18 @@ complete-rest_ command/Command seen-options/Map current-word/string --positional
       return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
 
   return CompletionResult_ [] --directive=DIRECTIVE-FILE-COMPLETION_
+
+/**
+Whether the given $option has meaningful completion support.
+
+An option has a completer if it has a custom completion callback or
+  if it provides built-in completion values (like enum values).
+Options without either (like plain string/int options) don't have a
+  completer, and should fall back to file completion.
+*/
+has-completer_ option/Option -> bool:
+  return option.completion-callback_ != null
+      or not option.options-for-completion.is-empty
 
 /**
 Converts a public $CompletionCandidate to an internal $CompletionCandidate_.
