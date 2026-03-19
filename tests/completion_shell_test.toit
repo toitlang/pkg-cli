@@ -3,8 +3,10 @@
 // be found in the tests/LICENSE file.
 
 import expect show *
+import fs
 import host.pipe
 import host.directory
+import system
 
 /**
 A tmux session wrapper for testing interactive shell completions.
@@ -88,10 +90,13 @@ main:
     print "tmux not found, skipping shell completion tests."
     return
 
+  test-dir := fs.dirname system.program-path
+  app-source := "$test-dir/completion_shell_test_app.toit"
+
   with-tmp-dir: | tmpdir |
     binary_ = "$tmpdir/fleet"
-    print "Compiling example binary..."
-    pipe.run-program ["toit", "compile", "-o", binary_, "examples/completion.toit"]
+    print "Compiling test app..."
+    pipe.run-program ["toit", "compile", "-o", binary_, app-source]
     print "Binary compiled: $binary_"
 
     test-bash
