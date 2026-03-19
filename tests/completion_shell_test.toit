@@ -23,8 +23,9 @@ class Tmux:
       "-y", "$height",
       shell,
     ]
-    // Wait for the shell to initialize.
-    sleep --ms=500
+    // Wait for the shell to initialize by echoing a marker.
+    send-line "echo tmux-ready"
+    wait-for "tmux-ready"
 
   /**
   Sends keystrokes to the tmux session.
@@ -41,9 +42,13 @@ class Tmux:
   send-line text/string -> none:
     send-keys [text, "Enter"]
 
-  /** Sends Ctrl-C to cancel the current line. */
+  /** Sends Ctrl-C to cancel the current line, then waits for the shell to be ready. */
   cancel -> none:
     send-keys ["C-c"]
+    // Echo a marker and wait for it so we know the shell is ready.
+    marker := "ready-$Time.monotonic-us"
+    send-line "echo $marker"
+    wait-for marker
 
   /** Captures the current pane content as a string. */
   capture -> string:
@@ -112,8 +117,9 @@ test-bash:
   tmux := Tmux (next-session-name_) --shell="bash --norc --noprofile"
   try:
     // Source the completion script.
-    tmux.send-line "source <($binary_ completion bash)"
-    sleep --ms=500
+    tmux.send-line "source <($binary_ completion bash); echo sourced"
+    expect (tmux.wait-for "sourced")
+        --message="bash: sourcing completion script"
 
     // Test 1: Subcommand completion (double Tab for ambiguous matches).
     tmux.send-keys ["$binary_ ", "Tab", "Tab"]
@@ -127,17 +133,13 @@ test-bash:
     expect (content.contains "completion")
         --message="bash: subcommand 'completion' should appear"
     tmux.cancel
-    sleep --ms=300
 
     // Test 2: Unique prefix auto-completes inline.
     tmux.send-keys ["$binary_ dep", "Tab"]
-    sleep --ms=1000
-    content = tmux.capture
     // With a single match, bash auto-completes inline.
-    expect (content.contains "deploy")
+    expect (tmux.wait-for "deploy")
         --message="bash: 'dep' should auto-complete to 'deploy'"
     tmux.cancel
-    sleep --ms=300
 
     // Test 3: Enum value completion.
     tmux.send-keys ["$binary_ deploy --channel ", "Tab", "Tab"]
@@ -149,14 +151,12 @@ test-bash:
     expect (content.contains "dev")
         --message="bash: enum value 'dev' should appear"
     tmux.cancel
-    sleep --ms=300
 
     // Test 4: Short option -d triggers device completion.
     tmux.send-keys ["$binary_ deploy -d ", "Tab", "Tab"]
     expect (tmux.wait-for "d3b07384")
         --message="bash: short option -d should show device UUID"
     tmux.cancel
-    sleep --ms=300
 
     print "  All bash tests passed."
   finally:
@@ -168,10 +168,12 @@ test-zsh:
   tmux := Tmux (next-session-name_) --shell="zsh -f"
   try:
     // Initialize zsh completion system.
-    tmux.send-line "autoload -U compinit && compinit -u"
-    sleep --ms=500
-    tmux.send-line "source <($binary_ completion zsh)"
-    sleep --ms=500
+    tmux.send-line "autoload -U compinit && compinit -u && echo ready"
+    expect (tmux.wait-for "ready")
+        --message="zsh: compinit"
+    tmux.send-line "source <($binary_ completion zsh) && echo sourced"
+    expect (tmux.wait-for "sourced")
+        --message="zsh: sourcing completion script"
 
     // Test 1: Subcommand completion.
     tmux.send-keys ["$binary_ ", "Tab"]
@@ -181,7 +183,6 @@ test-zsh:
     expect (content.contains "status")
         --message="zsh: subcommand 'status' should appear"
     tmux.cancel
-    sleep --ms=300
 
     // Test 2: Enum value completion.
     tmux.send-keys ["$binary_ deploy --channel ", "Tab"]
@@ -191,14 +192,12 @@ test-zsh:
     expect (content.contains "beta")
         --message="zsh: enum value 'beta' should appear"
     tmux.cancel
-    sleep --ms=300
 
     // Test 3: Device completion with descriptions.
     tmux.send-keys ["$binary_ deploy --device ", "Tab"]
     expect (tmux.wait-for "Living Room Sensor")
         --message="zsh: device completion should show description"
     tmux.cancel
-    sleep --ms=300
 
     print "  All zsh tests passed."
   finally:
@@ -216,8 +215,9 @@ test-fish:
   tmux := Tmux (next-session-name_) --shell="fish --no-config"
   try:
     // Source the completion script.
-    tmux.send-line "$binary_ completion fish | source"
-    sleep --ms=500
+    tmux.send-line "$binary_ completion fish | source; echo sourced"
+    expect (tmux.wait-for "sourced")
+        --message="fish: sourcing completion script"
 
     // Test 1: Subcommand completion.
     tmux.send-keys ["$binary_ ", "Tab"]
@@ -227,7 +227,6 @@ test-fish:
     expect (content.contains "status")
         --message="fish: subcommand 'status' should appear"
     tmux.cancel
-    sleep --ms=300
 
     // Test 2: Enum value completion.
     tmux.send-keys ["$binary_ deploy --channel ", "Tab"]
@@ -237,14 +236,12 @@ test-fish:
     expect (content.contains "beta")
         --message="fish: enum value 'beta' should appear"
     tmux.cancel
-    sleep --ms=300
 
     // Test 3: Device completion with descriptions.
     tmux.send-keys ["$binary_ deploy --device ", "Tab"]
     expect (tmux.wait-for "Living Room Sensor")
         --message="fish: device completion should show description"
     tmux.cancel
-    sleep --ms=300
 
     print "  All fish tests passed."
   finally:
