@@ -2,13 +2,18 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import fs
+
 /**
-Extracts the basename from the given $path, stripping any directory components.
+Extracts the basename from the given $path, stripping any directory components
+  and the .exe extension on Windows.
 */
 basename_ path/string -> string:
-  slash := path.index-of --last "/"
-  if slash >= 0: return path[slash + 1..]
-  return path
+  name := fs.basename path
+  // Strip .exe suffix so that completions work on Windows where
+  // system.program-path includes the extension but users type without it.
+  if name.ends-with ".exe": name = name[..name.size - 4]
+  return name
 
 /**
 Sanitizes the given $name for use as a shell function name.
@@ -184,7 +189,7 @@ powershell-completion-script_ --program-path/string -> string:
             \$completionArgs += \$wordToComplete
         }
 
-        \$output = & $program-path __complete -- @completionArgs 2>\$null
+        \$output = & '$program-path' __complete -- @completionArgs 2>\$null
         if (\$LASTEXITCODE -ne 0 -or -not \$output) { return }
 
         \$lines = \$output -split '\\r?\\n'
