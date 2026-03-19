@@ -27,6 +27,7 @@ main:
   test-completion-with-descriptions
   test-help-only-at-root
   test-flags-hidden-without-dash-prefix
+  test-option-path
   test-rest-positional-index
   test-rest-positional-index-after-dashdash
   test-rest-multi-not-skipped
@@ -389,6 +390,37 @@ test-flags-hidden-without-dash-prefix:
   expect (values.contains "-h")
   // Subcommands should not appear when prefix starts with "-".
   expect (not (values.contains "serve"))
+
+test-option-path:
+  // OptionPath for files should use file-completion directive.
+  root := cli.Command "app"
+      --options=[
+        cli.OptionPath "config" --help="Config file.",
+      ]
+      --run=:: null
+  result := complete_ root ["--config", ""]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+
+  // OptionPath for directories should use directory-completion directive.
+  root = cli.Command "app"
+      --options=[
+        cli.OptionPath "output-dir" --directory --help="Output directory.",
+      ]
+      --run=:: null
+  result = complete_ root ["--output-dir", ""]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-DIRECTORY-COMPLETION_ result.directive
+
+  // OptionPath with --option=prefix should also use the correct directive.
+  result = complete_ root ["--output-dir=foo"]
+  expect-equals DIRECTIVE-DIRECTORY-COMPLETION_ result.directive
+
+  // OptionPath type should reflect the directory flag.
+  file-opt := cli.OptionPath "file" --help="A file."
+  expect-equals "path" file-opt.type
+  dir-opt := cli.OptionPath "dir" --directory --help="A dir."
+  expect-equals "directory" dir-opt.type
 
 test-rest-positional-index:
   root := cli.Command "app"
