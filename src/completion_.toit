@@ -172,7 +172,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
     completions := pending-option.complete context
     directive := pending-option.completion-directive
     if not directive:
-      directive = completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+      directive = has-completer_ pending-option
+          ? DIRECTIVE-NO-FILE-COMPLETION_
+          : DIRECTIVE-FILE-COMPLETION_
     return CompletionResult_
         completions.map: to-candidate_ it
         --directive=directive
@@ -202,7 +204,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
         CompletionCandidate_ "$option-prefix$c.value" --description=c.description
       directive := option.completion-directive
       if not directive:
-        directive = completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+        directive = has-completer_ option
+            ? DIRECTIVE-NO-FILE-COMPLETION_
+            : DIRECTIVE-FILE-COMPLETION_
       return CompletionResult_ candidates --directive=directive
     return CompletionResult_ [] --directive=DIRECTIVE-DEFAULT_
 
@@ -324,7 +328,9 @@ complete-rest_ command/Command seen-options/Map current-word/string --positional
     completions := option.complete context
     directive := option.completion-directive
     if not directive:
-      directive = completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+      directive = has-completer_ option
+          ? DIRECTIVE-NO-FILE-COMPLETION_
+          : DIRECTIVE-FILE-COMPLETION_
     if not completions.is-empty or directive != DIRECTIVE-DEFAULT_:
       candidates := completions.map: to-candidate_ it
       return CompletionResult_ candidates --directive=directive
