@@ -28,7 +28,7 @@ The working directory is set to $tmpdir so relative path completions resolve cor
 pwsh-complete_ binary/string tmpdir/string input/string -> string:
   cursor-col := input.size
   script := """
-    \$env:PATH = "\$env:PATH:$tmpdir"
+    \$env:PATH = "\$env:PATH\$([System.IO.Path]::PathSeparator)$tmpdir"
     Set-Location '$tmpdir'
     Invoke-Expression (& '$binary' completion powershell | Out-String)
     \$r = TabExpansion2 -inputScript '$input' -cursorColumn $cursor-col

@@ -3,8 +3,9 @@
 // be found in the tests/LICENSE file.
 
 import fs
-import host.pipe
 import host.directory
+import host.file
+import host.pipe
 import system
 
 /**
@@ -84,7 +85,7 @@ with-tmp-dir [block]:
   try:
     block.call tmpdir
   finally:
-    catch: pipe.run-program ["rm", "-rf", tmpdir]
+    directory.rmdir --recursive --force tmpdir
 
 has-command_ name/string -> bool:
   exit-code := pipe.run-program ["which", name]
@@ -99,13 +100,15 @@ setup-test-binary_ tmpdir/string -> string:
   test-dir := fs.dirname system.program-path
   app-source := "$test-dir/completion_shell_test_app.toit"
   binary := "$tmpdir/fleet"
+  if system.platform == system.PLATFORM-WINDOWS:
+    binary = "$tmpdir/fleet.exe"
   print "Compiling test app..."
   pipe.run-program ["toit", "compile", "-o", binary, app-source]
   print "Binary compiled: $binary"
 
   // Create artifacts for OptionPath completion testing.
-  pipe.run-program ["touch", "$tmpdir/xfirmware.bin"]
-  pipe.run-program ["mkdir", "$tmpdir/xreleases"]
+  file.write-contents --path="$tmpdir/xfirmware.bin" ""
+  directory.mkdir "$tmpdir/xreleases"
 
   return binary
 
