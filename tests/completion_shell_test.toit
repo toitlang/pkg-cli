@@ -50,14 +50,9 @@ class Tmux:
     send-line "echo $marker"
     wait-for marker
 
-  /**
-  Captures the current pane content as a string.
-  Returns empty string if the session is unavailable.
-  */
+  /** Captures the current pane content as a string. */
   capture -> string:
-    catch:
-      return pipe.backticks ["tmux", "-L", socket-name, "capture-pane", "-t", socket-name, "-p"]
-    return ""
+    return pipe.backticks ["tmux", "-L", socket-name, "capture-pane", "-t", socket-name, "-p"]
 
   /**
   Waits until the pane contains the given $expected string, or throws on timeout.
