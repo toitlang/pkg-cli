@@ -28,6 +28,14 @@ main:
   test-help-only-at-root
   test-flags-hidden-without-dash-prefix
   test-option-path
+  test-rest-positional-index
+  test-rest-positional-index-after-dashdash
+  test-rest-multi-not-skipped
+  test-short-option-marks-seen
+  test-short-option-pending-value
+  test-packed-short-options
+  test-custom-completer-no-file-fallback
+  test-help-gated-on-availability
 
 test-empty-input:
   root := cli.Command "app"
@@ -413,3 +421,167 @@ test-option-path:
   expect-equals "path" file-opt.type
   dir-opt := cli.OptionPath "dir" --directory --help="A dir."
   expect-equals "directory" dir-opt.type
+
+test-rest-positional-index:
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "action" ["start", "stop", "restart"]
+            --help="Action to perform.",
+        cli.OptionEnum "target" ["dev", "staging", "prod"]
+            --help="Target environment.",
+      ]
+      --run=:: null
+  // With no prior positional args, should complete the first rest option.
+  result := complete_ root [""]
+  values := result.candidates.map: it.value
+  expect (values.contains "start")
+  expect (not (values.contains "dev"))
+
+  // After providing the first positional, should complete the second rest option.
+  result = complete_ root ["start", ""]
+  values = result.candidates.map: it.value
+  expect (not (values.contains "start"))
+  expect (values.contains "dev")
+  expect (values.contains "staging")
+  expect (values.contains "prod")
+
+test-rest-positional-index-after-dashdash:
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "action" ["start", "stop"]
+            --help="Action to perform.",
+        cli.OptionEnum "target" ["dev", "prod"]
+            --help="Target environment.",
+      ]
+      --run=:: null
+  // After -- and one positional, should complete the second rest option.
+  result := complete_ root ["--", "start", ""]
+  values := result.candidates.map: it.value
+  expect (not (values.contains "start"))
+  expect (values.contains "dev")
+  expect (values.contains "prod")
+
+test-rest-multi-not-skipped:
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "files" ["a.txt", "b.txt"] --multi
+            --help="Input files.",
+      ]
+      --run=:: null
+  // Multi rest options should still complete even after prior positionals.
+  result := complete_ root ["a.txt", ""]
+  values := result.candidates.map: it.value
+  expect (values.contains "a.txt")
+  expect (values.contains "b.txt")
+
+test-short-option-marks-seen:
+  root := cli.Command "app"
+      --options=[
+        cli.Option "output" --short-name="o" --help="Output path.",
+        cli.Option "input" --short-name="i" --help="Input path.",
+      ]
+      --run=:: null
+  // After providing -o with a value, --output should not be suggested again.
+  result := complete_ root ["-o", "foo", "-"]
+  values := result.candidates.map: it.value
+  expect (not (values.contains "--output"))
+  expect (not (values.contains "-o"))
+  expect (values.contains "--input")
+  expect (values.contains "-i")
+
+test-short-option-pending-value:
+  root := cli.Command "app"
+      --options=[
+        cli.OptionEnum "format" ["json", "text"] --short-name="f" --help="Format.",
+      ]
+      --run=:: null
+  // After -f, the next word should complete the option's values.
+  result := complete_ root ["-f", ""]
+  values := result.candidates.map: it.value
+  expect (values.contains "json")
+  expect (values.contains "text")
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
+
+test-packed-short-options:
+  root := cli.Command "app"
+      --options=[
+        cli.Flag "verbose" --short-name="v" --help="Be verbose.",
+        cli.Option "output" --short-name="o" --help="Output path.",
+        cli.Flag "force" --short-name="F" --help="Force.",
+      ]
+      --run=:: null
+  // Packed flags: -vF should mark both as seen.
+  result := complete_ root ["-vF", "--"]
+  values := result.candidates.map: it.value
+  expect (not (values.contains "--verbose"))
+  expect (not (values.contains "--force"))
+  expect (values.contains "--output")
+
+  // Packed flag + value option: -vo should set pending for output.
+  result = complete_ root ["-vo", "out.txt", "--"]
+  values = result.candidates.map: it.value
+  expect (not (values.contains "--verbose"))
+  expect (not (values.contains "--output"))
+
+  // Packed with inline value: -ofile.txt should consume the value.
+  result = complete_ root ["-ofile.txt", "--"]
+  values = result.candidates.map: it.value
+  expect (not (values.contains "--output"))
+  expect (values.contains "--verbose")
+
+test-custom-completer-no-file-fallback:
+  root := cli.Command "app"
+      --options=[
+        cli.Option "host" --help="Target host."
+            --completion=:: | context/cli.CompletionContext |
+              hosts := ["localhost", "staging.example.com"]
+              (hosts.filter: it.starts-with context.prefix).map: cli.CompletionCandidate it,
+      ]
+      --run=:: null
+  // When a custom completer returns no matches, should NOT fall back to file completion.
+  result := complete_ root ["--host", "xyz"]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
+
+  // Same with --option=prefix form.
+  result = complete_ root ["--host=xyz"]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
+
+  // A plain string option with no completer SHOULD fall back to file completion.
+  root2 := cli.Command "app"
+      --options=[
+        cli.Option "file" --help="Input file.",
+      ]
+      --run=:: null
+  result = complete_ root2 ["--file", ""]
+  expect-equals 0 result.candidates.size
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+
+test-help-gated-on-availability:
+  // When a command defines its own "help" option, --help should not be suggested.
+  root := cli.Command "app"
+      --options=[
+        cli.Option "help" --help="Custom help option.",
+      ]
+      --run=:: null
+  result := complete_ root ["--"]
+  values := result.candidates.map: it.value
+  // The user's own --help is in all-named-options and will appear.
+  expect (values.contains "--help")
+  // But it should appear only once (from the user's option, not the synthetic one).
+  expect-equals 1 (values.filter: it == "--help").size
+
+  // When a command uses short-name "h", -h should not be suggested as help.
+  root2 := cli.Command "app"
+      --options=[
+        cli.Flag "hack" --short-name="h" --help="Hack mode.",
+      ]
+      --run=:: null
+  result = complete_ root2 ["-"]
+  values = result.candidates.map: it.value
+  // -h should appear (for --hack), but only once.
+  expect (values.contains "-h")
+  expect-equals 1 (values.filter: it == "-h").size
+  // --help should still appear since "help" as a name is not taken.
+  expect (values.contains "--help")

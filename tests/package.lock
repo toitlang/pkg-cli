@@ -1,6 +1,7 @@
 sdk: ^2.0.0-alpha.188.1
 prefixes:
   cli: ..
+  fs: pkg-fs
   host: pkg-host
 packages:
   ..:
