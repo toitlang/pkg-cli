@@ -175,12 +175,19 @@ powershell-completion-script_ --program-path/string -> string:
         param(\$wordToComplete, \$commandAst, \$cursorPosition)
 
         \$tokens = \$commandAst.ToString() -split '\\s+'
-        \$args = \$tokens[1..(\$tokens.Length - 1)]
+        if (\$tokens.Length -gt 1) {
+            \$completionArgs = \$tokens[1..(\$tokens.Length - 1)]
+        } else {
+            \$completionArgs = @()
+        }
+        if (\$completionArgs.Length -eq 0 -or \$completionArgs[-1] -ne \$wordToComplete) {
+            \$completionArgs += \$wordToComplete
+        }
 
-        \$output = & $program-path __complete -- @args 2>\$null
-        if (\$LASTEXITCODE -ne 0) { return }
+        \$output = & $program-path __complete -- @completionArgs 2>\$null
+        if (\$LASTEXITCODE -ne 0 -or -not \$output) { return }
 
-        \$lines = \$output -split '\\n'
+        \$lines = \$output -split '\\r?\\n'
         \$directive = (\$lines[-1] -replace '^:', '')
         \$lines = \$lines[0..(\$lines.Length - 2)]
 
@@ -193,6 +200,7 @@ powershell-completion-script_ --program-path/string -> string:
                 \$value = \$line
                 \$desc = \$line
             }
+            if (\$value -notlike "\$wordToComplete*") { continue }
             [System.Management.Automation.CompletionResult]::new(
                 \$value,
                 \$value,
