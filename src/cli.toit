@@ -718,7 +718,6 @@ abstract class Option:
     if str.size < 1: return false
     str.do --runes: | c |
       if not ('a' <= c <= 'z' or 'A' <= c <= 'Z' or '0' <= c <= '9'):
-        print c
         return false
     return true
 
