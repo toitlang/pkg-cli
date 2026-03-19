@@ -11,37 +11,30 @@ import system
 A tmux session wrapper for testing interactive shell completions.
 */
 class Tmux:
-  session-name/string
+  /** The socket name, unique per session to avoid server conflicts. */
+  socket-name/string
 
-  constructor .session-name --shell/string --width/int=200 --height/int=50:
+  constructor .socket-name --shell/string --width/int=200 --height/int=50:
     pipe.run-program [
-      "tmux", "new-session",
+      "tmux",
+      "-L", socket-name,     // Use a dedicated server socket.
+      "new-session",
       "-d",                   // Detached.
-      "-s", session-name,
+      "-s", socket-name,
       "-x", "$width",
       "-y", "$height",
       shell,
     ]
-    // Wait for the shell to initialize. Retry sending the marker in case
-    // the tmux server isn't fully ready yet (e.g. after a previous session
-    // was killed and the server is restarting).
-    deadline := Time.monotonic-us + 5_000_000
-    delay-ms := 10
-    while true:
-      send-keys ["echo tmux-ready", "Enter"]
-      sleep --ms=delay-ms
-      delay-ms = min 500 (delay-ms * 2)
-      content := capture
-      if content.contains "tmux-ready": break
-      if Time.monotonic-us >= deadline:
-        throw "Timed out waiting for tmux session to start"
+    // Wait for the shell to initialize.
+    send-line "echo tmux-ready"
+    wait-for "tmux-ready"
 
   /**
   Sends keystrokes to the tmux session.
   Each argument is a tmux key name (e.g. "Enter", "Tab", "C-c").
   */
   send-keys keys/List -> none:
-    pipe.run-program ["tmux", "send-keys", "-t", session-name] + keys
+    pipe.run-program ["tmux", "-L", socket-name, "send-keys", "-t", socket-name] + keys
 
   /** Sends text followed by Enter. */
   send-line text/string -> none:
@@ -55,14 +48,9 @@ class Tmux:
     send-line "echo $marker"
     wait-for marker
 
-  /**
-  Captures the current pane content as a string.
-  Returns empty string if tmux is temporarily unavailable (e.g. server restarting).
-  */
+  /** Captures the current pane content as a string. */
   capture -> string:
-    catch:
-      return pipe.backticks ["tmux", "capture-pane", "-t", session-name, "-p"]
-    return ""
+    return pipe.backticks ["tmux", "-L", socket-name, "capture-pane", "-t", socket-name, "-p"]
 
   /**
   Waits until the pane contains the given $expected string, or throws on timeout.
@@ -77,9 +65,9 @@ class Tmux:
       delay-ms = min 500 (delay-ms * 2)
     throw "Timed out waiting for '$expected' in tmux pane"
 
-  /** Kills the tmux session. */
+  /** Kills the tmux server (and its session). */
   close -> none:
-    catch: pipe.run-program ["tmux", "kill-session", "-t", session-name]
+    catch: pipe.run-program ["tmux", "-L", socket-name, "kill-server"]
 
 // Unique session prefix for this test run.
 session-id_ := 0
