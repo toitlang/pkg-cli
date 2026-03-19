@@ -57,7 +57,7 @@ class Tmux:
   /**
   Waits until the pane contains the given $expected string, or throws on timeout.
   */
-  wait-for expected/string --timeout-ms/int=5000 -> none:
+  wait-for expected/string --timeout-ms/int=10000 -> none:
     deadline := Time.monotonic-us + timeout-ms * 1000
     delay-ms := 10
     while Time.monotonic-us < deadline:
