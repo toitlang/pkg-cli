@@ -22,9 +22,19 @@ class Tmux:
       "-y", "$height",
       shell,
     ]
-    // Wait for the shell to initialize by echoing a marker.
-    send-line "echo tmux-ready"
-    wait-for "tmux-ready"
+    // Wait for the shell to initialize. Retry sending the marker in case
+    // the tmux server isn't fully ready yet (e.g. after a previous session
+    // was killed and the server is restarting).
+    deadline := Time.monotonic-us + 5_000_000
+    delay-ms := 10
+    while true:
+      send-keys ["echo tmux-ready", "Enter"]
+      sleep --ms=delay-ms
+      delay-ms = min 500 (delay-ms * 2)
+      content := capture
+      if content.contains "tmux-ready": break
+      if Time.monotonic-us >= deadline:
+        throw "Timed out waiting for tmux session to start"
 
   /**
   Sends keystrokes to the tmux session.
@@ -45,9 +55,14 @@ class Tmux:
     send-line "echo $marker"
     wait-for marker
 
-  /** Captures the current pane content as a string. */
+  /**
+  Captures the current pane content as a string.
+  Returns empty string if tmux is temporarily unavailable (e.g. server restarting).
+  */
   capture -> string:
-    return pipe.backticks ["tmux", "capture-pane", "-t", session-name, "-p"]
+    catch:
+      return pipe.backticks ["tmux", "capture-pane", "-t", session-name, "-p"]
+    return ""
 
   /**
   Waits until the pane contains the given $expected string, or throws on timeout.
