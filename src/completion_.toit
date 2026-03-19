@@ -70,6 +70,8 @@ complete_ root/Command arguments/List -> CompletionResult_:
   past-dashdash := false
   // The option that is expecting a value (the previous arg was a non-flag option).
   pending-option/Option? := null
+  // How many positional (rest) arguments have been consumed so far.
+  positional-index := 0
 
   // Process all arguments except the last one (which is the word being completed).
   args-to-process := arguments.is-empty ? [] : arguments[..arguments.size - 1]
@@ -78,7 +80,8 @@ complete_ root/Command arguments/List -> CompletionResult_:
     arg/string := args-to-process[index]
 
     if past-dashdash:
-      // After --, everything is a rest argument. Nothing to track.
+      // After --, everything is a rest argument. Track positional index.
+      positional-index++
       continue.repeat
 
     if pending-option:
@@ -110,9 +113,33 @@ complete_ root/Command arguments/List -> CompletionResult_:
       continue.repeat
 
     if arg.starts-with "-":
-      // Short option. For simplicity, just mark it as seen.
-      // Short options can be packed (-abc), so we'd need complex parsing.
-      // Just skip for tracking purposes.
+      // Parse short options. They can be packed (-abc) and short names
+      // can be multi-character, so we search for matching prefixes like
+      // the parser does.
+      for i := 1; i < arg.size; :
+        option-length := 1
+        option/Option? := null
+        while i + option-length <= arg.size:
+          short-name := arg[i..i + option-length]
+          option = all-short-options.get short-name
+          if option: break
+          option-length++
+        if not option:
+          // Unknown short option; stop parsing this arg.
+          break
+        i += option-length
+        if option.is-flag:
+          if not option.is-multi:
+            (seen-options.get option.name --init=:[]).add "true"
+        else:
+          if i < arg.size:
+            // Value is the rest of the argument (e.g., -oValue).
+            value := arg[i..]
+            (seen-options.get option.name --init=:[]).add value
+          else:
+            // Next argument is the value.
+            pending-option = option
+          break
       continue.repeat
 
     // Not an option — try to descend into a subcommand.
@@ -121,7 +148,11 @@ complete_ root/Command arguments/List -> CompletionResult_:
       if subcommand:
         current-command = subcommand
         is-root = false
+        positional-index = 0
         add-options-for-command_ current-command all-named-options all-short-options
+    else:
+      // It's a positional/rest argument.
+      positional-index++
 
   // Now determine what to complete for the last argument (the word being typed).
   current-word := arguments.is-empty ? "" : arguments.last
@@ -134,14 +165,16 @@ complete_ root/Command arguments/List -> CompletionResult_:
         --seen-options=seen-options
         --prefix=current-word
     completions := pending-option.complete context
-    directive := completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+    directive := has-completer_ pending-option
+        ? DIRECTIVE-NO-FILE-COMPLETION_
+        : DIRECTIVE-FILE-COMPLETION_
     return CompletionResult_
         completions.map: to-candidate_ it
         --directive=directive
 
   // After --, only rest arguments (no option completions).
   if past-dashdash:
-    return complete-rest_ current-command seen-options current-word
+    return complete-rest_ current-command seen-options current-word --positional-index=positional-index
 
   // Completing an option value with --option=prefix.
   if current-word.starts-with "--" and (current-word.index-of "=") >= 0:
@@ -162,7 +195,9 @@ complete_ root/Command arguments/List -> CompletionResult_:
       option-prefix := current-word[..split + 1]
       candidates := completions.map: | c/CompletionCandidate |
         CompletionCandidate_ "$option-prefix$c.value" --description=c.description
-      directive := completions.is-empty ? DIRECTIVE-FILE-COMPLETION_ : DIRECTIVE-NO-FILE-COMPLETION_
+      directive := has-completer_ option
+          ? DIRECTIVE-NO-FILE-COMPLETION_
+          : DIRECTIVE-FILE-COMPLETION_
       return CompletionResult_ candidates --directive=directive
     return CompletionResult_ [] --directive=DIRECTIVE-DEFAULT_
 
@@ -174,7 +209,7 @@ complete_ root/Command arguments/List -> CompletionResult_:
   if not current-command.run-callback_:
     return complete-subcommands_ current-command all-named-options seen-options current-word --is-root=is-root
   else:
-    return complete-rest_ current-command seen-options current-word
+    return complete-rest_ current-command seen-options current-word --positional-index=positional-index
 
 /**
 Adds the options of the given $command to the option maps.
@@ -210,10 +245,12 @@ complete-option-names_ command/Command all-named-options/Map seen-options/Map cu
       if short.starts-with current-word:
         candidates.add (CompletionCandidate_ short --description=option.help)
 
-  // Also suggest --help / -h.
-  if "--help".starts-with current-word:
+  // Also suggest --help / -h if those names are not already in use.
+  has-help-option := all-named-options.contains "help"
+  has-h-short := all-named-options.any: | _ option/Option | option.short-name == "h"
+  if not has-help-option and "--help".starts-with current-word:
     candidates.add (CompletionCandidate_ "--help" --description="Show help for this command.")
-  if "-h".starts-with current-word:
+  if not has-h-short and "-h".starts-with current-word:
     candidates.add (CompletionCandidate_ "-h" --description="Show help for this command.")
 
   return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
@@ -249,10 +286,12 @@ complete-subcommands_ command/Command all-named-options/Map seen-options/Map cur
       if long-name.starts-with current-word:
         candidates.add (CompletionCandidate_ long-name --description=option.help)
 
-    // Also suggest --help / -h.
-    if "--help".starts-with current-word:
+    // Also suggest --help / -h if those names are not already in use.
+    has-help-option := all-named-options.contains "help"
+    has-h-short := all-named-options.any: | _ option/Option | option.short-name == "h"
+    if not has-help-option and "--help".starts-with current-word:
       candidates.add (CompletionCandidate_ "--help" --description="Show help for this command.")
-    if "-h".starts-with current-word:
+    if not has-h-short and "-h".starts-with current-word:
       candidates.add (CompletionCandidate_ "-h" --description="Show help for this command.")
 
   return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
@@ -262,9 +301,16 @@ Completes rest arguments.
 
 Returns file completion directive since rest arguments are often file paths.
 */
-complete-rest_ command/Command seen-options/Map current-word/string -> CompletionResult_:
+complete-rest_ command/Command seen-options/Map current-word/string --positional-index/int=0 -> CompletionResult_:
   // If there are rest options with completion callbacks, use them.
+  // Skip rest options that have already been consumed by earlier positional args.
+  // Multi options absorb all remaining positionals, so we stop skipping once we
+  // reach a multi option.
+  skip := positional-index
   command.rest_.do: | option/Option |
+    if skip > 0 and not option.is-multi:
+      skip--
+      continue.do
     context := CompletionContext.private_
         --option=option
         --command=command
@@ -276,6 +322,18 @@ complete-rest_ command/Command seen-options/Map current-word/string -> Completio
       return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
 
   return CompletionResult_ [] --directive=DIRECTIVE-FILE-COMPLETION_
+
+/**
+Whether the given $option has meaningful completion support.
+
+An option has a completer if it has a custom completion callback or
+  if it provides built-in completion values (like enum values).
+Options without either (like plain string/int options) don't have a
+  completer, and should fall back to file completion.
+*/
+has-completer_ option/Option -> bool:
+  return option.completion-callback_ != null
+      or not option.options-for-completion.is-empty
 
 /**
 Converts a public $CompletionCandidate to an internal $CompletionCandidate_.

@@ -11,25 +11,42 @@ basename_ path/string -> string:
   return path
 
 /**
+Sanitizes the given $name for use as a shell function name.
+
+Replaces all non-alphanumeric characters with underscores and prefixes
+  with an underscore if the name starts with a digit.
+*/
+sanitize-func-name_ name/string -> string:
+  buffer := []
+  name.do --runes: | c/int |
+    if 'a' <= c <= 'z' or 'A' <= c <= 'Z' or '0' <= c <= '9':
+      buffer.add (string.from-rune c)
+    else:
+      buffer.add "_"
+  result := buffer.join ""
+  if result.size > 0 and '0' <= result[0] <= '9':
+    result = "_$result"
+  return result
+
+/**
 Returns a bash completion script for the given $program-path.
 */
 bash-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
-  // Sanitize the program name for use as a bash function name.
-  func-name := program-name.replace --all "-" "_"
+  func-name := sanitize-func-name_ program-name
   return """
     _$(func-name)_completions() {
         local IFS=\$'\\n'
 
         local completions
-        completions=\$($program-path __complete -- "\${COMP_WORDS[@]:1:\$COMP_CWORD}")
+        completions=\$("$program-path" __complete -- "\${COMP_WORDS[@]:1:\$COMP_CWORD}")
         if [ \$? -ne 0 ]; then
             return
         fi
 
         local directive
         directive=\$(echo "\$completions" | tail -n 1)
-        completions=\$(echo "\$completions" | head -n -1)
+        completions=\$(echo "\$completions" | sed '\$d')
 
         directive="\${directive#:}"
 
@@ -52,14 +69,14 @@ bash-completion-script_ --program-path/string -> string:
             fi
         fi
     }
-    complete -o default -F _$(func-name)_completions $program-name"""
+    complete -o default -F _$(func-name)_completions "$program-name\""""
 
 /**
 Returns a zsh completion script for the given $program-path.
 */
 zsh-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
-  func-name := program-name.replace --all "-" "_"
+  func-name := sanitize-func-name_ program-name
   return """
     #compdef $program-name
 
@@ -68,7 +85,7 @@ zsh-completion-script_ --program-path/string -> string:
         local directive
 
         local output
-        output=\$($program-path __complete -- "\${words[@]:1:\$((CURRENT-1))}" 2>/dev/null)
+        output=\$("$program-path" __complete -- "\${words[@]:1:\$((CURRENT-1))}" 2>/dev/null)
         if [ \$? -ne 0 ]; then
             return
         fi
@@ -77,7 +94,7 @@ zsh-completion-script_ --program-path/string -> string:
         directive="\${directive#:}"
 
         local -a lines
-        lines=("\${(@f)\$(echo "\$output" | head -n -1)}")
+        lines=("\${(@f)\$(echo "\$output" | sed '\$d')}")
 
         local -a candidates
         for line in "\${lines[@]}"; do
@@ -101,20 +118,20 @@ zsh-completion-script_ --program-path/string -> string:
         fi
     }
 
-    compdef _$(func-name) $program-name"""
+    compdef _$(func-name) "$program-name\""""
 
 /**
 Returns a fish completion script for the given $program-path.
 */
 fish-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
-  func-name := program-name.replace --all "-" "_"
+  func-name := sanitize-func-name_ program-name
   return """
     function __$(func-name)_completions
         set -l tokens (commandline -opc)
         set -l current (commandline -ct)
 
-        set -l output ($program-path __complete -- \$tokens[2..] \$current 2>/dev/null)
+        set -l output ("$program-path" __complete -- \$tokens[2..] \$current 2>/dev/null)
         if test \$status -ne 0
             return
         end
@@ -132,9 +149,13 @@ fish-completion-script_ --program-path/string -> string:
                 end
             end
         end
+
+        if test "\$directive" = "4"
+            __fish_complete_path (commandline -ct)
+        end
     end
 
-    complete -c $program-name -f -a '(__$(func-name)_completions)'"""
+    complete -c "$program-name" -f -a '(__$(func-name)_completions)'"""
 
 /**
 Returns a PowerShell completion script for the given $program-path.
