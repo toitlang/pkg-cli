@@ -106,14 +106,18 @@ main:
     pipe.run-program ["toit", "compile", "-o", binary_, app-source]
     print "Binary compiled: $binary_"
 
-    test-bash
-    test-zsh
-    test-fish
+    // Create artifacts for OptionPath completion testing.
+    pipe.run-program ["touch", "$tmpdir/xfirmware.bin"]
+    pipe.run-program ["mkdir", "$tmpdir/xreleases"]
+
+    test-bash tmpdir
+    test-zsh tmpdir
+    test-fish tmpdir
 
     print ""
     print "All shell completion tests passed!"
 
-test-bash:
+test-bash tmpdir/string:
   // Bash 3.x (macOS default) lacks compopt and has limited programmable
   // completion support. Skip if bash is too old.
   bash-version := (pipe.backticks ["bash", "-c", "echo \$BASH_VERSINFO"]).trim
@@ -156,11 +160,23 @@ test-bash:
     tmux.wait-for "d3b07384"
     tmux.cancel
 
+    // OptionPath: file option falls back to file completion.
+    tmux.send-line "cd $tmpdir && echo cd-done"
+    tmux.wait-for "cd-done"
+    tmux.send-keys ["$binary_ deploy --firmware xfirm", "Tab"]
+    tmux.wait-for "xfirmware.bin"
+    tmux.cancel
+
+    // OptionPath --directory: falls back to directory-only completion.
+    tmux.send-keys ["$binary_ deploy --output-dir xrel", "Tab"]
+    tmux.wait-for "xreleases"
+    tmux.cancel
+
     print "  All bash tests passed."
   finally:
     tmux.close
 
-test-zsh:
+test-zsh tmpdir/string:
   if not has-command_ "zsh":
     print ""
     print "=== Skipping zsh tests (zsh not installed) ==="
@@ -194,11 +210,23 @@ test-zsh:
     tmux.wait-for "Living Room Sensor"
     tmux.cancel
 
+    // OptionPath: file option falls back to file completion.
+    tmux.send-line "cd $tmpdir && echo cd-done"
+    tmux.wait-for "cd-done"
+    tmux.send-keys ["$binary_ deploy --firmware xfirm", "Tab"]
+    tmux.wait-for "xfirmware.bin"
+    tmux.cancel
+
+    // OptionPath --directory: falls back to directory-only completion.
+    tmux.send-keys ["$binary_ deploy --output-dir xrel", "Tab"]
+    tmux.wait-for "xreleases"
+    tmux.cancel
+
     print "  All zsh tests passed."
   finally:
     tmux.close
 
-test-fish:
+test-fish tmpdir/string:
   if not has-command_ "fish":
     print ""
     print "=== Skipping fish tests (fish not installed) ==="
@@ -228,6 +256,18 @@ test-fish:
     // Device completion with descriptions.
     tmux.send-keys ["$binary_ deploy --device ", "Tab"]
     tmux.wait-for "Living Room Sensor"
+    tmux.cancel
+
+    // OptionPath: file option falls back to file completion.
+    tmux.send-line "cd $tmpdir; and echo cd-done"
+    tmux.wait-for "cd-done"
+    tmux.send-keys ["$binary_ deploy --firmware xfirm", "Tab"]
+    tmux.wait-for "xfirmware.bin"
+    tmux.cancel
+
+    // OptionPath --directory: falls back to directory-only completion.
+    tmux.send-keys ["$binary_ deploy --output-dir xrel", "Tab"]
+    tmux.wait-for "xreleases"
     tmux.cancel
 
     print "  All fish tests passed."

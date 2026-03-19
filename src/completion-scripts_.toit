@@ -159,7 +159,7 @@ fish-completion-script_ --program-path/string -> string:
         if test "\$directive" = "4"
             __fish_complete_path (commandline -ct)
         else if test "\$directive" = "8"
-            __fish_complete_directories
+            __fish_complete_directories (commandline -ct)
         end
     end
 
