@@ -70,7 +70,8 @@ class Tmux:
       if content.contains expected: return
       sleep --ms=delay-ms
       delay-ms = min 500 (delay-ms * 2)
-    throw "Timed out waiting for '$expected' in tmux pane"
+    content := capture
+    throw "Timed out waiting for '$expected' in tmux pane. Content:\n$content"
 
   /** Kills the tmux server (and its session). */
   close -> none:
@@ -118,6 +119,14 @@ main:
     print "All shell completion tests passed!"
 
 test-bash:
+  // Bash 3.x (macOS default) lacks compopt and has limited programmable
+  // completion support. Skip if bash is too old.
+  bash-version := (pipe.backticks ["bash", "-c", "echo \$BASH_VERSINFO"]).trim
+  if bash-version == "" or bash-version[0] < '4':
+    print ""
+    print "=== Skipping bash tests (bash $bash-version too old, need 4+) ==="
+    return
+
   print ""
   print "=== Testing bash completion ==="
   tmux := Tmux (next-session-name_) --shell-cmd=["bash", "--norc", "--noprofile"]
