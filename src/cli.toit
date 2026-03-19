@@ -762,6 +762,16 @@ abstract class Option:
   abstract options-for-completion -> List
 
   /**
+  Returns the completion directive for this option, or null.
+
+  If non-null, the completion engine uses this directive instead of computing
+    one from the candidates. Subclasses like $OptionPath override this to
+    request file or directory completion from the shell.
+  */
+  completion-directive -> int?:
+    return null
+
+  /**
   Returns completion candidates for this option's value.
 
   If a completion callback was provided via `--completion` in the constructor, it is
@@ -1020,11 +1030,63 @@ class OptionPatterns extends Option:
     }
 
 /**
-// TODO(florian): Add OptionPath that can be configured for file or directory
-//   completion. Shells support completing only directories (bash: compopt -o
-//   dirnames, zsh: _directories, fish: __fish_complete_directories), so the
-//   completion engine could use a directory-only directive.
+A path option.
 
+When completing, the shell will suggest file or directory paths depending
+  on the $is-directory flag.
+*/
+class OptionPath extends Option:
+  default/string?
+  type/string
+
+  /**
+  Whether this option completes only directories.
+
+  If true, the shell only suggests directories. If false, it suggests
+    all files and directories.
+  */
+  is-directory/bool
+
+  /**
+  Creates a new path option.
+
+  The $default value is null.
+  The $type defaults to "path" for file paths or "directory" for directory paths.
+
+  If $directory is true, the shell only completes directories.
+
+  See $Option.constructor for the other parameters.
+  */
+  constructor name/string
+      --.default=null
+      --directory/bool=false
+      --.type=(directory ? "directory" : "path")
+      --short-name/string?=null
+      --help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false
+      --completion/Lambda?=null:
+    is-directory = directory
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas --completion=completion
+
+  is-flag: return false
+
+  options-for-completion -> List: return []
+
+  completion-directive -> int?:
+    if is-directory: return DIRECTIVE-DIRECTORY-COMPLETION_
+    return DIRECTIVE-FILE-COMPLETION_
+
+  parse str/string --for-help-example/bool=false -> string:
+    return str
+
+/**
 A Uuid option.
 */
 class OptionUuid extends Option:

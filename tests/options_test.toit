@@ -13,6 +13,7 @@ main:
   test-int
   test-uuid
   test-flag
+  test-path
   test-bad-combos
 
 test-string:
@@ -190,3 +191,28 @@ test-bad-combos:
 
   expect-throw "Multi option can't have default value.":
     cli.Flag "foo" --default=false --multi
+
+test-path:
+  option := cli.OptionPath "config" --help="Config file."
+  expect-equals "config" option.name
+  expect-null option.default
+  expect-equals "path" option.type
+  expect-not option.is-flag
+  expect-not option.is-directory
+
+  option = cli.OptionPath "output" --directory --help="Output dir."
+  expect-equals "directory" option.type
+  expect option.is-directory
+
+  option = cli.OptionPath "input" --default="/tmp/foo" --help="Input."
+  expect-equals "/tmp/foo" option.default
+
+  value := option.parse "/some/path"
+  expect-equals "/some/path" value
+
+  // OptionPath supports the same combos as other options.
+  option = cli.OptionPath "files" --multi --help="Files."
+  expect option.is-multi
+
+  expect-throw "Multi option can't have default value.":
+    cli.OptionPath "foo" --default="bar" --multi

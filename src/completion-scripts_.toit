@@ -67,6 +67,10 @@ bash-completion-script_ --program-path/string -> string:
             if [[ \${#COMPREPLY[@]} -eq 0 ]]; then
                 compopt -o default 2>/dev/null
             fi
+        elif [[ \$directive -eq 8 ]]; then
+            if [[ \${#COMPREPLY[@]} -eq 0 ]]; then
+                compopt -o dirnames 2>/dev/null
+            fi
         fi
     }
     complete -o default -F _$(func-name)_completions "$program-name\""""
@@ -115,6 +119,8 @@ zsh-completion-script_ --program-path/string -> string:
 
         if [[ \$directive -eq 4 ]]; then
             _files
+        elif [[ \$directive -eq 8 ]]; then
+            _directories
         fi
     }
 
@@ -152,6 +158,8 @@ fish-completion-script_ --program-path/string -> string:
 
         if test "\$directive" = "4"
             __fish_complete_path (commandline -ct)
+        else if test "\$directive" = "8"
+            __fish_complete_directories (commandline -ct)
         end
     end
 
@@ -193,12 +201,17 @@ powershell-completion-script_ --program-path/string -> string:
             )
         }
 
-        if (\$directive -eq '4') {
-            [System.Management.Automation.CompletionResult]::new(
-                '',
-                '',
-                'ProviderContainer',
-                'File completion'
-            )
+        if (\$directive -eq '4' -or \$directive -eq '8') {
+            \$completionType = if (\$directive -eq '8') { 'ProviderContainer' } else { 'ProviderItem' }
+            Get-ChildItem -Path "\$wordToComplete*" -ErrorAction SilentlyContinue |
+                Where-Object { \$directive -ne '8' -or \$_.PSIsContainer } |
+                ForEach-Object {
+                    [System.Management.Automation.CompletionResult]::new(
+                        \$_.FullName,
+                        \$_.Name,
+                        \$completionType,
+                        \$_.FullName
+                    )
+                }
         }
     }"""
