@@ -14,8 +14,8 @@ class Tmux:
   /** The socket name, unique per session to avoid server conflicts. */
   socket-name/string
 
-  constructor .socket-name --shell/string --width/int=200 --height/int=50:
-    pipe.run-program [
+  constructor .socket-name --shell-cmd/List --width/int=200 --height/int=50:
+    args := [
       "tmux",
       "-L", socket-name,     // Use a dedicated server socket.
       "new-session",
@@ -23,8 +23,10 @@ class Tmux:
       "-s", socket-name,
       "-x", "$width",
       "-y", "$height",
-      shell,
-    ]
+    ] + shell-cmd
+    exit-code := pipe.run-program args
+    if exit-code != 0:
+      throw "tmux new-session failed with exit code $exit-code for shell '$shell-cmd'"
     // Wait for the shell to initialize.
     send-line "echo tmux-ready"
     wait-for "tmux-ready"
@@ -48,9 +50,14 @@ class Tmux:
     send-line "echo $marker"
     wait-for marker
 
-  /** Captures the current pane content as a string. */
+  /**
+  Captures the current pane content as a string.
+  Returns empty string if the session is unavailable.
+  */
   capture -> string:
-    return pipe.backticks ["tmux", "-L", socket-name, "capture-pane", "-t", socket-name, "-p"]
+    catch:
+      return pipe.backticks ["tmux", "-L", socket-name, "capture-pane", "-t", socket-name, "-p"]
+    return ""
 
   /**
   Waits until the pane contains the given $expected string, or throws on timeout.
@@ -113,7 +120,7 @@ main:
 test-bash:
   print ""
   print "=== Testing bash completion ==="
-  tmux := Tmux (next-session-name_) --shell="bash --norc --noprofile"
+  tmux := Tmux (next-session-name_) --shell-cmd=["bash", "--norc", "--noprofile"]
   try:
     tmux.send-line "source <($binary_ completion bash); echo sourced"
     tmux.wait-for "sourced"
@@ -150,9 +157,14 @@ test-bash:
     tmux.close
 
 test-zsh:
+  if not has-command_ "zsh":
+    print ""
+    print "=== Skipping zsh tests (zsh not installed) ==="
+    return
+
   print ""
   print "=== Testing zsh completion ==="
-  tmux := Tmux (next-session-name_) --shell="zsh -f"
+  tmux := Tmux (next-session-name_) --shell-cmd=["zsh", "-f"]
   try:
     tmux.send-line "autoload -U compinit && compinit -u && echo ready"
     tmux.wait-for "ready"
@@ -190,7 +202,7 @@ test-fish:
 
   print ""
   print "=== Testing fish completion ==="
-  tmux := Tmux (next-session-name_) --shell="fish --no-config"
+  tmux := Tmux (next-session-name_) --shell-cmd=["fish", "--no-config"]
   try:
     tmux.send-line "$binary_ completion fish | source; echo sourced"
     tmux.wait-for "sourced"
