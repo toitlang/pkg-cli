@@ -2,13 +2,18 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import fs
+
 /**
-Extracts the basename from the given $path, stripping any directory components.
+Extracts the basename from the given $path, stripping any directory components
+  and the .exe extension on Windows.
 */
 basename_ path/string -> string:
-  slash := path.index-of --last "/"
-  if slash >= 0: return path[slash + 1..]
-  return path
+  name := fs.basename path
+  // Strip .exe suffix so that completions work on Windows where
+  // system.program-path includes the extension but users type without it.
+  if name.ends-with ".exe": name = name[..name.size - 4]
+  return name
 
 /**
 Sanitizes the given $name for use as a shell function name.
@@ -175,12 +180,19 @@ powershell-completion-script_ --program-path/string -> string:
         param(\$wordToComplete, \$commandAst, \$cursorPosition)
 
         \$tokens = \$commandAst.ToString() -split '\\s+'
-        \$args = \$tokens[1..(\$tokens.Length - 1)]
+        if (\$tokens.Length -gt 1) {
+            \$completionArgs = \$tokens[1..(\$tokens.Length - 1)]
+        } else {
+            \$completionArgs = @()
+        }
+        if (\$completionArgs.Length -eq 0 -or \$completionArgs[-1] -ne \$wordToComplete) {
+            \$completionArgs += \$wordToComplete
+        }
 
-        \$output = & $program-path __complete -- @args 2>\$null
-        if (\$LASTEXITCODE -ne 0) { return }
+        \$output = & '$program-path' __complete -- @completionArgs 2>\$null
+        if (\$LASTEXITCODE -ne 0 -or -not \$output) { return }
 
-        \$lines = \$output -split '\\n'
+        \$lines = \$output -split '\\r?\\n'
         \$directive = (\$lines[-1] -replace '^:', '')
         \$lines = \$lines[0..(\$lines.Length - 2)]
 
@@ -193,6 +205,7 @@ powershell-completion-script_ --program-path/string -> string:
                 \$value = \$line
                 \$desc = \$line
             }
+            if (\$value -notlike "\$wordToComplete*") { continue }
             [System.Management.Automation.CompletionResult]::new(
                 \$value,
                 \$value,
