@@ -244,6 +244,13 @@ class HelpGenerator:
     if not has-help-subcommand and is-root-command_:
       commands-and-help.add ["help", "Show help for a command."]
 
+    has-completion-subcommand := false
+    command_.subcommands_.do: | subcommand/Command |
+      if subcommand.name == "completion": has-completion-subcommand = true
+      subcommand.aliases_.do: if it == "completion": has-completion-subcommand = true
+    if not has-completion-subcommand and is-root-command_:
+      commands-and-help.add ["completion", "Generate shell completion scripts."]
+
     sorted-commands := commands-and-help.sort: | a/List b/List | a[0].compare-to b[0]
     write-table_ sorted-commands --indentation=2
 
