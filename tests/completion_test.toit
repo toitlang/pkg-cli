@@ -35,6 +35,7 @@ main:
   test-short-option-pending-value
   test-packed-short-options
   test-custom-completer-no-file-fallback
+  test-help-completion
   test-help-gated-on-availability
 
 test-empty-input:
@@ -557,6 +558,65 @@ test-custom-completer-no-file-fallback:
   result = complete_ root2 ["--file", ""]
   expect-equals 0 result.candidates.size
   expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+
+test-help-completion:
+  root := cli.Command "app"
+      --options=[
+        cli.Flag "verbose" --help="Be verbose.",
+      ]
+      --subcommands=[
+        cli.Command "serve" --help="Start a server."
+            --options=[
+              cli.Option "port" --help="Port number.",
+            ]
+            --run=:: null,
+        cli.Command "build" --help="Build the project." --run=:: null,
+        cli.Command "device"
+            --help="Device commands."
+            --options=[
+              cli.Option "name" --help="Device name.",
+            ]
+            --subcommands=[
+              cli.Command "list" --help="List devices." --run=:: null,
+              cli.Command "show" --help="Show device." --run=:: null,
+            ],
+      ]
+  // "app help " should complete subcommands but not "help" itself.
+  result := complete_ root ["help", ""]
+  values := result.candidates.map: it.value
+  expect (values.contains "serve")
+  expect (values.contains "build")
+  expect (values.contains "device")
+  expect (not (values.contains "help"))
+
+  // "app help s" should filter by prefix.
+  result = complete_ root ["help", "s"]
+  values = result.candidates.map: it.value
+  expect (values.contains "serve")
+  expect (not (values.contains "build"))
+
+  // "app help device " should complete device's subcommands.
+  result = complete_ root ["help", "device", ""]
+  values = result.candidates.map: it.value
+  expect (values.contains "list")
+  expect (values.contains "show")
+  expect (not (values.contains "help"))
+
+  // "app help -" should NOT complete options (help doesn't use them).
+  result = complete_ root ["help", "-"]
+  values = result.candidates.map: it.value
+  expect (values.is-empty)
+
+  // "app help device -" should NOT complete device's options.
+  result = complete_ root ["help", "device", "-"]
+  values = result.candidates.map: it.value
+  expect (values.is-empty)
+
+  // "app help serve " should complete nothing (leaf command in help mode).
+  result = complete_ root ["help", "serve", ""]
+  values = result.candidates.map: it.value
+  expect (values.is-empty)
+  expect-equals DIRECTIVE-NO-FILE-COMPLETION_ result.directive
 
 test-help-gated-on-availability:
   // When a command defines its own "help" option, --help should not be suggested.

@@ -72,6 +72,11 @@ complete_ root/Command arguments/List -> CompletionResult_:
 
   add-options-for-command_ current-command all-named-options all-short-options
 
+  // Whether we are completing after "help" at root level. In help mode
+  // only subcommand names are completed (no options or rest args), since
+  // "help" only navigates the command tree.
+  in-help-mode := false
+
   past-dashdash := false
   // The option that is expecting a value (the previous arg was a non-flag option).
   pending-option/Option? := null
@@ -154,13 +159,35 @@ complete_ root/Command arguments/List -> CompletionResult_:
         current-command = subcommand
         is-root = false
         positional-index = 0
-        add-options-for-command_ current-command all-named-options all-short-options
+        // In help mode, don't accumulate subcommand options since
+        // help only navigates the tree and doesn't use them.
+        if not in-help-mode:
+          add-options-for-command_ current-command all-named-options all-short-options
+      else if is-root and arg == "help":
+        // "help" is a synthetic command at root level. Enter help
+        // mode which only completes subcommand names.
+        in-help-mode = true
+        all-named-options.clear
+        all-short-options.clear
     else:
       // It's a positional/rest argument.
       positional-index++
 
   // Now determine what to complete for the last argument (the word being typed).
   current-word := arguments.is-empty ? "" : arguments.last
+
+  // In help mode, only complete subcommand names. No options or rest args.
+  if in-help-mode:
+    candidates := []
+    if not current-command.run-callback_:
+      current-command.subcommands_.do: | sub/Command |
+        if sub.is-hidden_: continue.do
+        if sub.name.starts-with current-word:
+          candidates.add (CompletionCandidate_ sub.name --description=sub.short-help)
+        sub.aliases_.do: | alias/string |
+          if alias.starts-with current-word:
+            candidates.add (CompletionCandidate_ alias --description=sub.short-help)
+    return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
 
   // If we were expecting a value for an option, complete that option's values.
   if pending-option:
