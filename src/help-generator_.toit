@@ -16,12 +16,17 @@ It finds the selected command and prints its help.
 */
 help-command_ path/Path arguments/List --ui/Ui:
   command/Command := path.last
+  show-all := false
 
   for i := 0; i < arguments.size; i++:
     argument := arguments[i]
     if argument == "--": break
 
-    // Simply drop all options.
+    if argument == "--all":
+      show-all = true
+      continue
+
+    // Simply drop all other options.
     if argument.starts-with "-":
       continue
 
@@ -32,7 +37,24 @@ help-command_ path/Path arguments/List --ui/Ui:
     command = subcommand
     path += command
 
-  emit-help_ path --ui=ui
+  if show-all:
+    emit-help-all_ path --ui=ui
+  else:
+    emit-help_ path --ui=ui
+
+/**
+Emits the help for all commands in the subtree rooted at the given command.
+
+The command is identified by the $path where the command is the last element.
+*/
+emit-help-all_ path/Path --ui/Ui:
+  ui.emit --kind=Ui.RESULT
+      --structured=:
+        build-json-help-all_ path
+      --text=:
+        generator := HelpGenerator path
+        generator.build-all-commands
+        generator.to-string
 
 /**
 Emits the help for the given command.
@@ -47,6 +69,35 @@ emit-help_ path/Path --ui/Ui:
         generator := HelpGenerator path
         generator.build-all
         generator.to-string
+
+build-json-help-all_ path/Path -> Map:
+  return build-json-command-tree_ path.last --is-root=(path.size == 1)
+
+build-json-command-tree_ command/Command --is-root/bool=false -> Map:
+  sub-list := []
+  sorted := command.subcommands_.sort: | a/Command b/Command | a.name.compare-to b.name
+  sorted.do: | sub/Command |
+    if sub.is-hidden_: continue.do
+    sub-list.add (build-json-command-tree_ sub)
+
+  if is-root:
+    has-help := false
+    has-completion := false
+    command.subcommands_.do: | sub/Command |
+      if sub.name == "help": has-help = true
+      sub.aliases_.do: if it == "help": has-help = true
+      if sub.name == "completion": has-completion = true
+      sub.aliases_.do: if it == "completion": has-completion = true
+    if not has-help:
+      sub-list.add {"name": "help", "help": "Show help for a command.", "subcommands": []}
+    if not has-completion:
+      sub-list.add {"name": "completion", "help": "Generate shell completion scripts.", "subcommands": []}
+
+  return {
+    "name": command.name,
+    "help": command.short-help,
+    "subcommands": sub-list,
+  }
 
 build-json-help_ path/Path -> Map:
   // Local block to build json objects for the given command.
@@ -253,6 +304,53 @@ class HelpGenerator:
 
     sorted-commands := commands-and-help.sort: | a/List b/List | a[0].compare-to b[0]
     write-table_ sorted-commands --indentation=2
+
+  /**
+  Builds a hierarchical summary of all commands in the subtree.
+
+  Recursively lists all subcommands with indentation showing nesting.
+  Hidden commands are excluded. At root level, auto-added 'help' and
+    'completion' entries are included.
+  */
+  build-all-commands -> none:
+    rows := []
+    collect-commands-recursive_ command_ rows --indent=0 --is-root=is-root-command_
+    if rows.is-empty: return
+    write-table_ rows
+
+  /**
+  Collects all commands recursively into $rows as [indented-name, short-help] pairs.
+  */
+  collect-commands-recursive_ command/Command rows/List --indent/int --is-root/bool=false -> none:
+    // Each entry is [name, help, subcommand-or-null].
+    entries := []
+    command.subcommands_.do: | subcommand/Command |
+      if subcommand.is-hidden_: continue.do
+      entries.add [subcommand.name, subcommand.short-help, subcommand]
+
+    if is-root:
+      has-help := false
+      has-completion := false
+      command.subcommands_.do: | sub/Command |
+        if sub.name == "help": has-help = true
+        sub.aliases_.do: if it == "help": has-help = true
+        if sub.name == "completion": has-completion = true
+        sub.aliases_.do: if it == "completion": has-completion = true
+      if not has-help:
+        entries.add ["help", "Show help for a command.", null]
+      if not has-completion:
+        entries.add ["completion", "Generate shell completion scripts.", null]
+
+    sorted := entries.sort: | a/List b/List |
+      (a[0] as string).compare-to (b[0] as string)
+
+    prefix := " " * indent
+    sorted.do: | entry/List |
+      name := entry[0] as string
+      help-str := entry[1] as string
+      rows.add ["$prefix$name", help-str]
+      if entry[2]:
+        collect-commands-recursive_ (entry[2] as Command) rows --indent=(indent + 2)
 
   /**
   Builds the local options section.
