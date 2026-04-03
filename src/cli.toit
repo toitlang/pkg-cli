@@ -1156,11 +1156,11 @@ class OptionInFile extends Option:
 
   parse str/string --for-help-example/bool=false -> any:
     if allow-dash and str == "-":
-      return InFile.stdin_
+      return InFile.stdin_ --option-name=name
+    result := InFile.from-path_ str --option-name=name
     if check-exists and not for-help-example:
-      if not file.is-file str:
-        throw "File not found for option '$name': '$str'."
-    return InFile.from-path_ str
+      result.check
+    return result
 
 /**
 An output file option.
@@ -1227,8 +1227,8 @@ class OptionOutFile extends Option:
 
   parse str/string --for-help-example/bool=false -> any:
     if allow-dash and str == "-":
-      return OutFile.stdout_ --create-directories=create-directories
-    return OutFile.from-path_ str --create-directories=create-directories
+      return OutFile.stdout_ --create-directories=create-directories --option-name=name
+    return OutFile.from-path_ str --create-directories=create-directories --option-name=name
 
 /**
 A wrapper around an input file or stdin.
@@ -1246,12 +1246,27 @@ class InFile:
   */
   is-stdin/bool
 
-  constructor.from-path_ .path/string:
+  /**
+  The option name, used in error messages.
+  */
+  option-name/string
+
+  constructor.from-path_ .path/string --.option-name:
     is-stdin = false
 
-  constructor.stdin_:
+  constructor.stdin_ --.option-name:
     path = null
     is-stdin = true
+
+  /**
+  Checks that the file exists.
+
+  Throws if the file does not exist. Does nothing for stdin.
+  */
+  check -> none:
+    if is-stdin: return
+    if not file.is-file path:
+      throw "File not found for option '$option-name': '$path'."
 
   /**
   Opens the file (or stdin) for reading.
@@ -1305,11 +1320,16 @@ class OutFile:
   */
   is-stdout/bool
 
-  constructor.from-path_ .path/string --create-directories/bool:
+  /**
+  The option name, used in error messages.
+  */
+  option-name/string
+
+  constructor.from-path_ .path/string --create-directories/bool --.option-name:
     create-directories_ = create-directories
     is-stdout = false
 
-  constructor.stdout_ --create-directories/bool:
+  constructor.stdout_ --create-directories/bool --.option-name:
     path = null
     create-directories_ = create-directories
     is-stdout = true
@@ -1336,6 +1356,24 @@ class OutFile:
     writer := open
     try:
       block.call writer
+    finally:
+      writer.close
+
+  /**
+  Writes the given $data to the file or stdout.
+
+  If $OptionOutFile.create-directories was set, parent directories are
+    created automatically.
+  */
+  write-contents data/io.Data -> none:
+    if not is-stdout:
+      if create-directories_:
+        directory.mkdir --recursive (fs.dirname path)
+      file.write-contents --path=path data
+      return
+    writer := pipe.stdout.out
+    try:
+      (writer as io.Writer).write data
     finally:
       writer.close
 
