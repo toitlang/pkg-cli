@@ -3,7 +3,10 @@
 // be found in the tests/LICENSE file.
 
 import cli
+import cli.utils_ show with-tmp-directory
 import expect show *
+import host.directory
+import host.file
 import uuid show Uuid
 
 main:
@@ -14,6 +17,8 @@ main:
   test-uuid
   test-flag
   test-path
+  test-in-file
+  test-out-file
   test-bad-combos
 
 test-string:
@@ -216,3 +221,153 @@ test-path:
 
   expect-throw "Multi option can't have default value.":
     cli.OptionPath "foo" --default="bar" --multi
+
+test-in-file:
+  option := cli.OptionInFile "input" --help="Input file."
+  expect-equals "input" option.name
+  expect-null option.default
+  expect-equals "file" option.type
+  expect-not option.is-flag
+  expect option.allow-dash
+  expect option.check-exists
+
+  // Test with custom options.
+  option = cli.OptionInFile "input" --no-allow-dash --no-check-exists
+  expect-not option.allow-dash
+  expect-not option.check-exists
+
+  // Test parse returns InFile for a path.
+  in-file/cli.InFile := option.parse "/some/path"
+  expect-equals "/some/path" in-file.path
+  expect-not in-file.is-stdin
+
+  // Test parse returns InFile for "-" when allow-dash is true.
+  option = cli.OptionInFile "input"
+  in-file = option.parse "-"
+  expect-null in-file.path
+  expect in-file.is-stdin
+
+  // Test "-" is treated as literal when allow-dash is false.
+  option = cli.OptionInFile "input" --no-allow-dash --no-check-exists
+  in-file = option.parse "-"
+  expect-equals "-" in-file.path
+  expect-not in-file.is-stdin
+
+  // Test check-exists fails for missing files.
+  option = cli.OptionInFile "input" --check-exists
+  expect-throw "File not found for option 'input': '/nonexistent/file.txt'.":
+    option.parse "/nonexistent/file.txt"
+
+  // Test check on InFile directly.
+  option = cli.OptionInFile "input" --no-check-exists
+  in-file = option.parse "/nonexistent/file.txt"
+  expect-throw "File not found for option 'input': '/nonexistent/file.txt'.":
+    in-file.check
+
+  // Test check-exists is skipped for "-".
+  in-file = option.parse "-"
+  expect in-file.is-stdin
+
+  // Test check-exists is skipped for help examples.
+  in-file = option.parse "/nonexistent/file.txt" --for-help-example
+  expect-equals "/nonexistent/file.txt" in-file.path
+
+  // Test reading from a real file.
+  with-tmp-directory: | tmpdir |
+    test-path := "$tmpdir/test.txt"
+    file.write-contents --path=test-path "hello world"
+    option = cli.OptionInFile "input"
+    in-file = option.parse test-path
+    expect-equals test-path in-file.path
+
+    // Test do [block].
+    in-file.do: | reader |
+      data := reader.read
+      expect-equals "hello world" data.to-string
+
+    // Test read-contents.
+    in-file = option.parse test-path
+    contents := in-file.read-contents
+    expect-equals "hello world" contents.to-string
+
+  // Test bad combos.
+  expect-throw "Multi option can't have default value.":
+    cli.OptionInFile "foo" --default="bar" --multi
+
+test-out-file:
+  option := cli.OptionOutFile "output" --help="Output file."
+  expect-equals "output" option.name
+  expect-null option.default
+  expect-equals "file" option.type
+  expect-not option.is-flag
+  expect option.allow-dash
+  expect-not option.create-directories
+
+  // Test with custom options.
+  option = cli.OptionOutFile "output" --no-allow-dash --create-directories
+  expect-not option.allow-dash
+  expect option.create-directories
+
+  // Test parse returns OutFile for a path.
+  out-file/cli.OutFile := option.parse "/some/path"
+  expect-equals "/some/path" out-file.path
+  expect-not out-file.is-stdout
+
+  // Test parse returns OutFile for "-" when allow-dash is true.
+  option = cli.OptionOutFile "output"
+  out-file = option.parse "-"
+  expect-null out-file.path
+  expect out-file.is-stdout
+
+  // Test "-" is treated as literal when allow-dash is false.
+  option = cli.OptionOutFile "output" --no-allow-dash
+  out-file = option.parse "-"
+  expect-equals "-" out-file.path
+  expect-not out-file.is-stdout
+
+  // Test writing to a real file.
+  with-tmp-directory: | tmpdir |
+    test-path := "$tmpdir/output.txt"
+    option = cli.OptionOutFile "output"
+    out-file = option.parse test-path
+
+    // Test do [block].
+    out-file.do: | writer |
+      writer.write "hello output"
+
+    contents := file.read-contents test-path
+    expect-equals "hello output" contents.to-string
+
+    // Test write-contents.
+    out-file.write-contents "written directly"
+    contents = file.read-contents test-path
+    expect-equals "written directly" contents.to-string
+
+    // Test create-directories.
+    nested-path := "$tmpdir/a/b/c/output.txt"
+    option = cli.OptionOutFile "output" --create-directories
+    out-file = option.parse nested-path
+
+    out-file.do: | writer |
+      writer.write "nested"
+
+    contents = file.read-contents nested-path
+    expect-equals "nested" contents.to-string
+
+    // Test write-contents with create-directories.
+    nested-path2 := "$tmpdir/d/e/f/output.txt"
+    out-file = option.parse nested-path2
+    out-file.write-contents "nested-written"
+    contents = file.read-contents nested-path2
+    expect-equals "nested-written" contents.to-string
+
+    // Test create-directories=false fails for missing parent dirs.
+    missing-path := "$tmpdir/x/y/z/output.txt"
+    option = cli.OptionOutFile "output"
+    out-file = option.parse missing-path
+    expect-throw "FILE_NOT_FOUND: \"$missing-path\"":
+      out-file.open
+
+  // Test bad combos.
+  expect-throw "Multi option can't have default value.":
+    cli.OptionOutFile "foo" --default="bar" --multi

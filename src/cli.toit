@@ -2,6 +2,11 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the package's LICENSE file.
 
+import fs
+import host.directory
+import host.file
+import host.pipe
+import io
 import log
 import uuid show Uuid
 import system
@@ -33,6 +38,7 @@ interface Cli:
       --config/Config?=null:
     if not ui: ui = Ui.human
     return Cli_ name --ui=ui --cache=cache --config=config
+
   /**
   The name of the application.
 
@@ -1085,6 +1091,289 @@ class OptionPath extends Option:
 
   parse str/string --for-help-example/bool=false -> string:
     return str
+
+/**
+An input file option.
+
+The parsed value is an $InFile, which can be opened lazily.
+
+If $allow-dash is true (the default), the value "-" is interpreted as
+  stdin.
+
+If $check-exists is true (the default), the file is checked for
+  existence at parse time. This check is skipped for "-" (stdin).
+*/
+class OptionInFile extends Option:
+  default/string?
+  type/string
+
+  /**
+  Whether "-" is interpreted as stdin.
+  */
+  allow-dash/bool
+
+  /**
+  Whether the file is checked for existence at parse time.
+  */
+  check-exists/bool
+
+  /**
+  Creates a new input file option.
+
+  The $default value is null.
+  The $type defaults to "file".
+
+  If $allow-dash is true (the default), the value "-" is interpreted
+    as stdin.
+
+  If $check-exists is true (the default), the file must exist at parse
+    time. This check is skipped for "-" (stdin) and for help examples.
+
+  See $Option.constructor for the other parameters.
+  */
+  constructor name/string
+      --.default=null
+      --.type="file"
+      --.allow-dash=true
+      --.check-exists=true
+      --short-name/string?=null
+      --help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false
+      --completion/Lambda?=null:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas --completion=completion
+
+  is-flag: return false
+
+  options-for-completion -> List: return []
+
+  completion-directive -> int?: return DIRECTIVE-FILE-COMPLETION_
+
+  parse str/string --for-help-example/bool=false -> any:
+    if allow-dash and str == "-":
+      return InFile.stdin_ --option-name=name
+    result := InFile.from-path_ str --option-name=name
+    if check-exists and not for-help-example:
+      result.check
+    return result
+
+/**
+An output file option.
+
+The parsed value is an $OutFile, which can be opened lazily.
+
+If $allow-dash is true (the default), the value "-" is interpreted as
+  stdout.
+
+If $create-directories is true, parent directories are created
+  automatically when opening the file for writing.
+*/
+class OptionOutFile extends Option:
+  default/string?
+  type/string
+
+  /**
+  Whether "-" is interpreted as stdout.
+  */
+  allow-dash/bool
+
+  /**
+  Whether parent directories are created when opening for writing.
+  */
+  create-directories/bool
+
+  /**
+  Creates a new output file option.
+
+  The $default value is null.
+  The $type defaults to "file".
+
+  If $allow-dash is true (the default), the value "-" is interpreted
+    as stdout.
+
+  If $create-directories is true, parent directories are created
+    automatically when opening the file for writing. Defaults to false.
+
+  See $Option.constructor for the other parameters.
+  */
+  constructor name/string
+      --.default=null
+      --.type="file"
+      --.allow-dash=true
+      --.create-directories=false
+      --short-name/string?=null
+      --help/string?=null
+      --required/bool=false
+      --hidden/bool=false
+      --multi/bool=false
+      --split-commas/bool=false
+      --completion/Lambda?=null:
+    if multi and default: throw "Multi option can't have default value."
+    if required and default: throw "Option can't have default value and be required."
+    super.from-subclass name --short-name=short-name --help=help \
+        --required=required --hidden=hidden --multi=multi \
+        --split-commas=split-commas --completion=completion
+
+  is-flag: return false
+
+  options-for-completion -> List: return []
+
+  completion-directive -> int?: return DIRECTIVE-FILE-COMPLETION_
+
+  parse str/string --for-help-example/bool=false -> any:
+    if allow-dash and str == "-":
+      return OutFile.stdout_ --create-directories=create-directories --option-name=name
+    return OutFile.from-path_ str --create-directories=create-directories --option-name=name
+
+/**
+A wrapper around an input file or stdin.
+
+Returned by $OptionInFile when parsing command-line arguments.
+
+Use $open or $do to read from the file or stdin.
+*/
+class InFile:
+  /** The file path, or null if this represents stdin. */
+  path/string?
+
+  /**
+  Whether this $InFile represents stdin.
+  */
+  is-stdin/bool
+
+  /**
+  The option name, used in error messages.
+  */
+  option-name/string
+
+  constructor.from-path_ .path/string --.option-name:
+    is-stdin = false
+
+  constructor.stdin_ --.option-name:
+    path = null
+    is-stdin = true
+
+  /**
+  Checks that the file exists.
+
+  Throws if the file does not exist. Does nothing for stdin.
+  */
+  check -> none:
+    if is-stdin: return
+    if not file.is-file path:
+      throw "File not found for option '$option-name': '$path'."
+
+  /**
+  Opens the file (or stdin) for reading.
+
+  The caller is responsible for closing the returned reader.
+  */
+  open -> io.CloseableReader:
+    if is-stdin: return pipe.stdin.in
+    return (file.Stream.for-read path).in
+
+  /**
+  Opens the file (or stdin) for reading, calls the given $block
+    with the reader, and closes the reader afterwards.
+  */
+  do [block] -> none:
+    reader := open
+    try:
+      block.call reader
+    finally:
+      reader.close
+
+  /**
+  Reads the entire content of the file or stdin.
+  */
+  read-contents -> ByteArray:
+    if not is-stdin: return file.read-contents path
+    reader := pipe.stdin.in
+    try:
+      return reader.read-all
+    finally:
+      reader.close
+
+/**
+A wrapper around an output file or stdout.
+
+Returned by $OptionOutFile when parsing command-line arguments.
+
+Use $open or $do to write to the file or stdout.
+*/
+class OutFile:
+  /** The file path, or null if this represents stdout. */
+  path/string?
+
+  create-directories_/bool
+
+  /**
+  Whether this $OutFile represents stdout.
+  */
+  is-stdout/bool
+
+  /**
+  The option name, used in error messages.
+  */
+  option-name/string
+
+  constructor.from-path_ .path/string --create-directories/bool --.option-name:
+    create-directories_ = create-directories
+    is-stdout = false
+
+  constructor.stdout_ --create-directories/bool --.option-name:
+    path = null
+    create-directories_ = create-directories
+    is-stdout = true
+
+  /**
+  Opens the file (or stdout) for writing.
+
+  If $OptionOutFile.create-directories was set, parent directories are
+    created automatically.
+
+  The caller is responsible for closing the returned writer.
+  */
+  open -> io.CloseableWriter:
+    if is-stdout: return pipe.stdout.out
+    if create-directories_:
+      directory.mkdir --recursive (fs.dirname path)
+    return (file.Stream.for-write path).out
+
+  /**
+  Opens the file (or stdout) for writing, calls the given $block
+    with the writer, and closes the writer afterwards.
+  */
+  do [block] -> none:
+    writer := open
+    try:
+      block.call writer
+    finally:
+      writer.close
+
+  /**
+  Writes the given $data to the file or stdout.
+
+  If $OptionOutFile.create-directories was set, parent directories are
+    created automatically.
+  */
+  write-contents data/io.Data -> none:
+    if not is-stdout:
+      if create-directories_:
+        directory.mkdir --recursive (fs.dirname path)
+      file.write-contents --path=path data
+      return
+    writer := pipe.stdout.out
+    try:
+      writer.write data
+    finally:
+      writer.close
 
 /**
 A Uuid option.
