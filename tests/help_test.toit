@@ -16,6 +16,7 @@ main:
   test-options
   test-examples
   test-short-help
+  test-help-all
 
 check-output expected/string [block]:
   ui := TestUi
@@ -870,3 +871,66 @@ test-short-help:
   expected = "Test command."
   actual = cmd.short-help
   expect-equals expected actual
+
+test-help-all:
+  sub-sub := cli.Command "sub2"
+      --help="Even more nested info."
+      --run=:: null
+
+  sub1 := cli.Command "sub1"
+      --help="Sub info."
+      --subcommands=[sub-sub]
+
+  tool-foo := cli.Command "foo"
+      --help="The foo tool."
+      --run=:: null
+
+  tool-bar := cli.Command "bar"
+      --help="The bar tool."
+      --run=:: null
+
+  tool := cli.Command "tool"
+      --help="Tools for xyz."
+      --subcommands=[tool-foo, tool-bar]
+
+  hidden-cmd := cli.Command "secret"
+      --help="Secret command."
+      --hidden
+      --run=:: null
+
+  execute := cli.Command "execute"
+      --help="Runs toto."
+      --run=:: null
+
+  root := cli.Command "root"
+      --help="Root command."
+      --subcommands=[tool, execute, sub1, hidden-cmd]
+
+  expected := """
+    completion  Generate shell completion scripts.
+    execute     Runs toto.
+    help        Show help for a command.
+    sub1        Sub info.
+      sub2      Even more nested info.
+    tool        Tools for xyz.
+      bar       The bar tool.
+      foo       The foo tool.
+    """
+  check-output expected: | cli/cli.Cli |
+    root.run ["help", "--all"] --cli=cli --invoked-command="bin/app"
+
+  // Test --all on a subcommand.
+  expected = """
+    bar  The bar tool.
+    foo  The foo tool.
+    """
+  check-output expected: | cli/cli.Cli |
+    root.run ["help", "--all", "tool"] --cli=cli --invoked-command="bin/app"
+
+  // Test --all on a leaf command (no subcommands).
+  expected = ""
+  ui := TestUi
+  cli-obj := cli.Cli "test" --ui=ui
+  root.run ["help", "--all", "execute"] --cli=cli-obj --invoked-command="bin/app"
+  all-output := ui.stdout + ui.stderr
+  expect-equals (expected + "\n") all-output
