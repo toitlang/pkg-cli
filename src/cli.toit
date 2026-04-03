@@ -38,6 +38,7 @@ interface Cli:
       --config/Config?=null:
     if not ui: ui = Ui.human
     return Cli_ name --ui=ui --cache=cache --config=config
+
   /**
   The name of the application.
 
@@ -1293,14 +1294,11 @@ class InFile:
   */
   read-contents -> ByteArray:
     if not is-stdin: return file.read-contents path
-    buffer := io.Buffer
     reader := pipe.stdin.in
     try:
-      while chunk := reader.read:
-        buffer.write chunk
+      return reader.read-all
     finally:
       reader.close
-    return buffer.bytes
 
 /**
 A wrapper around an output file or stdout.
@@ -1373,7 +1371,7 @@ class OutFile:
       return
     writer := pipe.stdout.out
     try:
-      (writer as io.Writer).write data
+      writer.write data
     finally:
       writer.close
 
