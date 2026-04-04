@@ -754,10 +754,12 @@ abstract class Option:
   /**
   Parses the given $str and returns the parsed value.
 
+  Calls the $if-error block with an error message if parsing fails.
+
   If $for-help-example is true, only performs validation that is valid for examples.
     For example, a FileOption would not check that the file exists.
   */
-  abstract parse str/string --for-help-example/bool=false -> any
+  abstract parse str/string [--if-error] --for-help-example/bool=false -> any
 
   /**
   Returns the default completion candidates for this option.
@@ -844,7 +846,7 @@ class OptionString extends Option:
 
   options-for-completion -> List: return []
 
-  parse str/string --for-help-example/bool=false -> string:
+  parse str/string [--if-error] --for-help-example/bool=false -> string:
     return str
 
 /**
@@ -911,9 +913,9 @@ class OptionEnum extends Option:
 
   options-for-completion -> List: return values
 
-  parse str/string --for-help-example/bool=false -> string:
+  parse str/string [--if-error] --for-help-example/bool=false -> string:
     if not values.contains str:
-      throw "Invalid value for option '$name': '$str'. Valid values are: $(values.join ", ")."
+      return if-error.call "Invalid value for option '$name': '$str'. Valid values are: $(values.join ", ")."
     return str
 
 /**
@@ -970,9 +972,9 @@ class OptionInt extends Option:
 
   options-for-completion -> List: return []
 
-  parse str/string --for-help-example/bool=false -> int:
+  parse str/string [--if-error] --for-help-example/bool=false -> int:
     return int.parse str --if-error=:
-      throw "Invalid integer value for option '$name': '$str'."
+      return if-error.call "Invalid integer value for option '$name': '$str'."
 
 /**
 An option for patterns.
@@ -1014,9 +1016,9 @@ class OptionPatterns extends Option:
   /**
   Returns the pattern that matches the given $str in a map with the pattern as key.
   */
-  parse str/string --for-help-example/bool=false -> any:
+  parse str/string [--if-error] --for-help-example/bool=false -> any:
     return parse_ str --if-error=:
-      throw "Invalid value for option '$name': '$str'. Valid values are: $(patterns.join ", ")."
+      return if-error.call "Invalid value for option '$name': '$str'. Valid values are: $(patterns.join ", ")."
 
   parse_ str/string [--if-error]:
     if not str.contains ":" and not str.contains "=":
@@ -1089,7 +1091,7 @@ class OptionPath extends Option:
     if is-directory: return DIRECTIVE-DIRECTORY-COMPLETION_
     return DIRECTIVE-FILE-COMPLETION_
 
-  parse str/string --for-help-example/bool=false -> string:
+  parse str/string [--if-error] --for-help-example/bool=false -> string:
     return str
 
 /**
@@ -1155,12 +1157,12 @@ class OptionInFile extends Option:
 
   completion-directive -> int?: return DIRECTIVE-FILE-COMPLETION_
 
-  parse str/string --for-help-example/bool=false -> any:
+  parse str/string [--if-error] --for-help-example/bool=false -> any:
     if allow-dash and str == "-":
       return InFile.stdin_ --option-name=name
     result := InFile.from-path_ str --option-name=name
     if check-exists and not for-help-example:
-      result.check
+      result.check --if-error=if-error
     return result
 
 /**
@@ -1226,7 +1228,7 @@ class OptionOutFile extends Option:
 
   completion-directive -> int?: return DIRECTIVE-FILE-COMPLETION_
 
-  parse str/string --for-help-example/bool=false -> any:
+  parse str/string [--if-error] --for-help-example/bool=false -> any:
     if allow-dash and str == "-":
       return OutFile.stdout_ --create-directories=create-directories --option-name=name
     return OutFile.from-path_ str --create-directories=create-directories --option-name=name
@@ -1265,9 +1267,27 @@ class InFile:
   Throws if the file does not exist. Does nothing for stdin.
   */
   check -> none:
+    check --if-error=: throw it
+
+  /**
+  Checks that the file exists.
+
+  Calls the $if-error block with an error message if the file does not exist.
+  Does nothing for stdin.
+  */
+  check [--if-error] -> none:
     if is-stdin: return
     if not file.is-file path:
-      throw "File not found for option '$option-name': '$path'."
+      if-error.call "File not found for option '$option-name': '$path'."
+
+  /**
+  Checks that the file exists.
+
+  Calls $Ui.abort with the error message if the file does not exist.
+  Does nothing for stdin.
+  */
+  check --ui/Ui -> none:
+    check --if-error=: ui.abort it
 
   /**
   Opens the file (or stdin) for reading.
@@ -1411,9 +1431,9 @@ class OptionUuid extends Option:
 
   type -> string: return "uuid"
 
-  parse str/string --for-help-example/bool=false -> Uuid:
+  parse str/string [--if-error] --for-help-example/bool=false -> Uuid:
     return Uuid.parse str --if-error=:
-      throw "Invalid value for option '$name': '$str'. Expected a UUID."
+      return if-error.call "Invalid value for option '$name': '$str'. Expected a UUID."
 
 
 /**
@@ -1472,10 +1492,10 @@ class Flag extends Option:
 
   options-for-completion -> List: return ["true", "false"]
 
-  parse str/string --for-help-example/bool=false -> bool:
+  parse str/string [--if-error] --for-help-example/bool=false -> bool:
     if str == "true": return true
     if str == "false": return false
-    throw "Invalid value for boolean flag '$name': '$str'. Valid values are: true, false."
+    return if-error.call "Invalid value for boolean flag '$name': '$str'. Valid values are: true, false."
 
 /**
 An example.

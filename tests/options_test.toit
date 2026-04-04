@@ -71,7 +71,7 @@ test-string:
   expect option.should-split-commas
   expect-not option.is-flag
 
-  value := option.parse "foo"
+  value := option.parse "foo" --if-error=: throw it
   expect-equals "foo" value
 
 test-enum:
@@ -83,14 +83,14 @@ test-enum:
   option = cli.OptionEnum "enum" ["foo", "bar"] --default="bar"
   expect-equals "bar" option.default
 
-  value := option.parse "foo"
+  value := option.parse "foo" --if-error=: throw it
   expect-equals "foo" value
 
-  value = option.parse "bar"
+  value = option.parse "bar" --if-error=: throw it
   expect-equals "bar" value
 
   expect-throw "Invalid value for option 'enum': 'baz'. Valid values are: foo, bar.":
-    option.parse "baz"
+    option.parse "baz" --if-error=: throw it
 
 test-patterns:
   option := cli.OptionPatterns "pattern" ["foo", "bar:<duration>", "baz=<address>"]
@@ -101,20 +101,20 @@ test-patterns:
   option = cli.OptionPatterns "pattern" ["foo", "bar:<duration>", "baz=<address>"] --default="bar:1h"
   expect-equals "bar:1h" option.default
 
-  value := option.parse "foo"
+  value := option.parse "foo" --if-error=: throw it
   expect-equals "foo" value
 
-  value = option.parse "bar:1h"
+  value = option.parse "bar:1h" --if-error=: throw it
   expect-structural-equals { "bar": "1h" } value
 
-  value = option.parse "baz=neverland"
+  value = option.parse "baz=neverland" --if-error=: throw it
   expect-structural-equals { "baz": "neverland" } value
 
   expect-throw "Invalid value for option 'pattern': 'baz'. Valid values are: foo, bar:<duration>, baz=<address>.":
-    option.parse "baz"
+    option.parse "baz" --if-error=: throw it
 
   expect-throw "Invalid value for option 'pattern': 'not-there'. Valid values are: foo, bar:<duration>, baz=<address>.":
-    option.parse "not-there"
+    option.parse "not-there" --if-error=: throw it
 
 test-int:
   option := cli.OptionInt "int"
@@ -125,11 +125,11 @@ test-int:
   option = cli.OptionInt "int" --default=42
   expect-equals 42 option.default
 
-  value := option.parse "42"
+  value := option.parse "42" --if-error=: throw it
   expect-equals 42 value
 
   expect-throw "Invalid integer value for option 'int': 'foo'.":
-    option.parse "foo"
+    option.parse "foo" --if-error=: throw it
 
 test-uuid:
   option := cli.OptionUuid "uuid"
@@ -140,17 +140,17 @@ test-uuid:
   option = cli.OptionUuid "uuid" --default=Uuid.NIL
   expect-equals Uuid.NIL option.default
 
-  value := option.parse "00000000-0000-0000-0000-000000000000"
+  value := option.parse "00000000-0000-0000-0000-000000000000" --if-error=: throw it
   expect-equals Uuid.NIL value
 
-  value = option.parse "00000000-0000-0000-0000-000000000001"
+  value = option.parse "00000000-0000-0000-0000-000000000001" --if-error=: throw it
   expect-equals (Uuid.parse "00000000-0000-0000-0000-000000000001") value
 
   expect-throw "Invalid value for option 'uuid': 'foo'. Expected a UUID.":
-    option.parse "foo"
+    option.parse "foo" --if-error=: throw it
 
   expect-throw "Invalid value for option 'uuid': '00000000-0000-0000-0000-00000000000'. Expected a UUID.":
-    option.parse "00000000-0000-0000-0000-00000000000"
+    option.parse "00000000-0000-0000-0000-00000000000" --if-error=: throw it
 
 test-flag:
   flag := cli.Flag "flag" --default=false
@@ -160,14 +160,14 @@ test-flag:
   flag = cli.Flag "flag" --default=true
   expect-identical true flag.default
 
-  value := flag.parse "true"
+  value := flag.parse "true" --if-error=: throw it
   expect-identical true value
 
-  value = flag.parse "false"
+  value = flag.parse "false" --if-error=: throw it
   expect-identical false value
 
   expect-throw "Invalid value for boolean flag 'flag': 'foo'. Valid values are: true, false.":
-    flag.parse "foo"
+    flag.parse "foo" --if-error=: throw it
 
 test-bad-combos:
   expect-throw "--split-commas is only valid for multi options.":
@@ -212,7 +212,7 @@ test-path:
   option = cli.OptionPath "input" --default="/tmp/foo" --help="Input."
   expect-equals "/tmp/foo" option.default
 
-  value := option.parse "/some/path"
+  value := option.parse "/some/path" --if-error=: throw it
   expect-equals "/some/path" value
 
   // OptionPath supports the same combos as other options.
@@ -237,39 +237,39 @@ test-in-file:
   expect-not option.check-exists
 
   // Test parse returns InFile for a path.
-  in-file/cli.InFile := option.parse "/some/path"
+  in-file/cli.InFile := option.parse "/some/path" --if-error=: throw it
   expect-equals "/some/path" in-file.path
   expect-not in-file.is-stdin
 
   // Test parse returns InFile for "-" when allow-dash is true.
   option = cli.OptionInFile "input"
-  in-file = option.parse "-"
+  in-file = option.parse "-" --if-error=: throw it
   expect-null in-file.path
   expect in-file.is-stdin
 
   // Test "-" is treated as literal when allow-dash is false.
   option = cli.OptionInFile "input" --no-allow-dash --no-check-exists
-  in-file = option.parse "-"
+  in-file = option.parse "-" --if-error=: throw it
   expect-equals "-" in-file.path
   expect-not in-file.is-stdin
 
   // Test check-exists fails for missing files.
   option = cli.OptionInFile "input" --check-exists
   expect-throw "File not found for option 'input': '/nonexistent/file.txt'.":
-    option.parse "/nonexistent/file.txt"
+    option.parse "/nonexistent/file.txt" --if-error=: throw it
 
   // Test check on InFile directly.
   option = cli.OptionInFile "input" --no-check-exists
-  in-file = option.parse "/nonexistent/file.txt"
+  in-file = option.parse "/nonexistent/file.txt" --if-error=: throw it
   expect-throw "File not found for option 'input': '/nonexistent/file.txt'.":
     in-file.check
 
   // Test check-exists is skipped for "-".
-  in-file = option.parse "-"
+  in-file = option.parse "-" --if-error=: throw it
   expect in-file.is-stdin
 
   // Test check-exists is skipped for help examples.
-  in-file = option.parse "/nonexistent/file.txt" --for-help-example
+  in-file = option.parse "/nonexistent/file.txt" --if-error=(: throw it) --for-help-example
   expect-equals "/nonexistent/file.txt" in-file.path
 
   // Test reading from a real file.
@@ -277,7 +277,7 @@ test-in-file:
     test-path := "$tmpdir/test.txt"
     file.write-contents --path=test-path "hello world"
     option = cli.OptionInFile "input"
-    in-file = option.parse test-path
+    in-file = option.parse test-path --if-error=: throw it
     expect-equals test-path in-file.path
 
     // Test do [block].
@@ -286,7 +286,7 @@ test-in-file:
       expect-equals "hello world" data.to-string
 
     // Test read-contents.
-    in-file = option.parse test-path
+    in-file = option.parse test-path --if-error=: throw it
     contents := in-file.read-contents
     expect-equals "hello world" contents.to-string
 
@@ -309,19 +309,19 @@ test-out-file:
   expect option.create-directories
 
   // Test parse returns OutFile for a path.
-  out-file/cli.OutFile := option.parse "/some/path"
+  out-file/cli.OutFile := option.parse "/some/path" --if-error=: throw it
   expect-equals "/some/path" out-file.path
   expect-not out-file.is-stdout
 
   // Test parse returns OutFile for "-" when allow-dash is true.
   option = cli.OptionOutFile "output"
-  out-file = option.parse "-"
+  out-file = option.parse "-" --if-error=: throw it
   expect-null out-file.path
   expect out-file.is-stdout
 
   // Test "-" is treated as literal when allow-dash is false.
   option = cli.OptionOutFile "output" --no-allow-dash
-  out-file = option.parse "-"
+  out-file = option.parse "-" --if-error=: throw it
   expect-equals "-" out-file.path
   expect-not out-file.is-stdout
 
@@ -329,7 +329,7 @@ test-out-file:
   with-tmp-directory: | tmpdir |
     test-path := "$tmpdir/output.txt"
     option = cli.OptionOutFile "output"
-    out-file = option.parse test-path
+    out-file = option.parse test-path --if-error=: throw it
 
     // Test do [block].
     out-file.do: | writer |
@@ -346,7 +346,7 @@ test-out-file:
     // Test create-directories.
     nested-path := "$tmpdir/a/b/c/output.txt"
     option = cli.OptionOutFile "output" --create-directories
-    out-file = option.parse nested-path
+    out-file = option.parse nested-path --if-error=: throw it
 
     out-file.do: | writer |
       writer.write "nested"
@@ -356,7 +356,7 @@ test-out-file:
 
     // Test write-contents with create-directories.
     nested-path2 := "$tmpdir/d/e/f/output.txt"
-    out-file = option.parse nested-path2
+    out-file = option.parse nested-path2 --if-error=: throw it
     out-file.write-contents "nested-written"
     contents = file.read-contents nested-path2
     expect-equals "nested-written" contents.to-string
@@ -364,7 +364,7 @@ test-out-file:
     // Test create-directories=false fails for missing parent dirs.
     missing-path := "$tmpdir/x/y/z/output.txt"
     option = cli.OptionOutFile "output"
-    out-file = option.parse missing-path
+    out-file = option.parse missing-path --if-error=: throw it
     expect-throw "FILE_NOT_FOUND: \"$missing-path\"":
       out-file.open
 
