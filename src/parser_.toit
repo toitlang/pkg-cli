@@ -63,12 +63,13 @@ class Parser_:
     add-option := : | option/Option argument/string |
       if option.is-multi:
         values := option.should-split-commas ? argument.split "," : [argument]
-        parsed := values.map: option.parse it --for-help-example=for-help-example_
+        parsed := values.map:
+          option.parse it --if-error=(: | msg | fatal path msg) --for-help-example=for-help-example_
         options[option.name].add-all parsed
       else if seen-options.contains option.name:
         fatal path "Option was provided multiple times: $option.name"
       else:
-        value := option.parse argument --for-help-example=for-help-example_
+        value := option.parse argument --if-error=(: | msg | fatal path msg) --for-help-example=for-help-example_
         options[option.name] = value
 
       seen-options.add option.name
