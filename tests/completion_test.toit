@@ -35,6 +35,7 @@ main:
   test-short-option-pending-value
   test-packed-short-options
   test-custom-completer-no-file-fallback
+  test-option-extensions
   test-help-completion
   test-help-gated-on-availability
 
@@ -558,6 +559,71 @@ test-custom-completer-no-file-fallback:
   result = complete_ root2 ["--file", ""]
   expect-equals 0 result.candidates.size
   expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+
+test-option-extensions:
+  // OptionPath with extensions should report them in the result.
+  root := cli.Command "app"
+      --options=[
+        cli.OptionPath "config" --extensions=[".toml", ".yaml"] --help="Config file.",
+      ]
+      --run=:: null
+  result := complete_ root ["--config", ""]
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals 2 result.extensions.size
+  expect (result.extensions.contains ".toml")
+  expect (result.extensions.contains ".yaml")
+
+  // With --option=prefix form.
+  result = complete_ root ["--config=foo"]
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals 2 result.extensions.size
+
+  // OptionInFile with extensions.
+  root = cli.Command "app"
+      --options=[
+        cli.OptionInFile "input" --extensions=[".csv"] --help="Input file.",
+      ]
+      --run=:: null
+  result = complete_ root ["--input", ""]
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals 1 result.extensions.size
+  expect (result.extensions.contains ".csv")
+
+  // OptionOutFile with extensions.
+  root = cli.Command "app"
+      --options=[
+        cli.OptionOutFile "output" --extensions=[".log"] --help="Output file.",
+      ]
+      --run=:: null
+  result = complete_ root ["--output", ""]
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals 1 result.extensions.size
+  expect (result.extensions.contains ".log")
+
+  // Without extensions, result.extensions should be null.
+  root = cli.Command "app"
+      --options=[
+        cli.OptionPath "file" --help="Any file.",
+      ]
+      --run=:: null
+  result = complete_ root ["--file", ""]
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals null result.extensions
+
+  // OptionPath with --directory and --extensions should throw.
+  expect-throw "OptionPath can't have both --directory and --extensions.":
+    cli.OptionPath "dir" --directory --extensions=[".txt"] --help="Bad."
+
+  // Rest option with extensions.
+  root = cli.Command "app"
+      --rest=[
+        cli.OptionPath "config" --extensions=[".toml"] --help="Config file.",
+      ]
+      --run=:: null
+  result = complete_ root [""]
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals 1 result.extensions.size
+  expect (result.extensions.contains ".toml")
 
 test-help-completion:
   root := cli.Command "app"

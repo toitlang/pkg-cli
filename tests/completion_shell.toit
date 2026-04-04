@@ -110,5 +110,10 @@ setup-test-binary_ tmpdir/string -> string:
   file.write-contents --path="$tmpdir/xfirmware.bin" ""
   directory.mkdir "$tmpdir/xreleases"
 
+  // Create artifacts for extension-filtered completion testing.
+  file.write-contents --path="$tmpdir/xconfig.toml" ""
+  file.write-contents --path="$tmpdir/xconfig.yaml" ""
+  file.write-contents --path="$tmpdir/xconfig.txt" ""
+
   return binary
 

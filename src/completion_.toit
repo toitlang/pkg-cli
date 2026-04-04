@@ -50,8 +50,9 @@ Contains a list of $candidates and a $directive that tells the shell
 class CompletionResult_:
   candidates/List
   directive/int
+  extensions/List?  // List of extension strings like [".txt", ".json"], or null.
 
-  constructor .candidates --.directive=DIRECTIVE-DEFAULT_:
+  constructor .candidates --.directive=DIRECTIVE-DEFAULT_ --.extensions=null:
 
 /**
 Computes completion candidates for the given $arguments.
@@ -205,6 +206,7 @@ complete_ root/Command arguments/List -> CompletionResult_:
     return CompletionResult_
         completions.map: to-candidate_ it
         --directive=directive
+        --extensions=pending-option.completion-extensions
 
   // After --, only rest arguments (no option completions).
   if past-dashdash:
@@ -234,7 +236,7 @@ complete_ root/Command arguments/List -> CompletionResult_:
         directive = has-completer_ option
             ? DIRECTIVE-NO-FILE-COMPLETION_
             : DIRECTIVE-FILE-COMPLETION_
-      return CompletionResult_ candidates --directive=directive
+      return CompletionResult_ candidates --directive=directive --extensions=option.completion-extensions
     return CompletionResult_ [] --directive=DIRECTIVE-DEFAULT_
 
   // Completing an option name.
@@ -360,7 +362,7 @@ complete-rest_ command/Command seen-options/Map current-word/string --positional
           : DIRECTIVE-FILE-COMPLETION_
     if not completions.is-empty or directive != DIRECTIVE-DEFAULT_:
       candidates := completions.map: to-candidate_ it
-      return CompletionResult_ candidates --directive=directive
+      return CompletionResult_ candidates --directive=directive --extensions=option.completion-extensions
 
   return CompletionResult_ [] --directive=DIRECTIVE-FILE-COMPLETION_
 

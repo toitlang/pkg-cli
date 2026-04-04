@@ -31,6 +31,7 @@ main arguments:
             OptionEnum "channel" ["stable", "beta", "dev"]
                 --help="Release channel.",
             OptionPath "firmware" --help="Firmware file to deploy.",
+            OptionPath "config" --extensions=[".toml", ".yaml"] --help="Config file.",
             OptionPath "output-dir" --directory --help="Output directory.",
           ]
           --run=:: null

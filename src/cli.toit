@@ -322,7 +322,10 @@ class Command:
       result := complete_ this completion-args
       result.candidates.do: | candidate/CompletionCandidate_ |
         print candidate.to-string
-      print ":$result.directive"
+      if result.extensions and not result.extensions.is-empty:
+        print ":$result.directive:$(result.extensions.join ",")"
+      else:
+        print ":$result.directive"
       return
 
     if not cli:
@@ -780,6 +783,16 @@ abstract class Option:
     return null
 
   /**
+  Returns file extensions to filter completions by, or null.
+
+  When non-null, the shell only shows files matching these extensions
+    (plus directories for navigation). Extensions include the leading
+    dot, e.g. [".txt", ".json"].
+  */
+  completion-extensions -> List?:
+    return null
+
+  /**
   Returns completion candidates for this option's value.
 
   If a completion callback was provided via `--completion` in the constructor, it is
@@ -1056,6 +1069,15 @@ class OptionPath extends Option:
   is-directory/bool
 
   /**
+  File extensions to filter completions by, or null.
+
+  When non-null, the shell only shows files matching these extensions
+    (plus directories for navigation). Extensions include the leading
+    dot, e.g. [".txt", ".json"].
+  */
+  extensions/List?
+
+  /**
   Creates a new path option.
 
   The $default value is null.
@@ -1063,11 +1085,17 @@ class OptionPath extends Option:
 
   If $directory is true, the shell only completes directories.
 
+  If $extensions is non-null, the shell only completes files matching
+    the given extensions (plus directories for navigation). Extensions
+    must include the leading dot, e.g. `[".txt", ".json"]`. Cannot be
+    combined with $directory.
+
   See $Option.constructor for the other parameters.
   */
   constructor name/string
       --.default=null
       --directory/bool=false
+      --.extensions/List?=null
       --.type=(directory ? "directory" : "path")
       --short-name/string?=null
       --help/string?=null
@@ -1077,6 +1105,8 @@ class OptionPath extends Option:
       --split-commas/bool=false
       --completion/Lambda?=null:
     is-directory = directory
+    if directory and extensions and not extensions.is-empty:
+      throw "OptionPath can't have both --directory and --extensions."
     if multi and default: throw "Multi option can't have default value."
     if required and default: throw "Option can't have default value and be required."
     super.from-subclass name --short-name=short-name --help=help \
@@ -1090,6 +1120,9 @@ class OptionPath extends Option:
   completion-directive -> int?:
     if is-directory: return DIRECTIVE-DIRECTORY-COMPLETION_
     return DIRECTIVE-FILE-COMPLETION_
+
+  completion-extensions -> List?:
+    return extensions
 
   parse str/string [--if-error] --for-help-example/bool=false -> string:
     return str
@@ -1120,6 +1153,15 @@ class OptionInFile extends Option:
   check-exists/bool
 
   /**
+  File extensions to filter completions by, or null.
+
+  When non-null, the shell only shows files matching these extensions
+    (plus directories for navigation). Extensions include the leading
+    dot, e.g. [".txt", ".json"].
+  */
+  extensions/List?
+
+  /**
   Creates a new input file option.
 
   The $default value is null.
@@ -1131,6 +1173,10 @@ class OptionInFile extends Option:
   If $check-exists is true (the default), the file must exist at parse
     time. This check is skipped for "-" (stdin) and for help examples.
 
+  If $extensions is non-null, the shell only completes files matching
+    the given extensions (plus directories for navigation). Extensions
+    must include the leading dot, e.g. `[".txt", ".json"]`.
+
   See $Option.constructor for the other parameters.
   */
   constructor name/string
@@ -1138,6 +1184,7 @@ class OptionInFile extends Option:
       --.type="file"
       --.allow-dash=true
       --.check-exists=true
+      --.extensions/List?=null
       --short-name/string?=null
       --help/string?=null
       --required/bool=false
@@ -1156,6 +1203,9 @@ class OptionInFile extends Option:
   options-for-completion -> List: return []
 
   completion-directive -> int?: return DIRECTIVE-FILE-COMPLETION_
+
+  completion-extensions -> List?:
+    return extensions
 
   parse str/string [--if-error] --for-help-example/bool=false -> any:
     if allow-dash and str == "-":
@@ -1191,6 +1241,15 @@ class OptionOutFile extends Option:
   create-directories/bool
 
   /**
+  File extensions to filter completions by, or null.
+
+  When non-null, the shell only shows files matching these extensions
+    (plus directories for navigation). Extensions include the leading
+    dot, e.g. [".txt", ".json"].
+  */
+  extensions/List?
+
+  /**
   Creates a new output file option.
 
   The $default value is null.
@@ -1202,6 +1261,10 @@ class OptionOutFile extends Option:
   If $create-directories is true, parent directories are created
     automatically when opening the file for writing. Defaults to false.
 
+  If $extensions is non-null, the shell only completes files matching
+    the given extensions (plus directories for navigation). Extensions
+    must include the leading dot, e.g. `[".txt", ".json"]`.
+
   See $Option.constructor for the other parameters.
   */
   constructor name/string
@@ -1209,6 +1272,7 @@ class OptionOutFile extends Option:
       --.type="file"
       --.allow-dash=true
       --.create-directories=false
+      --.extensions/List?=null
       --short-name/string?=null
       --help/string?=null
       --required/bool=false
@@ -1227,6 +1291,9 @@ class OptionOutFile extends Option:
   options-for-completion -> List: return []
 
   completion-directive -> int?: return DIRECTIVE-FILE-COMPLETION_
+
+  completion-extensions -> List?:
+    return extensions
 
   parse str/string [--if-error] --for-help-example/bool=false -> any:
     if allow-dash and str == "-":
