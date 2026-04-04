@@ -82,4 +82,11 @@ test-powershell binary/string tmpdir/string:
   expect (output.contains "xreleases")
   print "  directory path completion: ok"
 
+  // OptionPath --extensions: only .toml and .yaml files should complete.
+  output = pwsh-complete_ binary tmpdir "fleet deploy --config xconfig."
+  expect (output.contains "xconfig.toml")
+  expect (output.contains "xconfig.yaml")
+  expect (not (output.contains "xconfig.txt"))
+  print "  extension-filtered completion: ok"
+
   print "  All powershell tests passed."

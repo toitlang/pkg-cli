@@ -63,6 +63,14 @@ test-zsh binary/string tmpdir/string:
     tmux.wait-for "xreleases"
     tmux.cancel
 
+    // OptionPath --extensions: only .toml and .yaml files should complete.
+    tmux.send-keys ["$binary deploy --config xconfig.", "Tab"]
+    tmux.wait-for "xconfig.toml"
+    content = tmux.capture
+    expect (content.contains "xconfig.yaml")
+    expect (not content.contains "xconfig.txt")
+    tmux.cancel
+
     print "  All zsh tests passed."
   finally:
     tmux.close

@@ -42,6 +42,7 @@ bash-completion-script_ --program-path/string -> string:
   return """
     _$(func-name)_completions() {
         local IFS=\$'\\n'
+        shopt -s extglob 2>/dev/null
 
         local completions
         completions=\$("$program-path" __complete -- "\${COMP_WORDS[@]:1:\$COMP_CWORD}")
@@ -49,11 +50,19 @@ bash-completion-script_ --program-path/string -> string:
             return
         fi
 
-        local directive
-        directive=\$(echo "\$completions" | tail -n 1)
+        local directive_line
+        directive_line=\$(echo "\$completions" | tail -n 1)
         completions=\$(echo "\$completions" | sed '\$d')
 
-        directive="\${directive#:}"
+        directive_line="\${directive_line#:}"
+
+        local directive extensions=""
+        if [[ "\$directive_line" == *:* ]]; then
+            directive="\${directive_line%%:*}"
+            extensions="\${directive_line#*:}"
+        else
+            directive="\$directive_line"
+        fi
 
         local candidates=()
         while IFS='' read -r line; do
@@ -70,7 +79,24 @@ bash-completion-script_ --program-path/string -> string:
             compopt +o default 2>/dev/null
         elif [[ \$directive -eq 4 ]]; then
             if [[ \${#COMPREPLY[@]} -eq 0 ]]; then
-                compopt -o default 2>/dev/null
+                if [[ -n "\$extensions" ]]; then
+                    local ext_pattern=""
+                    IFS=',' read -ra exts <<< "\$extensions"
+                    for ext in "\${exts[@]}"; do
+                        ext="\${ext#.}"
+                        if [[ -n "\$ext_pattern" ]]; then
+                            ext_pattern="\$ext_pattern|\$ext"
+                        else
+                            ext_pattern="\$ext"
+                        fi
+                    done
+                    COMPREPLY=(\$(compgen -f -X "!*.@(\$ext_pattern)" -- "\$cur_word"))
+                    COMPREPLY+=(\$(compgen -d -- "\$cur_word"))
+                    # Remove duplicate directory entries.
+                    COMPREPLY=(\$(printf '%s\\n' "\${COMPREPLY[@]}" | sort -u))
+                else
+                    compopt -o default 2>/dev/null
+                fi
             fi
         elif [[ \$directive -eq 8 ]]; then
             if [[ \${#COMPREPLY[@]} -eq 0 ]]; then
@@ -91,7 +117,7 @@ zsh-completion-script_ --program-path/string -> string:
 
     _$(func-name)() {
         local -a completions
-        local directive
+        local directive_line directive extensions=""
 
         local output
         output=\$("$program-path" __complete -- "\${words[@]:1:\$((CURRENT-1))}" 2>/dev/null)
@@ -99,8 +125,15 @@ zsh-completion-script_ --program-path/string -> string:
             return
         fi
 
-        directive=\$(echo "\$output" | tail -n 1)
-        directive="\${directive#:}"
+        directive_line=\$(echo "\$output" | tail -n 1)
+        directive_line="\${directive_line#:}"
+
+        if [[ "\$directive_line" == *:* ]]; then
+            directive="\${directive_line%%:*}"
+            extensions="\${directive_line#*:}"
+        else
+            directive="\$directive_line"
+        fi
 
         local -a lines
         lines=("\${(@f)\$(echo "\$output" | sed '\$d')}")
@@ -123,7 +156,21 @@ zsh-completion-script_ --program-path/string -> string:
         fi
 
         if [[ \$directive -eq 4 ]]; then
-            _files
+            if [[ -n "\$extensions" ]]; then
+                local -a ext_array
+                ext_array=(\${(s:,:)extensions})
+                local glob_parts=""
+                for ext in "\${ext_array[@]}"; do
+                    if [[ -n "\$glob_parts" ]]; then
+                        glob_parts="\$glob_parts|*\$ext"
+                    else
+                        glob_parts="*\$ext"
+                    fi
+                done
+                _files -g "(\$glob_parts)"
+            else
+                _files
+            fi
         elif [[ \$directive -eq 8 ]]; then
             _directories
         fi
@@ -147,8 +194,15 @@ fish-completion-script_ --program-path/string -> string:
             return
         end
 
-        set -l directive (string replace -r '^:(.*)' '\$1' \$output[-1])
+        set -l directive_line (string replace -r '^:(.*)' '\$1' \$output[-1])
         set -e output[-1]
+
+        set -l directive \$directive_line
+        set -l extensions ""
+        if string match -q '*:*' \$directive_line
+            set directive (string split ':' \$directive_line)[1]
+            set extensions (string split ':' \$directive_line)[2]
+        end
 
         for line in \$output
             set -l parts (string split \\t \$line)
@@ -162,7 +216,24 @@ fish-completion-script_ --program-path/string -> string:
         end
 
         if test "\$directive" = "4"
-            __fish_complete_path (commandline -ct)
+            if test -n "\$extensions"
+                set -l cur (commandline -ct)
+                set -l ext_list (string split ',' \$extensions)
+                for f in \$cur*
+                    if test -d "\$f"
+                        echo \$f
+                        continue
+                    end
+                    for ext in \$ext_list
+                        if string match -q "*\$ext" \$f
+                            echo \$f
+                            break
+                        end
+                    end
+                end
+            else
+                __fish_complete_path (commandline -ct)
+            end
         else if test "\$directive" = "8"
             __fish_complete_directories (commandline -ct)
         end
@@ -193,8 +264,15 @@ powershell-completion-script_ --program-path/string -> string:
         if (\$LASTEXITCODE -ne 0 -or -not \$output) { return }
 
         \$lines = \$output -split '\\r?\\n'
-        \$directive = (\$lines[-1] -replace '^:', '')
+        \$directiveLine = (\$lines[-1] -replace '^:', '')
         \$lines = \$lines[0..(\$lines.Length - 2)]
+
+        \$directive = \$directiveLine
+        \$extensions = ''
+        if (\$directiveLine -match '^(\\d+):(.+)\$') {
+            \$directive = \$Matches[1]
+            \$extensions = \$Matches[2]
+        }
 
         foreach (\$line in \$lines) {
             if (-not \$line) { continue }
@@ -216,15 +294,22 @@ powershell-completion-script_ --program-path/string -> string:
 
         if (\$directive -eq '4' -or \$directive -eq '8') {
             \$completionType = if (\$directive -eq '8') { 'ProviderContainer' } else { 'ProviderItem' }
-            Get-ChildItem -Path "\$wordToComplete*" -ErrorAction SilentlyContinue |
-                Where-Object { \$directive -ne '8' -or \$_.PSIsContainer } |
-                ForEach-Object {
-                    [System.Management.Automation.CompletionResult]::new(
-                        \$_.FullName,
-                        \$_.Name,
-                        \$completionType,
-                        \$_.FullName
-                    )
+            \$items = Get-ChildItem -Path "\$wordToComplete*" -ErrorAction SilentlyContinue
+            if (\$directive -eq '8') {
+                \$items = \$items | Where-Object { \$_.PSIsContainer }
+            } elseif (\$extensions) {
+                \$extArray = \$extensions -split ','
+                \$items = \$items | Where-Object {
+                    \$_.PSIsContainer -or (\$extArray -contains \$_.Extension)
                 }
+            }
+            \$items | ForEach-Object {
+                [System.Management.Automation.CompletionResult]::new(
+                    \$_.FullName,
+                    \$_.Name,
+                    \$completionType,
+                    \$_.FullName
+                )
+            }
         }
     }"""
