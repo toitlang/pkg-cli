@@ -31,6 +31,9 @@ main:
   test-rest-positional-index
   test-rest-positional-index-after-dashdash
   test-rest-multi-not-skipped
+  test-rest-dependent-completion
+  test-rest-multi-records-all
+  test-rest-after-dashdash-recorded
   test-short-option-marks-seen
   test-short-option-pending-value
   test-packed-short-options
@@ -475,6 +478,68 @@ test-rest-multi-not-skipped:
   values := result.candidates.map: it.value
   expect (values.contains "a.txt")
   expect (values.contains "b.txt")
+
+test-rest-dependent-completion:
+  // A completion callback for a later rest argument can condition on an
+  // earlier rest argument by reading context.seen-options.
+  seen/Map? := null
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "kind" ["user", "group"] --help="Resource kind.",
+        cli.Option "name" --help="Resource name."
+            --completion=:: | context/cli.CompletionContext |
+              seen = context.seen-options
+              kind := (context.seen-options.get "kind" --if-absent=: [""]).first
+              candidates := kind == "user"
+                  ? ["alice", "bob"]
+                  : ["admins", "devs"]
+              candidates.map: cli.CompletionCandidate it,
+      ]
+      --run=:: null
+
+  result := complete_ root ["user", ""]
+  values := result.candidates.map: it.value
+  expect-equals ["user"] seen["kind"]
+  expect (values.contains "alice")
+  expect (values.contains "bob")
+  expect (not (values.contains "admins"))
+
+  result = complete_ root ["group", ""]
+  values = result.candidates.map: it.value
+  expect-equals ["group"] seen["kind"]
+  expect (values.contains "admins")
+  expect (values.contains "devs")
+  expect (not (values.contains "alice"))
+
+test-rest-multi-records-all:
+  // For a multi rest option, seen-options records every value in order.
+  seen/Map? := null
+  root := cli.Command "app"
+      --rest=[
+        cli.Option "files" --multi --help="Input files."
+            --completion=:: | context/cli.CompletionContext |
+              seen = context.seen-options
+              [],
+      ]
+      --run=:: null
+  complete_ root ["a.txt", "b.txt", "c.txt", ""]
+  expect-equals ["a.txt", "b.txt", "c.txt"] seen["files"]
+
+test-rest-after-dashdash-recorded:
+  // Positionals after -- are also recorded in seen-options under the
+  // owning rest option's name.
+  seen/Map? := null
+  root := cli.Command "app"
+      --rest=[
+        cli.OptionEnum "kind" ["user", "group"] --help="Kind.",
+        cli.Option "name" --help="Name."
+            --completion=:: | context/cli.CompletionContext |
+              seen = context.seen-options
+              [],
+      ]
+      --run=:: null
+  complete_ root ["--", "user", ""]
+  expect-equals ["user"] seen["kind"]
 
 test-short-option-marks-seen:
   root := cli.Command "app"

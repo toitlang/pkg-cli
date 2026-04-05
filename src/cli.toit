@@ -596,6 +596,11 @@ class CompletionContext:
   /**
   A map from option name to a list of values that have been provided
     for that option so far.
+
+  Includes both named options and rest (positional) options. Rest options
+    are keyed by their name, and their value list preserves the order of
+    the positionals consumed. This lets a completion callback for a later
+    rest argument condition its output on earlier rest values.
   */
   seen-options/Map
 
