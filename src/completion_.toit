@@ -91,7 +91,11 @@ complete_ root/Command arguments/List -> CompletionResult_:
     arg/string := args-to-process[index]
 
     if past-dashdash:
-      // After --, everything is a rest argument. Track positional index.
+      // After --, everything is a rest argument. Track positional index
+      // and record the value under its owning rest option's name.
+      rest-option := rest-option-for-index_ current-command positional-index
+      if rest-option:
+        (seen-options.get rest-option.name --init=:[]).add arg
       positional-index++
       continue.repeat
 
@@ -171,7 +175,12 @@ complete_ root/Command arguments/List -> CompletionResult_:
         all-named-options.clear
         all-short-options.clear
     else:
-      // It's a positional/rest argument.
+      // It's a positional/rest argument. Record its value under its
+      // owning rest option's name so that completion callbacks can
+      // see earlier rest arguments via context.seen-options.
+      rest-option := rest-option-for-index_ current-command positional-index
+      if rest-option:
+        (seen-options.get rest-option.name --init=:[]).add arg
       positional-index++
 
   // Now determine what to complete for the last argument (the word being typed).
@@ -365,6 +374,22 @@ complete-rest_ command/Command seen-options/Map current-word/string --positional
       return CompletionResult_ candidates --directive=directive --extensions=option.completion-extensions
 
   return CompletionResult_ [] --directive=DIRECTIVE-FILE-COMPLETION_
+
+/**
+Returns the rest $Option that owns the positional at the given $positional-index
+  in $command, or null if there is no such rest option.
+
+Mirrors the parser's consumption order: each non-multi rest option consumes
+  one positional slot, and a multi rest option absorbs all remaining
+  positionals.
+*/
+rest-option-for-index_ command/Command positional-index/int -> Option?:
+  skip := positional-index
+  command.rest_.do: | option/Option |
+    if option.is-multi: return option
+    if skip == 0: return option
+    skip--
+  return null
 
 /**
 Whether the given $option has meaningful completion support.
