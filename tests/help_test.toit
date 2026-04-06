@@ -63,8 +63,9 @@ test-combination:
       bin/app [<options>] [--] <rest1:rest_type>
 
     Options:
-      -h, --help            Show help for this command.
-          --option1 string  Option 1.
+          --generate-completion shell  Print a shell completion script (bash, zsh, fish, powershell) to stdout and exit.
+      -h, --help                       Show help for this command.
+          --option1 string             Option 1.
 
     Rest:
       rest1 rest_type  Rest 1 (required)
@@ -650,6 +651,7 @@ test-options:
   cmd.run --add-ui-help []
   expected = """
     Global options:
+          --generate-completion shell                        Print a shell completion script (bash, zsh, fish, powershell) to stdout and exit.
           --output-format human|plain|json                   Specify the format used when printing to the console. (default: human)
           --verbose                                          Enable verbose output. Shorthand for --verbosity-level=verbose.
           --verbosity-level debug|info|verbose|quiet|silent  Specify the verbosity level. (default: info)

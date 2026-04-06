@@ -16,6 +16,32 @@ basename_ path/string -> string:
   return name
 
 /**
+Returns the list of command names to which a generated completion script
+  should bind.
+
+A naive `complete`/`compdef` registration only matches the exact basename
+  of the program — i.e. only when the binary is on \$PATH. Users who source
+  the script with a path (for example `source <(examples/comp ...)`) would
+  then invoke the binary as `examples/comp` or `./examples/comp`, which
+  shells look up verbatim and fail to match.
+
+We therefore register every plausible invocation form:
+- the basename (for \$PATH-installed binaries),
+- the program-path as given (for relative or absolute paths),
+- a "./" prefixed variant for relative paths (the common "./bin" case).
+*/
+completion-bind-names_ program-path/string -> List:
+  name := basename_ program-path
+  names := [name]
+  if program-path != name: names.add program-path
+  is-absolute := program-path.starts-with "/"
+      or (program-path.size >= 2 and program-path[1] == ':')  // Windows drive.
+  already-dotted := program-path.starts-with "./" or program-path.starts-with ".\\"
+  if not is-absolute and not already-dotted and program-path != name:
+    names.add "./$program-path"
+  return names
+
+/**
 Sanitizes the given $name for use as a shell function name.
 
 Replaces all non-alphanumeric characters with underscores and prefixes
@@ -39,6 +65,8 @@ Returns a bash completion script for the given $program-path.
 bash-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
   func-name := sanitize-func-name_ program-name
+  bind-names := (completion-bind-names_ program-path).map: "\"$it\""
+  bind-names-str := bind-names.join " "
   return """
     _$(func-name)_completions() {
         local IFS=\$'\\n'
@@ -104,7 +132,7 @@ bash-completion-script_ --program-path/string -> string:
             fi
         fi
     }
-    complete -o default -F _$(func-name)_completions "$program-name\""""
+    complete -o default -F _$(func-name)_completions $bind-names-str"""
 
 /**
 Returns a zsh completion script for the given $program-path.
@@ -112,6 +140,8 @@ Returns a zsh completion script for the given $program-path.
 zsh-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
   func-name := sanitize-func-name_ program-name
+  bind-names := (completion-bind-names_ program-path).map: "\"$it\""
+  bind-names-str := bind-names.join " "
   return """
     #compdef $program-name
 
@@ -157,17 +187,15 @@ zsh-completion-script_ --program-path/string -> string:
 
         if [[ \$directive -eq 4 ]]; then
             if [[ -n "\$extensions" ]]; then
+                # Issue one _files -g call per extension. Alternation
+                #   patterns like "(*.toml|*.yaml)" or "*.(toml|yaml)"
+                #   break _path_files directory-prefix navigation in zsh,
+                #   so we avoid them entirely.
                 local -a ext_array
                 ext_array=(\${(s:,:)extensions})
-                local glob_parts=""
                 for ext in "\${ext_array[@]}"; do
-                    if [[ -n "\$glob_parts" ]]; then
-                        glob_parts="\$glob_parts|*\$ext"
-                    else
-                        glob_parts="*\$ext"
-                    fi
+                    _files -g "*\$ext"
                 done
-                _files -g "(\$glob_parts)"
             else
                 _files
             fi
@@ -176,7 +204,7 @@ zsh-completion-script_ --program-path/string -> string:
         fi
     }
 
-    compdef _$(func-name) "$program-name\""""
+    compdef _$(func-name) $bind-names-str"""
 
 /**
 Returns a fish completion script for the given $program-path.
@@ -184,6 +212,11 @@ Returns a fish completion script for the given $program-path.
 fish-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
   func-name := sanitize-func-name_ program-name
+  // Fish's `complete -c` takes one command name per invocation, so emit
+  //   one `complete` line per bind name.
+  bind-lines := (completion-bind-names_ program-path).map: | n/string |
+    "complete -c \"$n\" -f -a '(__$(func-name)_completions)'"
+  complete-block := bind-lines.join "\n    "
   return """
     function __$(func-name)_completions
         set -l tokens (commandline -opc)
@@ -239,15 +272,17 @@ fish-completion-script_ --program-path/string -> string:
         end
     end
 
-    complete -c "$program-name" -f -a '(__$(func-name)_completions)'"""
+    $complete-block"""
 
 /**
 Returns a PowerShell completion script for the given $program-path.
 */
 powershell-completion-script_ --program-path/string -> string:
   program-name := basename_ program-path
+  bind-names := (completion-bind-names_ program-path).map: "'$it'"
+  bind-names-str := bind-names.join ","
   return """
-    Register-ArgumentCompleter -Native -CommandName '$program-name' -ScriptBlock {
+    Register-ArgumentCompleter -Native -CommandName @($bind-names-str) -ScriptBlock {
         param(\$wordToComplete, \$commandAst, \$cursorPosition)
 
         \$tokens = \$commandAst.ToString() -split '\\s+'

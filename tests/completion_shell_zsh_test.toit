@@ -71,6 +71,24 @@ test-zsh binary/string tmpdir/string:
     expect (not content.contains "xconfig.txt")
     tmux.cancel
 
+    // OptionPath --extensions: directories must still be suggested so the
+    //   user can navigate into them.
+    tmux.send-keys ["$binary deploy --config xsub", "Tab"]
+    tmux.wait-for "xsubdir"
+    tmux.cancel
+
+    // Completion must also work when the binary is invoked via a relative
+    //   path (e.g. ./fleet) rather than the absolute path baked into the
+    //   completion script. Re-source with a relative path so that
+    //   compdef registers "./fleet" as a bind name.
+    tmux.send-line "source <(./fleet completion zsh) && echo re-sourced"
+    tmux.wait-for "re-sourced"
+    tmux.send-keys ["./fleet deploy --channel ", "Tab"]
+    tmux.wait-for "stable"
+    content = tmux.capture
+    expect (content.contains "beta")
+    tmux.cancel
+
     print "  All zsh tests passed."
   finally:
     tmux.close

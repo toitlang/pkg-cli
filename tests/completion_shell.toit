@@ -115,5 +115,10 @@ setup-test-binary_ tmpdir/string -> string:
   file.write-contents --path="$tmpdir/xconfig.yaml" ""
   file.write-contents --path="$tmpdir/xconfig.txt" ""
 
+  // Directory used to verify that extension-filtered completion still lets
+  //   the user navigate into directories.
+  directory.mkdir "$tmpdir/xsubdir"
+  file.write-contents --path="$tmpdir/xsubdir/nested.toml" ""
+
   return binary
 
