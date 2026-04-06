@@ -26,6 +26,46 @@ export Cache FileStore DirectoryStore
 export Config
 
 /**
+Shells for which $Command can generate completion scripts.
+*/
+COMPLETION-SHELLS_ ::= ["bash", "zsh", "fish", "powershell"]
+
+/**
+Returns the completion script for the given $shell.
+
+The $program-path is baked into the script and used to re-invoke the
+  binary at completion time.
+*/
+completion-script-for-shell_ --shell/string --program-path/string -> string:
+  if shell == "bash": return bash-completion-script_ --program-path=program-path
+  if shell == "zsh": return zsh-completion-script_ --program-path=program-path
+  if shell == "fish": return fish-completion-script_ --program-path=program-path
+  if shell == "powershell": return powershell-completion-script_ --program-path=program-path
+  unreachable
+
+/**
+Scans $arguments for a "--generate-completion <shell>" or
+  "--generate-completion=<shell>" occurrence with a known shell value.
+
+Returns the shell name if found, null otherwise.
+
+Unknown or missing values are ignored, so that the normal parser can
+  report them with its standard error machinery.
+*/
+find-generate-completion-arg_ arguments/List -> string?:
+  prefix := "--generate-completion="
+  for i := 0; i < arguments.size; i++:
+    arg/string := arguments[i]
+    value/string? := null
+    if arg == "--generate-completion":
+      if i + 1 < arguments.size: value = arguments[i + 1]
+    else if arg.starts-with prefix:
+      value = arg[prefix.size..]
+    if value and (COMPLETION-SHELLS_.contains value):
+      return value
+  return null
+
+/**
 An object giving access to common operations for CLI programs.
 
 If no ui is given uses $Ui.human.
@@ -310,8 +350,10 @@ class Command:
       --cli/Cli?=null
       --add-ui-help/bool=(not cli)
       --add-completion/bool=true:
+    added-completion-flag := false
     if add-completion:
-      add-completion-command_ --program-path=invoked-command
+      added-completion-flag = add-completion-bootstrap_
+          --program-path=invoked-command
 
     // Handle __complete requests before any other processing.
     if add-completion and not arguments.is-empty and arguments[0] == "__complete":
@@ -328,6 +370,14 @@ class Command:
         print ":$result.directive"
       return
 
+    // Handle --generate-completion before any other processing, so that
+    //   required rest arguments and run callbacks are skipped.
+    if added-completion-flag:
+      shell := find-generate-completion-arg_ arguments
+      if shell:
+        print (completion-script-for-shell_ --shell=shell --program-path=invoked-command)
+        return
+
     if not cli:
       ui := create-ui-from-args_ arguments
       log.set-default (ui.logger --name=name)
@@ -339,13 +389,38 @@ class Command:
       invocation := Invocation.private_ cli path.commands parameters
       invocation.command.run-callback_.call invocation
 
-  add-completion-command_ --program-path/string:
-    // Don't add if the user already has a "completion" subcommand.
-    if find-subcommand_ "completion": return
-    // Can't add subcommands to a command with rest args or a run callback
-    //   that already has subcommands handled.
-    if run-callback_: return
+  /**
+  Adds a bootstrap mechanism for shell completions.
 
+  If the command has no run callback, a "completion" subcommand is added.
+  Otherwise, a "--generate-completion" option is added to the root command.
+
+  Returns true if the "--generate-completion" flag was added.
+  */
+  add-completion-bootstrap_ --program-path/string -> bool:
+    // Don't add if the user already has a "completion" subcommand.
+    if find-subcommand_ "completion": return false
+    // Don't add if the user already has a "--generate-completion" option.
+    options_.do: | opt/Option |
+      if opt.name == "generate-completion": return false
+
+    if not run-callback_:
+      add-completion-subcommand_ --program-path=program-path
+      return false
+
+    // The root has a run callback, so we can't add a subcommand. Fall back
+    //   to a "--generate-completion" flag.
+    add-completion-flag_
+    return true
+
+  add-completion-flag_:
+    options_ = options_.copy
+    options_.add
+        OptionEnum "generate-completion" COMPLETION-SHELLS_
+            --type="shell"
+            --help="Print a shell completion script (bash, zsh, fish, powershell) to stdout and exit."
+
+  add-completion-subcommand_ --program-path/string:
     prog-name := basename_ program-path
     completion-command := Command "completion"
         --help="""
@@ -378,24 +453,13 @@ class Command:
             PowerShell:
               $program-path completion powershell >> \$PROFILE"""
         --rest=[
-          OptionEnum "shell" ["bash", "zsh", "fish", "powershell"]
+          OptionEnum "shell" COMPLETION-SHELLS_
               --help="The shell to generate completions for."
               --required,
         ]
         --run=:: | invocation/Invocation |
           shell := invocation["shell"]
-          script/string := ?
-          if shell == "bash":
-            script = bash-completion-script_ --program-path=program-path
-          else if shell == "zsh":
-            script = zsh-completion-script_ --program-path=program-path
-          else if shell == "fish":
-            script = fish-completion-script_ --program-path=program-path
-          else if shell == "powershell":
-            script = powershell-completion-script_ --program-path=program-path
-          else:
-            unreachable
-          print script
+          print (completion-script-for-shell_ --shell=shell --program-path=program-path)
     subcommands_.add completion-command
 
   add-ui-options_:
