@@ -41,6 +41,9 @@ main:
   test-option-extensions
   test-help-completion
   test-help-gated-on-availability
+  test-command-group-completion
+  test-command-group-after-default-entered
+  test-command-group-with-extensions
 
 test-empty-input:
   root := cli.Command "app"
@@ -776,3 +779,91 @@ test-help-gated-on-availability:
   expect-equals 1 (values.filter: it == "-h").size
   // --help should still appear since "help" as a name is not taken.
   expect (values.contains "--help")
+
+test-command-group-completion:
+  // A CommandGroup should suggest both subcommands and default rest completions.
+  default-cmd := cli.Command "default"
+      --rest=[
+        cli.OptionEnum "source" ["main.toit", "test.toit"]
+            --help="Source file.",
+      ]
+      --run=:: null
+  commands-cmd := cli.Command "commands"
+  commands-cmd.add (cli.Command "serve" --help="Start a server." --run=:: null)
+  commands-cmd.add (cli.Command "build" --help="Build the project." --run=:: null)
+
+  root := cli.CommandGroup "app"
+      --default=default-cmd
+      --commands=commands-cmd
+
+  // Empty prefix: should see subcommands + rest completions + help.
+  result := complete_ root [""]
+  values := result.candidates.map: it.value
+  expect (values.contains "serve")
+  expect (values.contains "build")
+  expect (values.contains "help")
+  expect (values.contains "main.toit")
+  expect (values.contains "test.toit")
+
+  // Prefix matching subcommand.
+  result = complete_ root ["s"]
+  values = result.candidates.map: it.value
+  expect (values.contains "serve")
+  expect (not (values.contains "build"))
+
+  // Prefix matching rest.
+  result = complete_ root ["m"]
+  values = result.candidates.map: it.value
+  expect (values.contains "main.toit")
+  expect (not (values.contains "serve"))
+
+  // Options with "-" prefix.
+  result = complete_ root ["-"]
+  values = result.candidates.map: it.value
+  expect (values.contains "--help")
+  expect (values.contains "-h")
+
+test-command-group-after-default-entered:
+  // After an arg that doesn't match a subcommand, the default command
+  // is entered. Subsequent completions should come from the default.
+  default-cmd := cli.Command "default"
+      --rest=[
+        cli.Option "source" --help="Source file.",
+        cli.OptionEnum "mode" ["debug", "release"] --multi --help="Mode.",
+      ]
+      --run=:: null
+  commands-cmd := cli.Command "commands"
+  commands-cmd.add (cli.Command "serve" --help="Start a server." --run=:: null)
+
+  root := cli.CommandGroup "app"
+      --default=default-cmd
+      --commands=commands-cmd
+
+  // After "foo.toit" (doesn't match a subcommand), completing the second arg.
+  result := complete_ root ["foo.toit", ""]
+  values := result.candidates.map: it.value
+  expect (values.contains "debug")
+  expect (values.contains "release")
+  expect (not (values.contains "serve"))
+
+test-command-group-with-extensions:
+  // CommandGroup where default has file extensions.
+  default-cmd := cli.Command "default"
+      --rest=[
+        cli.OptionPath "source" --extensions=[".toit"] --help="Source file.",
+      ]
+      --run=:: null
+  commands-cmd := cli.Command "commands"
+  commands-cmd.add (cli.Command "run" --help="Run something." --run=:: null)
+
+  root := cli.CommandGroup "app"
+      --default=default-cmd
+      --commands=commands-cmd
+
+  result := complete_ root [""]
+  values := result.candidates.map: it.value
+  expect (values.contains "run")
+  expect-equals DIRECTIVE-FILE-COMPLETION_ result.directive
+  expect-equals 1 result.extensions.size
+  expect (result.extensions.contains ".toit")
+

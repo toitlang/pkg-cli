@@ -225,6 +225,7 @@ class Command:
   The $run callback is invoked when the command is executed. It is given an
     $Invocation object. If $run is null, then at least one subcommand must be added
     to this command.
+
   */
   constructor name --usage/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
@@ -344,16 +345,22 @@ class Command:
 
   The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
     in the help output. By default it is active if no $cli is provided.
+
+  The $completion-as-flag parameter controls whether shell completion is exposed as a
+    `--generate-completion` flag or a `completion` subcommand. If null (the default),
+    commands with subcommands get a subcommand, and commands without get a flag.
   */
   run arguments/List -> none
       --invoked-command=system.program-name
       --cli/Cli?=null
       --add-ui-help/bool=(not cli)
-      --add-completion/bool=true:
+      --add-completion/bool=true
+      --completion-as-flag/bool?=null:
     added-completion-flag := false
     if add-completion:
       added-completion-flag = add-completion-bootstrap_
           --program-path=invoked-command
+          --as-flag=completion-as-flag
 
     // Handle __complete requests before any other processing.
     if add-completion and not arguments.is-empty and arguments[0] == "__complete":
@@ -392,26 +399,33 @@ class Command:
   /**
   Adds a bootstrap mechanism for shell completions.
 
-  If the command has no run callback, a "completion" subcommand is added.
-  Otherwise, a "--generate-completion" option is added to the root command.
+  If $as-flag is null, the choice is automatic: commands with subcommands get a
+    "completion" subcommand, commands without get a "--generate-completion" flag.
+  If $as-flag is true, a "--generate-completion" flag is always used.
+  If $as-flag is false, a "completion" subcommand is always used.
 
   Returns true if the "--generate-completion" flag was added.
   */
-  add-completion-bootstrap_ --program-path/string -> bool:
+  add-completion-bootstrap_ --program-path/string --as-flag/bool?=null -> bool:
     // Don't add if the user already has a "completion" subcommand.
     if find-subcommand_ "completion": return false
     // Don't add if the user already has a "--generate-completion" option.
     options_.do: | opt/Option |
       if opt.name == "generate-completion": return false
 
-    if not run-callback_:
-      add-completion-subcommand_ --program-path=program-path
-      return false
+    use-flag/bool := ?
+    if as-flag != null:
+      use-flag = as-flag
+    else:
+      // Auto: use a subcommand if there are subcommands, otherwise a flag.
+      use-flag = subcommands_.is-empty
 
-    // The root has a run callback, so we can't add a subcommand. Fall back
-    //   to a "--generate-completion" flag.
-    add-completion-flag_
-    return true
+    if use-flag:
+      add-completion-flag_
+      return true
+
+    add-completion-subcommand_ --program-path=program-path
+    return false
 
   add-completion-flag_:
     options_ = options_.copy
@@ -612,6 +626,87 @@ class Command:
       if command.name == name or command.aliases_.contains name:
         return command
     return null
+
+
+/**
+A command that groups two alternative dispatch paths: a set of named
+  subcommands and a default command.
+
+When arguments match a named subcommand, dispatch goes there. Otherwise
+  the default command handles the arguments. Each command has its own
+  independent options and rest arguments — there is no option inheritance
+  between the two.
+
+This is useful for commands like `toit` which accept both
+  subcommands (`toit run`, `toit compile`) and direct file arguments
+  (`toit foo.toit`).
+
+A $CommandGroup can be used anywhere a $Command can — including as a
+  nested subcommand.
+
+The help output shows a combined usage section followed by separate
+  titled sections for each alternative:
+
+  ```
+  <top-level help>
+
+  Usage:
+    app <source> [<arg>...]
+    app <command> [<options>]
+
+  <default-title>:
+  <help for default command>
+
+  <commands-title>:
+  <help for commands command>
+  ```
+*/
+class CommandGroup extends Command:
+  /** The command used when no named subcommand matches. Must have a run callback. */
+  default_/Command
+
+  /** Title shown in help above the default command's section. */
+  default-title_/string
+
+  /** The command that holds the named subcommands. Must not have a run callback. */
+  commands_/Command
+
+  /** Title shown in help above the commands section. */
+  commands-title_/string
+
+  /**
+  Constructs a new command group.
+
+  The $default command handles arguments that don't match any named subcommand.
+    It must have a run callback.
+
+  The $commands command holds the named subcommands. It must not have a run callback
+    and must have at least one subcommand.
+  */
+  constructor name/string
+      --help/string?=null
+      --examples/List=[]
+      --aliases/List=[]
+      --hidden/bool=false
+      --default/Command
+      --default-title/string="Default"
+      --commands/Command
+      --commands-title/string="Commands":
+    if not default.run-callback_:
+      throw "The default command must have a run callback."
+    if commands.run-callback_:
+      throw "The commands command must not have a run callback."
+    default_ = default
+    default-title_ = default-title
+    commands_ = commands
+    commands-title_ = commands-title
+    super.private name
+        --help=help
+        --examples=examples
+        --aliases=aliases
+        --subcommands=commands.subcommands_
+        --hidden=hidden
+
 
 /**
 A completion candidate returned by completion callbacks.

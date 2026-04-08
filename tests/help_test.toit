@@ -17,6 +17,7 @@ main:
   test-examples
   test-short-help
   test-help-all
+  test-command-group-help
 
 check-output expected/string [block]:
   ui := TestUi
@@ -936,3 +937,73 @@ test-help-all:
   root.run ["help", "--all", "execute"] --cli=cli-obj --invoked-command="bin/app"
   all-output := ui.stdout + ui.stderr
   expect-equals (expected + "\n") all-output
+
+test-command-group-help:
+  default-cmd := cli.Command "default"
+      --help="Run a source file directly."
+      --options=[
+        cli.OptionInt "optimization-level" --short-name="O" --default=1
+            --help="Set the optimization level.",
+      ]
+      --rest=[
+        cli.Option "source" --help="The source file." --required,
+        cli.Option "arg" --help="Arguments." --multi,
+      ]
+      --run=:: null
+
+  commands-cmd := cli.Command "commands"
+      --help="Use a subcommand."
+      --options=[
+        cli.Flag "verbose" --short-name="v" --help="Be verbose.",
+      ]
+  sub-run := cli.Command "run" --help="Run a file." --run=:: null
+  sub-compile := cli.Command "compile" --help="Compile a file." --run=:: null
+  commands-cmd.add sub-run
+  commands-cmd.add sub-compile
+
+  root := cli.CommandGroup "app"
+      --help="A test application."
+      --default=default-cmd
+      --default-title="Run a file"
+      --commands=commands-cmd
+      --commands-title="Subcommands"
+
+  expected := """
+    A test application.
+
+    Usage:
+      bin/app [<options>] [--] <source> [<arg>...]
+      bin/app <command> [<options>]
+
+    Run a file:
+      Run a source file directly.
+
+      Usage:
+        bin/app [<options>] [--] <source> [<arg>...]
+
+      Options:
+      -h, --help                    Show help for this command.
+      -O, --optimization-level int  Set the optimization level. (default: 1)
+
+      Rest:
+      arg string     Arguments. (multi)
+      source string  The source file. (required)
+
+    Subcommands:
+      Use a subcommand.
+
+      Usage:
+        bin/app <command> [<options>]
+
+      Commands:
+        compile     Compile a file.
+        completion  Generate shell completion scripts.
+        run         Run a file.
+
+      Options:
+      -h, --help     Show help for this command.
+      -v, --verbose  Be verbose.
+    """
+  check-output expected: | cli/cli.Cli |
+    root.run ["--help"] --cli=cli --invoked-command="bin/app"
+
