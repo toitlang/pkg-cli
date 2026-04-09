@@ -247,17 +247,7 @@ class HelpGenerator:
         else if not option.is-hidden:
           has-more-options = true
 
-    if not command_.subcommands_.is-empty: write_ " <command>"
-    if has-more-options: write_ " [<options>]"
-    if not command_.rest_.is-empty: write_ " [--]"
-    command_.rest_.do: | option/Option |
-      type := option.type
-      option-str/string := ?
-      if type == "string": option-str = "<$option.name>"
-      else: option-str = "<$option.name:$option.type>"
-      if option.is-multi: option-str = "$option-str..."
-      if not option.is-required: option-str = "[$option-str]"
-      write_ " $option-str"
+    write-usage-suffix_ command_ --has-more-options=has-more-options
     if as-section: writeln_
 
   /**
@@ -720,6 +710,9 @@ class HelpGenerator:
 
   /**
   Builds a usage line for an inner command, with the given $indentation.
+
+  Uses the $path_ prefix for the invoked command name, then appends
+    the $command's own options, subcommands, and rest arguments.
   */
   build-usage-for-inner_ command/Command --indentation/int -> none:
     write_ path_.invoked-command --indentation=indentation
@@ -735,6 +728,14 @@ class HelpGenerator:
       else if not option.is-hidden:
         has-more-options = true
 
+    write-usage-suffix_ command --has-more-options=has-more-options
+    writeln_
+
+  /**
+  Writes the trailing portion of a usage line: `<command>`, `[<options>]`,
+    `[--]`, and rest arguments.
+  */
+  write-usage-suffix_ command/Command --has-more-options/bool -> none:
     if not command.subcommands_.is-empty: write_ " <command>"
     if has-more-options: write_ " [<options>]"
     if not command.rest_.is-empty: write_ " [--]"
@@ -746,7 +747,6 @@ class HelpGenerator:
       if option.is-multi: option-str = "$option-str..."
       if not option.is-required: option-str = "[$option-str]"
       write_ " $option-str"
-    writeln_
 
   /**
   Builds the help for a $CommandGroup.
