@@ -167,6 +167,9 @@ class HelpGenerator:
   Builds the full help for the command that was given to the constructor.
   */
   build-all:
+    if command_ is CommandGroup:
+      build-command-group_
+      return
     build-description
     build-usage
     build-aliases
@@ -244,17 +247,7 @@ class HelpGenerator:
         else if not option.is-hidden:
           has-more-options = true
 
-    if not command_.subcommands_.is-empty: write_ " <command>"
-    if has-more-options: write_ " [<options>]"
-    if not command_.rest_.is-empty: write_ " [--]"
-    command_.rest_.do: | option/Option |
-      type := option.type
-      option-str/string := ?
-      if type == "string": option-str = "<$option.name>"
-      else: option-str = "<$option.name:$option.type>"
-      if option.is-multi: option-str = "$option-str..."
-      if not option.is-required: option-str = "[$option-str]"
-      write_ " $option-str"
+    write-usage-suffix_ command_ --has-more-options=has-more-options
     if as-section: writeln_
 
   /**
@@ -677,6 +670,107 @@ class HelpGenerator:
 
     if in-quotes: throw "Unterminated quotes: $arguments-string.trim"
     return arguments
+
+  /**
+  Builds a full help section for an inner command of a $CommandGroup.
+
+  Uses the $path_ prefix for display. Includes description, usage,
+    commands, options, and rest — indented under the section title.
+  */
+  build-section-for_ command/Command --title/string -> none:
+    ensure-vertical-space_
+    writeln_ "$title:"
+
+    if help := command.help_:
+      writeln_ help.trim --indentation=2
+      writeln_
+    else if short-help := command.short-help_:
+      writeln_ short-help.trim --indentation=2
+      writeln_
+
+    write_ "Usage:" --indentation=2
+    writeln_
+    build-usage-for-inner_ command --indentation=4
+
+    if not command.subcommands_.is-empty:
+      writeln_
+      write_ "Commands:" --indentation=2
+      writeln_
+      commands-and-help := []
+      command.subcommands_.do: | subcommand/Command |
+        if subcommand.is-hidden_: continue.do
+        commands-and-help.add [subcommand.name, subcommand.short-help]
+      sorted-commands := commands-and-help.sort: | a/List b/List | a[0].compare-to b[0]
+      write-table_ sorted-commands --indentation=4
+
+    build-options_ --title="  Options" command.options_ --add-help
+
+    if not command.rest_.is-empty:
+      build-options_ --title="  Rest" command.rest_ --rest
+
+  /**
+  Builds a usage line for an inner command, with the given $indentation.
+
+  Uses the $path_ prefix for the invoked command name, then appends
+    the $command's own options, subcommands, and rest arguments.
+  */
+  build-usage-for-inner_ command/Command --indentation/int -> none:
+    write_ path_.invoked-command --indentation=indentation
+    for i := 1; i < path_.size; i++:
+      write_ " $path_[i].name"
+
+    has-more-options := false
+    command.options_.do: | option/Option |
+      if option.is-required:
+        write_ " --$option.name"
+        if not option.is-flag:
+          write_ "=<$option.type>"
+      else if not option.is-hidden:
+        has-more-options = true
+
+    write-usage-suffix_ command --has-more-options=has-more-options
+    writeln_
+
+  /**
+  Writes the trailing portion of a usage line: `<command>`, `[<options>]`,
+    `[--]`, and rest arguments.
+  */
+  write-usage-suffix_ command/Command --has-more-options/bool -> none:
+    if not command.subcommands_.is-empty: write_ " <command>"
+    if has-more-options: write_ " [<options>]"
+    if not command.rest_.is-empty: write_ " [--]"
+    command.rest_.do: | option/Option |
+      type := option.type
+      option-str/string := ?
+      if type == "string": option-str = "<$option.name>"
+      else: option-str = "<$option.name:$option.type>"
+      if option.is-multi: option-str = "$option-str..."
+      if not option.is-required: option-str = "[$option-str]"
+      write_ " $option-str"
+
+  /**
+  Builds the help for a $CommandGroup.
+
+  Shows a combined usage section followed by titled sections for the
+    default command and the commands command.
+  */
+  build-command-group_ -> none:
+    group := command_ as CommandGroup
+
+    // Top-level description from the group itself.
+    build-description
+
+    // Combined usage section.
+    ensure-vertical-space_
+    writeln_ "Usage:"
+    build-usage-for-inner_ group.default_ --indentation=2
+    build-usage-for-inner_ group.commands_ --indentation=2
+
+    // Default command section.
+    build-section-for_ group.default_ --title=group.default-title_
+
+    // Commands command section.
+    build-section-for_ group.commands_ --title=group.commands-title_
 
   write_ str/string:
     buffer_.add str

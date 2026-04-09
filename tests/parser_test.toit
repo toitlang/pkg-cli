@@ -4,6 +4,8 @@
 
 import cli
 import cli.test show *
+import cli.help-generator_ show HelpGenerator
+import cli.path_ show Path
 import expect show *
 
 
@@ -24,6 +26,9 @@ main:
   test-dash-arg
   test-mixed-rest-named
   test-snake-kebab
+  test-command-group
+  test-command-group-nested
+  test-command-group-help-flag
 
 test-options:
   expected /Map? := null
@@ -414,3 +419,149 @@ test-snake-kebab:
   cmd.run ["--foo-bar", "foo_value", "--toto-titi", "toto_value"]
   cmd.run ["--foo_bar", "foo_value", "--toto_titi", "toto_value"]
   cmd.run ["--foo-bar", "foo_value", "--toto_titi", "toto_value"]
+
+test-command-group:
+  sub-invoked := false
+  default-invoked := false
+  default-expected /Map? := null
+
+  default-cmd := cli.Command "default"
+      --rest=[
+        cli.Option "source" --required,
+        cli.Option "arg" --multi,
+      ]
+      --options=[
+        cli.OptionInt "optimization-level" --short-name="O" --default=1,
+      ]
+      --run=:: | invocation/cli.Invocation |
+        default-invoked = true
+        check-arguments default-expected invocation
+
+  commands-cmd := cli.Command "commands"
+      --options=[
+        cli.Flag "verbose" --short-name="v",
+      ]
+  sub := cli.Command "sub"
+      --help="A subcommand."
+      --run=:: | invocation/cli.Invocation |
+        sub-invoked = true
+  commands-cmd.add sub
+
+  root := cli.CommandGroup "root"
+      --default=default-cmd
+      --commands=commands-cmd
+
+  // Matching a subcommand dispatches to the commands command.
+  sub-invoked = false
+  root.run ["sub"]
+  expect sub-invoked
+
+  // Non-matching argument dispatches to the default command.
+  default-invoked = false
+  default-expected = {"source": "foo.toit", "arg": [], "optimization-level": 1}
+  root.run ["foo.toit"]
+  expect default-invoked
+
+  // Default command with its own options.
+  default-invoked = false
+  default-expected = {"source": "foo.toit", "arg": [], "optimization-level": 2}
+  root.run ["-O", "2", "foo.toit"]
+  expect default-invoked
+
+  // Default command with rest args.
+  default-invoked = false
+  default-expected = {"source": "foo.toit", "arg": ["x", "y"], "optimization-level": 1}
+  root.run ["foo.toit", "x", "y"]
+  expect default-invoked
+
+  // Commands command options don't leak into default.
+  default-invoked = false
+  sub-invoked = false
+  root.run ["--verbose", "sub"]
+  expect sub-invoked
+  expect (not default-invoked)
+
+  // Using -- dispatches to default.
+  default-invoked = false
+  default-expected = {"source": "sub", "arg": [], "optimization-level": 1}
+  root.run ["--", "sub"]
+  expect default-invoked
+
+test-command-group-nested:
+  // A CommandGroup used as a nested subcommand.
+  inner-default-invoked := false
+  inner-sub-invoked := false
+  inner-default-expected /Map? := null
+
+  inner-default := cli.Command "inner-default"
+      --rest=[
+        cli.Option "file" --required,
+      ]
+      --run=:: | invocation/cli.Invocation |
+        inner-default-invoked = true
+        check-arguments inner-default-expected invocation
+
+  inner-commands := cli.Command "inner-commands"
+  inner-sub := cli.Command "start"
+      --help="Start something."
+      --run=:: | invocation/cli.Invocation |
+        inner-sub-invoked = true
+  inner-commands.add inner-sub
+
+  inner-group := cli.CommandGroup "tool"
+      --help="Tool commands."
+      --default=inner-default
+      --commands=inner-commands
+
+  outer := cli.Command "app"
+  outer.add inner-group
+
+  // Nested: subcommand dispatches correctly.
+  inner-sub-invoked = false
+  outer.run ["tool", "start"]
+  expect inner-sub-invoked
+
+  // Nested: default dispatches correctly.
+  inner-default-invoked = false
+  inner-default-expected = {"file": "foo.toit"}
+  outer.run ["tool", "foo.toit"]
+  expect inner-default-invoked
+
+test-command-group-help-flag:
+  // --help and -h on a CommandGroup should show the group's help,
+  // not dispatch to the default command.
+  default-invoked := false
+
+  default-cmd := cli.Command "default"
+      --help="Default command."
+      --rest=[
+        cli.Option "source" --required,
+      ]
+      --run=:: default-invoked = true
+
+  commands-cmd := cli.Command "commands"
+  commands-cmd.add (cli.Command "sub" --help="A subcommand." --run=:: null)
+
+  root := cli.CommandGroup "app"
+      --help="The app."
+      --default=default-cmd
+      --commands=commands-cmd
+
+  // -h should show help, not dispatch to default.
+  ui := TestUi
+  cli-obj := cli.Cli "test" --ui=ui
+  root.run ["-h"] --cli=cli-obj --invoked-command="app"
+  expect (not default-invoked)
+  // The output should contain the group's help.
+  output := ui.stdout + ui.stderr
+  expect (output.contains "The app.")
+
+  // --help should also show help, not dispatch to default.
+  default-invoked = false
+  ui = TestUi
+  cli-obj = cli.Cli "test" --ui=ui
+  root.run ["--help"] --cli=cli-obj --invoked-command="app"
+  expect (not default-invoked)
+  output = ui.stdout + ui.stderr
+  expect (output.contains "The app.")
+

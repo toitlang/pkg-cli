@@ -106,6 +106,15 @@ complete_ root/Command arguments/List -> CompletionResult_:
       continue.repeat
 
     if arg == "--":
+      if current-command is CommandGroup:
+        // Switch to the default command before entering rest mode.
+        group := current-command as CommandGroup
+        current-command = group.default_
+        is-root = false
+        positional-index = 0
+        all-named-options.clear
+        all-short-options.clear
+        add-options-for-command_ current-command all-named-options all-short-options
       past-dashdash = true
       continue.repeat
 
@@ -174,6 +183,20 @@ complete_ root/Command arguments/List -> CompletionResult_:
         in-help-mode = true
         all-named-options.clear
         all-short-options.clear
+      else if current-command is CommandGroup:
+        // CommandGroup: no matching subcommand — switch to default command.
+        group := current-command as CommandGroup
+        current-command = group.default_
+        is-root = false
+        positional-index = 0
+        all-named-options.clear
+        all-short-options.clear
+        add-options-for-command_ current-command all-named-options all-short-options
+        // Record this arg as the first rest argument.
+        rest-option := rest-option-for-index_ current-command positional-index
+        if rest-option:
+          (seen-options.get rest-option.name --init=:[]).add arg
+        positional-index++
     else:
       // It's a positional/rest argument. Record its value under its
       // owning rest option's name so that completion callbacks can
@@ -253,6 +276,10 @@ complete_ root/Command arguments/List -> CompletionResult_:
     return complete-option-names_ current-command all-named-options seen-options current-word
 
   // Completing a subcommand or rest argument.
+  if current-command is CommandGroup:
+    // CommandGroup: suggest both subcommands and the default command's rest.
+    group := current-command as CommandGroup
+    return complete-subcommands-and-rest_ current-command group.default_ all-named-options seen-options current-word --is-root=is-root
   if not current-command.run-callback_:
     return complete-subcommands_ current-command all-named-options seen-options current-word --is-root=is-root
   else:
@@ -342,6 +369,47 @@ complete-subcommands_ command/Command all-named-options/Map seen-options/Map cur
       candidates.add (CompletionCandidate_ "-h" --description="Show help for this command.")
 
   return CompletionResult_ candidates --directive=DIRECTIVE-NO-FILE-COMPLETION_
+
+/**
+Completes both named subcommands and the default command's rest arguments
+  for a $CommandGroup.
+
+The subcommand candidates come from $command, and the rest
+  directive/extensions come from $default-command.
+*/
+complete-subcommands-and-rest_ command/Command default-command/Command all-named-options/Map seen-options/Map current-word/string --is-root/bool -> CompletionResult_:
+  candidates := []
+
+  command.subcommands_.do: | sub/Command |
+    if sub.is-hidden_: continue.do
+    if sub.name.starts-with current-word:
+      candidates.add (CompletionCandidate_ sub.name --description=sub.short-help)
+    sub.aliases_.do: | alias/string |
+      if alias.starts-with current-word:
+        candidates.add (CompletionCandidate_ alias --description=sub.short-help)
+
+  if is-root and "help".starts-with current-word:
+    candidates.add (CompletionCandidate_ "help" --description="Show help for a command.")
+
+  if current-word.starts-with "-":
+    all-named-options.do: | name/string option/Option |
+      if option.is-hidden: continue.do
+      if (seen-options.contains name) and not option.is-multi: continue.do
+      long-name := "--$name"
+      if long-name.starts-with current-word:
+        candidates.add (CompletionCandidate_ long-name --description=option.help)
+
+    has-help-option := all-named-options.contains "help"
+    has-h-short := all-named-options.any: | _ option/Option | option.short-name == "h"
+    if not has-help-option and "--help".starts-with current-word:
+      candidates.add (CompletionCandidate_ "--help" --description="Show help for this command.")
+    if not has-h-short and "-h".starts-with current-word:
+      candidates.add (CompletionCandidate_ "-h" --description="Show help for this command.")
+
+  // Add rest completions from the default command.
+  rest-result := complete-rest_ default-command seen-options current-word
+  candidates.add-all rest-result.candidates
+  return CompletionResult_ candidates --directive=rest-result.directive --extensions=rest-result.extensions
 
 /**
 Completes rest arguments.

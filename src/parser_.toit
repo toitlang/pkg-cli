@@ -105,6 +105,12 @@ class Parser_:
     while index < arguments.size:
       argument/string := arguments[index++]
       if argument == "--":
+        // If we're on a CommandGroup, dispatch to the default command.
+        if command is CommandGroup:
+          group := command as CommandGroup
+          remaining := ["--"] + arguments[index..]
+          parse group.default_ remaining block
+          return
         rest.add-all arguments[index ..]
         break  // We're done!
 
@@ -125,6 +131,13 @@ class Parser_:
         option := all-named-options.get kebab-name
         if not option:
           if name == "help" and not is-inverted: return-help.call []
+          // If we're on a CommandGroup, an unknown option means we should
+          // dispatch all arguments from here onwards to the default command.
+          if command is CommandGroup:
+            group := command as CommandGroup
+            remaining := [argument] + arguments[index..]
+            parse group.default_ remaining block
+            return
           fatal path "Unknown option: --$name"
 
         if option.is-flag and value != null:
@@ -159,6 +172,11 @@ class Parser_:
 
           if not option:
             if short-name == "h": return-help.call []
+            if command is CommandGroup:
+              group := command as CommandGroup
+              remaining := [argument] + arguments[index..]
+              parse group.default_ remaining block
+              return
             fatal path "Unknown option: -$short-name"
 
           i += option-length
@@ -181,6 +199,14 @@ class Parser_:
           if argument == "help" and command == root-command:
             // Special case for the help command.
             return-help.call arguments[index..]
+
+          // If this is a CommandGroup, re-dispatch all remaining arguments
+          // (including the current one) to the default command.
+          if command is CommandGroup:
+            group := command as CommandGroup
+            remaining := [argument] + arguments[index..]
+            parse group.default_ remaining block
+            return
 
           fatal path "Unknown command: $argument"
         set-command.call subcommand true
@@ -208,6 +234,10 @@ class Parser_:
       fatal path "Unexpected rest argument: '$rest[rest-index]'."
 
     if not command.run-callback_:
+      if command is CommandGroup:
+        group := command as CommandGroup
+        parse group.default_ [] block
+        return
       fatal path "Missing subcommand."
 
     block.call path (Parameters.private_ options seen-options)
