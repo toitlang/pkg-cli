@@ -225,7 +225,6 @@ class Command:
   The $run callback is invoked when the command is executed. It is given an
     $Invocation object. If $run is null, then at least one subcommand must be added
     to this command.
-
   */
   constructor name --usage/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
