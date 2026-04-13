@@ -72,8 +72,16 @@ bash-completion-script_ --program-path/string -> string:
         local IFS=\$'\\n'
         shopt -s extglob 2>/dev/null
 
+        # Expand tildes (e.g. ~/foo -> /home/user/foo) so the program
+        # receives real filesystem paths it can open.
+        local -a expanded_words
+        local _w
+        for _w in "\${COMP_WORDS[@]:1:\$COMP_CWORD}"; do
+            expanded_words+=("\${_w/#\\~/\$HOME}")
+        done
+
         local completions
-        completions=\$("$program-path" __complete -- "\${COMP_WORDS[@]:1:\$COMP_CWORD}")
+        completions=\$("$program-path" __complete -- "\${expanded_words[@]}")
         if [ \$? -ne 0 ]; then
             return
         fi
@@ -149,8 +157,16 @@ zsh-completion-script_ --program-path/string -> string:
         local -a completions
         local directive_line directive extensions=""
 
+        # Expand tildes (e.g. ~/foo -> /home/user/foo) so the program
+        # receives real filesystem paths it can open.
+        local -a expanded_words
+        local _w
+        for _w in "\${words[@]:1:\$((CURRENT-1))}"; do
+            expanded_words+=("\${_w/#\\~/\$HOME}")
+        done
+
         local output
-        output=\$("$program-path" __complete -- "\${words[@]:1:\$((CURRENT-1))}" 2>/dev/null)
+        output=\$("$program-path" __complete -- "\${expanded_words[@]}" 2>/dev/null)
         if [ \$? -ne 0 ]; then
             return
         fi
