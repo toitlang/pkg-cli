@@ -89,6 +89,35 @@ test-zsh binary/string tmpdir/string:
     expect (content.contains "beta")
     tmux.cancel
 
+    // Tilde expansion: the "lookup" command opens the file given as the
+    //   first rest arg and offers fixed candidates for the second arg.
+    //   When the file path uses ~, the shell must expand the tilde so
+    //   the program can open the file.
+    // Find an existing file in $HOME to avoid creating test artifacts.
+    tmux.send-line "for f in .profile .bashrc .zshrc .zshenv .bash_profile .config; do test -e ~/\$f && echo tilde-found:\$f && break; done"
+    tmux.wait-for "tilde-found:"
+    tilde-file := ""
+    lines := (tmux.capture).split "\n"
+    lines.do: | line/string |
+      if (line.trim.starts-with "tilde-found:") and tilde-file == "":
+        tilde-file = ((line.trim).split ":").last
+
+    expect (tilde-file != "")
+
+    // Re-source with absolute path (original binary).
+    tmux.send-line "source <($binary completion zsh) && echo re-sourced2"
+    tmux.wait-for "re-sourced2"
+
+    // Complete the entry arg using a tilde path for the file.
+    // Two Tabs are needed: the first fills the common prefix "tilde-ok-",
+    // and the second displays the candidate list.
+    tmux.send-keys ["$binary lookup ~/$(tilde-file) ", "Tab", "Tab"]
+    tmux.wait-for "tilde-ok-alpha"
+    content = tmux.capture
+    expect (content.contains "tilde-ok-bravo")
+    expect (content.contains "tilde-ok-charlie")
+    tmux.cancel
+
     print "  All zsh tests passed."
   finally:
     tmux.close
