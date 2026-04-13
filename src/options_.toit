@@ -9,7 +9,7 @@ import host.pipe
 import io
 import uuid show Uuid
 
-import .cli show Command
+import .cli show Command Invocation
 import .completion_ show DIRECTIVE-FILE-COMPLETION_ DIRECTIVE-DIRECTORY-COMPLETION_
 import .ui
 import .utils_ show to-kebab
