@@ -109,7 +109,7 @@ test-bash binary/string tmpdir/string:
     tilde-file := ""
     lines := (tmux.capture).split "\n"
     lines.do: | line/string |
-      if line.contains "tilde-found:" and tilde-file == "":
+      if (line.trim.starts-with "tilde-found:") and tilde-file == "":
         tilde-file = ((line.trim).split ":").last
 
     expect (tilde-file != "")
@@ -119,7 +119,10 @@ test-bash binary/string tmpdir/string:
     tmux.wait-for "re-sourced2"
 
     // Complete the entry arg using a tilde path for the file.
-    tmux.send-keys ["$binary lookup ~/$(tilde-file) ", "Tab", "Tab"]
+    // Three Tabs are needed: the first fills the common prefix "tilde-ok-",
+    // the second is treated as a new "first Tab" for the updated word, and
+    // the third actually displays the candidate list.
+    tmux.send-keys ["$binary lookup ~/$(tilde-file) ", "Tab", "Tab", "Tab"]
     tmux.wait-for "tilde-ok-alpha"
     content = tmux.capture
     expect (content.contains "tilde-ok-bravo")
