@@ -193,6 +193,16 @@ class Command:
   /** The rest arguments. */
   rest_/List
 
+  /**
+  Whether '--' is treated as a regular rest argument.
+
+  When false (the default), '--' stops option parsing and all subsequent
+    arguments become rest arguments.
+  When true, '--' is treated as a normal rest argument and option parsing
+    continues for subsequent arguments.
+  */
+  dash-dash-is-rest_/bool
+
   /** Whether this command should show up in the help. */
   is-hidden_/bool
 
@@ -227,44 +237,44 @@ class Command:
   */
   constructor name --usage/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
-      --run/Lambda?=null:
+      --dash-dash-is-rest/bool=false --run/Lambda?=null:
     return Command.private name --usage=usage --help=help --examples=examples \
         --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
-        --run=run
+        --dash-dash-is-rest=dash-dash-is-rest --run=run
 
   /**
   Deprecated. Use '--help' instead of '--short-help'.
   */
   constructor name --usage/string?=null --short-help/string --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
-      --run/Lambda?=null:
+      --dash-dash-is-rest/bool=false --run/Lambda?=null:
     return Command.private name --usage=usage --short-help=short-help --examples=examples \
         --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
-        --run=run
+        --dash-dash-is-rest=dash-dash-is-rest --run=run
 
   /**
   Deprecated. Use '--help' instead of '--long-help'.
   */
   constructor name --usage/string?=null --long-help/string --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
-      --run/Lambda?=null:
+      --dash-dash-is-rest/bool=false --run/Lambda?=null:
     return Command.private name --usage=usage --help=long-help --examples=examples \
         --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
-        --run=run
+        --dash-dash-is-rest=dash-dash-is-rest --run=run
 
   /**
   Deprecated. Use '--help' with a meaningful first paragraph instead of '--short-help' and '--long-help'.
   */
   constructor name --usage/string?=null --short-help/string --long-help/string --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
-      --run/Lambda?=null:
+      --dash-dash-is-rest/bool=false --run/Lambda?=null:
     return Command.private name --usage=usage --short-help=short-help --help=long-help --examples=examples \
         --aliases=aliases --options=options --rest=rest --subcommands=subcommands --hidden=hidden \
-        --run=run
+        --dash-dash-is-rest=dash-dash-is-rest --run=run
 
   constructor.private .name --usage/string?=null --short-help/string?=null --help/string?=null --examples/List=[] \
       --aliases/List=[] --options/List=[] --rest/List=[] --subcommands/List=[] --hidden/bool=false \
-      --run/Lambda?=null:
+      --dash-dash-is-rest/bool=false --run/Lambda?=null:
     usage_ = usage
     short-help_ = short-help
     help_ = help
@@ -272,6 +282,7 @@ class Command:
     aliases_ = aliases
     options_ = options
     rest_ = rest
+    dash-dash-is-rest_ = dash-dash-is-rest
     subcommands_ = subcommands
     run-callback_ = run
     is-hidden_ = hidden

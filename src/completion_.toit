@@ -115,7 +115,14 @@ complete_ root/Command arguments/List -> CompletionResult_:
         all-named-options.clear
         all-short-options.clear
         add-options-for-command_ current-command all-named-options all-short-options
-      past-dashdash = true
+      if not current-command.dash-dash-is-rest_:
+        past-dashdash = true
+        continue.repeat
+      // Treat "--" as a regular rest argument.
+      rest-option := rest-option-for-index_ current-command positional-index
+      if rest-option:
+        (seen-options.get rest-option.name --init=:[]).add arg
+      positional-index++
       continue.repeat
 
     if arg.starts-with "--":
