@@ -94,6 +94,19 @@ class Parser_:
         else:
           options[option.name] = option.default
 
+      // If this is a CommandGroup, also register the commands_ wrapper's
+      // options so they are available when dispatching to subcommands.
+      if new-command is CommandGroup:
+        group := new-command as CommandGroup
+        group.commands_.options_.do: | option/Option |
+          all-named-options[option.name] = option
+          if option.short-name: all-short-options[option.short-name] = option
+        group.commands_.options_.do: | option/Option |
+          if option.is-multi:
+            options[option.name] = []
+          else:
+            options[option.name] = option.default
+
       command = new-command
       if add-to-path: path += command
 

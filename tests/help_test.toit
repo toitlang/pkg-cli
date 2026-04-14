@@ -982,12 +982,12 @@ test-command-group-help:
         bin/app [<options>] [--] <source> [<arg>...]
 
       Options:
-      -h, --help                    Show help for this command.
-      -O, --optimization-level int  Set the optimization level. (default: 1)
+        -h, --help                    Show help for this command.
+        -O, --optimization-level int  Set the optimization level. (default: 1)
 
       Rest:
-      arg string     Arguments. (multi)
-      source string  The source file. (required)
+        arg string     Arguments. (multi)
+        source string  The source file. (required)
 
     Subcommands:
       Use a subcommand.
@@ -1001,8 +1001,8 @@ test-command-group-help:
         run         Run a file.
 
       Options:
-      -h, --help     Show help for this command.
-      -v, --verbose  Be verbose.
+        -h, --help     Show help for this command.
+        -v, --verbose  Be verbose.
     """
   check-output expected: | cli/cli.Cli |
     root.run ["--help"] --cli=cli --invoked-command="bin/app"
