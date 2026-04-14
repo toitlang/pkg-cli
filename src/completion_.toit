@@ -292,6 +292,11 @@ add-options-for-command_ command/Command named-options/Map short-options/Map:
   command.options_.do: | option/Option |
     named-options[option.name] = option
     if option.short-name: short-options[option.short-name] = option
+  if command is CommandGroup:
+    group := command as CommandGroup
+    group.commands_.options_.do: | option/Option |
+      named-options[option.name] = option
+      if option.short-name: short-options[option.short-name] = option
 
 /**
 Completes option names for the given $current-word.

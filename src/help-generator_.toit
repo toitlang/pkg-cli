@@ -128,6 +128,9 @@ build-json-help_ path/Path -> Map:
   for i := path.size - 2; i >= 0; i--:
     parent-command := path[i]
     extract-options.call parent-command global-options
+    if parent-command is CommandGroup:
+      group := parent-command as CommandGroup
+      extract-options.call group.commands_ global-options
 
   json-examples := command.examples_.map: | example/Example | {
     "description": example.description,
@@ -190,6 +193,9 @@ class HelpGenerator:
     result := []
     for i := 0; i < path_.size - 1; i++:
       result.add-all path_[i].options_
+      if path_[i] is CommandGroup:
+        group := path_[i] as CommandGroup
+        result.add-all group.commands_.options_
     return result
 
   /**
@@ -362,7 +368,7 @@ class HelpGenerator:
   build-global-options -> none:
     build-options_ --title="Global options" global-options_
 
-  build-options_ --title/string options/List --add-help/bool=false --rest/bool=false -> none:
+  build-options_ --title/string options/List --add-help/bool=false --rest/bool=false --indentation/int=2 -> none:
     if options.is-empty and not add-help: return
 
     if add-help:
@@ -427,7 +433,7 @@ class HelpGenerator:
 
     ensure-vertical-space_
     writeln_ "$title:"
-    write-table_ options-type-defaults-and-help --indentation=2
+    write-table_ options-type-defaults-and-help --indentation=indentation
 
   /**
   Builds the examples section.
@@ -703,10 +709,10 @@ class HelpGenerator:
       sorted-commands := commands-and-help.sort: | a/List b/List | a[0].compare-to b[0]
       write-table_ sorted-commands --indentation=4
 
-    build-options_ --title="  Options" command.options_ --add-help
+    build-options_ --title="  Options" command.options_ --add-help --indentation=4
 
     if not command.rest_.is-empty:
-      build-options_ --title="  Rest" command.rest_ --rest
+      build-options_ --title="  Rest" command.rest_ --rest --indentation=4
 
   /**
   Builds a usage line for an inner command, with the given $indentation.
