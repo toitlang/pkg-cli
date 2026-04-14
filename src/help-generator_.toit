@@ -744,7 +744,7 @@ class HelpGenerator:
   write-usage-suffix_ command/Command --has-more-options/bool -> none:
     if not command.subcommands_.is-empty: write_ " <command>"
     if has-more-options: write_ " [<options>]"
-    if not command.rest_.is-empty: write_ " [--]"
+    if not command.rest_.is-empty and not command.dash-dash-is-rest_: write_ " [--]"
     command.rest_.do: | option/Option |
       type := option.type
       option-str/string := ?

@@ -124,10 +124,13 @@ class Parser_:
           remaining := ["--"] + arguments[index..]
           parse group.default_ remaining block
           return
-        rest.add-all arguments[index ..]
-        break  // We're done!
+        if not command.dash-dash-is-rest_:
+          rest.add-all arguments[index ..]
+          break  // We're done!
+        // Treat "--" as a regular rest argument.
+        rest.add argument
 
-      if argument.starts-with "--":
+      else if argument.starts-with "--":
         value/string? := null
         // Get the option name.
         split := argument.index-of "="
