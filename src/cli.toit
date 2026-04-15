@@ -475,6 +475,10 @@ class Command:
 
             PowerShell:
               $program-path completion powershell >> \$PROFILE"""
+        --options=[
+          Option "executable-name"
+              --help="Override the executable name used in the generated script.",
+        ]
         --rest=[
           OptionEnum "shell" COMPLETION-SHELLS_
               --help="The shell to generate completions for."
@@ -482,7 +486,9 @@ class Command:
         ]
         --run=:: | invocation/Invocation |
           shell := invocation["shell"]
-          print (completion-script-for-shell_ --shell=shell --program-path=program-path)
+          exe-name := invocation["executable-name"]
+          effective-path := exe-name or program-path
+          print (completion-script-for-shell_ --shell=shell --program-path=effective-path)
     subcommands_.add completion-command
 
   add-ui-options_:
