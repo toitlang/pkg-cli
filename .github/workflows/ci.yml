@@ -10,25 +10,31 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
-        # The versions should contain (at least) the lowest requirement
-        #    and a version that is more up to date.
-        toit-version: [ v2.0.0-alpha.189, latest ]
-        include:
-          - toit-version: v2.0.0-alpha.189
-            version-name: old
-          - toit-version: latest
-            version-name: new
+        toit-version: [ oldest, latest ]
 
-    name: CI - ${{ matrix.os }} - ${{ matrix.version-name }}
+    name: CI - ${{ matrix.os }} - ${{ matrix.toit-version }}
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v6
 
+      - name: Resolve Toit version
+        id: toit-version
+        shell: bash
+        run: |
+          if [[ "${{ matrix.toit-version }}" == "oldest" ]]; then
+            sdk=$(grep -E '^[[:space:]]+sdk:' package.yaml | head -1 \
+              | sed -E 's/^[[:space:]]+sdk:[[:space:]]*//; s/^\^//' \
+              | tr -d "\"' ")
+            echo "version=v$sdk" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: toitlang/action-setup@v1
         with:
-          toit-version: ${{ matrix.toit-version }}
+          toit-version: ${{ steps.toit-version.outputs.version }}
 
       - name: Install shell completion test dependencies (Linux)
         if: runner.os == 'Linux'
