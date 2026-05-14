@@ -11,6 +11,7 @@ import expect show *
 main:
   test-file-cache
   test-dir-cache
+  test-remove
 
 test-file-cache:
   cache-dir := directory.mkdtemp "/tmp/cache_test-"
@@ -323,6 +324,52 @@ test-dir-cache:
     expect (dir-entries.contains "key")
     expect (dir-entries.contains "key2")
     expect (dir-entries.contains "dir")
+
+  finally:
+    directory.rmdir --recursive cache-dir
+
+test-remove:
+  cache-dir := directory.mkdtemp "/tmp/cache_test-"
+  try:
+    c := cache.Cache --app-name="test" --path=cache-dir
+
+    // Removing a non-existing entry is a no-op.
+    c.remove "missing"
+
+    // Remove a file entry.
+    file-key := "file-key"
+    c.get file-key: | store/cache.FileStore | store.save #[1, 2, 3]
+    expect (c.contains file-key)
+    c.remove file-key
+    expect-not (c.contains file-key)
+
+    // Remove a directory entry.
+    dir-key := "dir-key"
+    c.get-directory-path dir-key: | store/cache.DirectoryStore |
+      store.with-tmp-directory: | dir |
+        write-content --path="$dir/file" --content=#[4, 5, 6]
+        store.move dir
+    expect (c.contains dir-key)
+    c.remove dir-key
+    expect-not (c.contains dir-key)
+
+    // Remove a nested directory entry, then recreate it.
+    nested-key := "nested/dir-key"
+    c.get-directory-path nested-key: | store/cache.DirectoryStore |
+      store.with-tmp-directory: | dir |
+        write-content --path="$dir/file" --content=#[7, 8, 9]
+        store.move dir
+    expect (c.contains nested-key)
+    c.remove nested-key
+    expect-not (c.contains nested-key)
+
+    c.get-directory-path nested-key: | store/cache.DirectoryStore |
+      store.with-tmp-directory: | dir |
+        write-content --path="$dir/file" --content=#[10, 11, 12]
+        store.move dir
+    expect (c.contains nested-key)
+    nested-path := c.get-directory-path nested-key
+    expect-equals #[10, 11, 12] (file.read-contents "$nested-path/file")
 
   finally:
     directory.rmdir --recursive cache-dir

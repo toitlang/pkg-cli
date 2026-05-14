@@ -76,9 +76,15 @@ class Cache:
     if file.is-file key-path:
       file.delete key-path
     else if file.is-directory key-path:
-      tmp-path := directory.mkdtemp key-path
-      file.rename key-path tmp-path
-      directory.rmdir --recursive --force tmp-path
+      // Move the entry into a freshly created temp directory so concurrent
+      //   readers see the entry either fully present or gone. We rename it
+      //   *into* the temp dir (rather than *over* it) so the destination
+      //   child path is guaranteed not to exist: this works on Windows,
+      //   where 'rename' cannot overwrite an existing directory, and avoids
+      //   a race window with any sibling using the same temp name.
+      tmp-dir := directory.mkdtemp key-path
+      file.rename key-path (fs.join tmp-dir "entry")
+      directory.rmdir --recursive --force tmp-dir
 
   /**
   Whether the cache contains the given $key.
