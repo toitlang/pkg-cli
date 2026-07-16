@@ -377,7 +377,9 @@ class Command:
       completion-args := arguments[1..]
       if not completion-args.is-empty and completion-args[0] == "--":
         completion-args = completion-args[1..]
-      result := complete_ this completion-args
+      result := complete-with-timeout_ this completion-args
+      // The completion scripts treat a non-zero exit as "no completions".
+      if not result: exit 1
       result.candidates.do: | candidate/CompletionCandidate_ |
         print candidate.to-string
       if result.extensions and not result.extensions.is-empty:
