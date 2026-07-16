@@ -373,6 +373,10 @@ class Command:
 
     // Handle __complete requests before any other processing.
     if add-completion and not arguments.is-empty and arguments[0] == "__complete":
+      // Silence the default logger: the completion candidates are printed to
+      // stdout, so any library logging from completion callbacks would
+      // corrupt the completion output.
+      log.set-default (log.default.with-level log.FATAL-LEVEL)
       if add-ui-help: add-ui-options_
       completion-args := arguments[1..]
       if not completion-args.is-empty and completion-args[0] == "--":
