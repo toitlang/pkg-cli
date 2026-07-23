@@ -44,6 +44,8 @@ main:
   test-command-group-completion
   test-command-group-after-default-entered
   test-command-group-with-extensions
+  test-slow-callback-times-out
+  test-throwing-callback-yields-null
 
 test-empty-input:
   root := cli.Command "app"
@@ -867,3 +869,30 @@ test-command-group-with-extensions:
   expect-equals 1 result.extensions.size
   expect (result.extensions.contains ".toit")
 
+
+test-slow-callback-times-out:
+  root := cli.Command "app"
+      --options=[
+        cli.Option "host" --help="Target host."
+            --completion=:: | context/cli.CompletionContext |
+              sleep --ms=1_000
+              [cli.CompletionCandidate "too-late"],
+      ]
+      --run=:: null
+  result := complete-with-timeout_ root ["--host", ""] --timeout-ms=50
+  expect-null result
+
+  // A fast callback is unaffected.
+  result = complete-with-timeout_ root ["--", ""] --timeout-ms=1_000
+  expect-not-null result
+
+test-throwing-callback-yields-null:
+  root := cli.Command "app"
+      --options=[
+        cli.Option "host" --help="Target host."
+            --completion=:: | context/cli.CompletionContext |
+              throw "callback is broken",
+      ]
+      --run=:: null
+  result := complete-with-timeout_ root ["--host", ""]
+  expect-null result

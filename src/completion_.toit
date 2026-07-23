@@ -55,6 +55,32 @@ class CompletionResult_:
   constructor .candidates --.directive=DIRECTIVE-DEFAULT_ --.extensions=null:
 
 /**
+The maximum time a completion request may take.
+
+Completion requests run while the user is waiting for the shell to
+  react to a tab-press, and shells don't interrupt slow completion
+  commands. If a completion callback misbehaves (for example by hanging
+  on a network operation), this limit bounds how long the user's prompt
+  is blocked.
+*/
+COMPLETION-TIMEOUT-MS_ ::= 5_000
+
+/**
+Computes completion candidates like $complete_, but guards against
+  misbehaving completion callbacks.
+
+Returns null if the computation throws or takes longer than
+  $timeout-ms. The caller should then exit with a non-zero exit code,
+  which the generated completion scripts treat as "no completions".
+*/
+complete-with-timeout_ root/Command arguments/List --timeout-ms/int=COMPLETION-TIMEOUT-MS_ -> CompletionResult_?:
+  result/CompletionResult_? := null
+  catch:
+    with-timeout --ms=timeout-ms:
+      result = complete_ root arguments
+  return result
+
+/**
 Computes completion candidates for the given $arguments.
 
 Walks the command tree starting from $root, determines the completion
