@@ -350,9 +350,9 @@ class Command:
 
   If no $cli is given, the arguments are parsed for `--verbose`, `--verbosity-level` and
     `--output-format` to create the appropriate UI object. If a $cli object is given,
-    then these arguments are ignored.
+    then these arguments do not change its UI.
 
-  The $add-ui-help flag is used to determine whether to include help for `--verbose`, ...
+  The $add-ui-help flag determines whether these UI options are accepted and included
     in the help output. By default it is active if no $cli is provided.
 
   The $completion-as-flag parameter controls whether shell completion is exposed as a
@@ -439,9 +439,8 @@ class Command:
     if not cli:
       ui := create-ui-from-args_ arguments
       log.set-default (ui.logger --name=name)
-      if add-ui-help:
-        add-ui-options_
       cli = Cli_ name --ui=ui --cache=null --config=null
+    if add-ui-help: add-ui-options_
     parser := Parser_ --invoked-command=invoked-command
     parser.parse this arguments: | path/Path parameters/Parameters |
       invocation := Invocation.private_ cli path.commands parameters

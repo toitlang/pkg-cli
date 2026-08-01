@@ -18,6 +18,7 @@ When a subcommand is found on a CommandGroup, the parser goes directly
 main:
   test-commands-option-accessible-from-subcommand
   test-commands-option-accessible-with-value
+  test-ui-option-with-custom-cli
 
 test-commands-option-accessible-from-subcommand:
   sub-invoked := false
@@ -67,3 +68,22 @@ test-commands-option-accessible-with-value:
 
   root.run ["--sdk-dir", "/my/sdk", "run"]
   expect-equals "/my/sdk" captured-value
+
+test-ui-option-with-custom-cli:
+  captured-format := null
+  commands-cmd := cli.Command "commands"
+  commands-cmd.add
+      cli.Command "run"
+          --run=:: | invocation/cli.Invocation |
+            captured-format = invocation["output-format"]
+
+  root := cli.CommandGroup "app"
+      --default=(cli.Command "default"
+          --rest=[cli.Option "source" --required]
+          --run=:: unreachable)
+      --commands=commands-cmd
+
+  root.run ["--output-format", "json", "run"]
+      --cli=(cli.Cli "app" --ui=(cli.Ui.human --level=cli.Ui.SILENT-LEVEL))
+      --add-ui-help
+  expect-equals "json" captured-format
