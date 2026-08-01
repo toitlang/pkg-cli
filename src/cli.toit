@@ -365,6 +365,42 @@ class Command:
       --add-ui-help/bool=(not cli)
       --add-completion/bool=true
       --completion-as-flag/bool?=null:
+    exit-code := run-for-exit-code arguments
+        --invoked-command=invoked-command
+        --cli=cli
+        --add-ui-help=add-ui-help
+        --add-completion=add-completion
+        --completion-as-flag=completion-as-flag
+    if exit-code != 0: exit exit-code
+
+  /**
+  Runs this command and returns the resulting process exit code.
+
+  Unlike $run, this method does not terminate the process when $Ui.abort is
+    called. It unwinds the stack, runs associated `finally` blocks, and returns
+    exit code 1. Other exceptions continue unwinding.
+  */
+  run-for-exit-code arguments/List -> int
+      --invoked-command=system.program-name
+      --cli/Cli?=null
+      --add-ui-help/bool=(not cli)
+      --add-completion/bool=true
+      --completion-as-flag/bool?=null:
+    exception := catch --unwind=(: it != ABORT-EXCEPTION_):
+      run_ arguments
+          --invoked-command=invoked-command
+          --cli=cli
+          --add-ui-help=add-ui-help
+          --add-completion=add-completion
+          --completion-as-flag=completion-as-flag
+    return exception ? 1 : 0
+
+  run_ arguments/List -> none
+      --invoked-command/string
+      --cli/Cli?
+      --add-ui-help/bool
+      --add-completion/bool
+      --completion-as-flag/bool?:
     added-completion-flag := false
     if add-completion:
       added-completion-flag = add-completion-bootstrap_
@@ -383,7 +419,7 @@ class Command:
         completion-args = completion-args[1..]
       result := complete-with-timeout_ this completion-args
       // The completion scripts treat a non-zero exit as "no completions".
-      if not result: exit 1
+      if not result: throw ABORT-EXCEPTION_
       result.candidates.do: | candidate/CompletionCandidate_ |
         print candidate.to-string
       if result.extensions and not result.extensions.is-empty:

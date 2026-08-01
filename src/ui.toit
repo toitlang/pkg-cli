@@ -7,6 +7,8 @@ import io
 import log
 import log as log-lib
 
+ABORT-EXCEPTION_ ::= Object
+
 create-ui-from-args_ args/List -> Ui:
   verbose-level/string? := null
   output-format/string? := null
@@ -715,10 +717,10 @@ class Ui:
 
   # Inheritance
   It is safe to override this method with a custom implementation. The
-    method should always abort. Either with 'exit 1', or with an exception.
+    method should never return.
   */
   abort -> none:
-    exit 1
+    throw ABORT-EXCEPTION_
 
   /**
   Returns a new Ui object with the given $level and $printer.

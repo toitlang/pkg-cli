@@ -132,6 +132,16 @@ The `Invocation` object contains:
 - `path`: A list of strings that contains the path to the command that was called.
 - `command`: The command that was called.
 
+### Aborting a command
+
+Use `invocation.cli.ui.abort` to report an error and stop a command. Aborting
+unwinds the stack, so associated `finally` blocks are executed. `Command.run`
+then terminates the process with exit code 1.
+
+Applications that need to perform work after an abort can use
+`Command.run-for-exit-code`. It returns 1 after an abort instead of terminating
+the process. Other exceptions continue unwinding.
+
 ### Cache
 
 The cache is a simple key-value store that persists between runs. Cached data may
