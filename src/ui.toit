@@ -9,7 +9,7 @@ import log as log-lib
 
 ABORT-EXCEPTION_ ::= Object
 
-create-ui-from-args_ args/List -> Ui:
+create-ui-from-args_ args/List --exit-on-abort/bool=false -> Ui:
   verbose-level/string? := null
   output-format/string? := null
 
@@ -54,11 +54,11 @@ create-ui-from-args_ args/List -> Ui:
   else: level = Ui.NORMAL-LEVEL
 
   if output-format == "json":
-    return Ui.json --level=level
+    return Ui.json --level=level --exit-on-abort=exit-on-abort
   else if output-format == "plain":
-    return Ui.plain --level=level
+    return Ui.plain --level=level --exit-on-abort=exit-on-abort
   else if output-format == "human":
-    return Ui.human --level=level
+    return Ui.human --level=level --exit-on-abort=exit-on-abort
   else:
     throw "Invalid output format: $output-format"
 
@@ -275,23 +275,25 @@ class Ui:
 
   level/int
   printer_/Printer
+  exit-on-abort_/bool
 
-  constructor --.level=NORMAL-LEVEL --printer/Printer:
+  constructor --.level=NORMAL-LEVEL --printer/Printer --exit-on-abort/bool=false:
     printer_ = printer
+    exit-on-abort_ = exit-on-abort
     if not DEBUG-LEVEL >= level >= SILENT-LEVEL:
       throw "Invalid level: $level"
 
-  constructor.human --level/int=NORMAL-LEVEL:
-    return Ui --level=level --printer=HumanPrinter
+  constructor.human --level/int=NORMAL-LEVEL --exit-on-abort/bool=false:
+    return Ui --level=level --printer=HumanPrinter --exit-on-abort=exit-on-abort
 
-  constructor.plain --level/int=NORMAL-LEVEL:
-    return Ui --level=level --printer=PlainPrinter
+  constructor.plain --level/int=NORMAL-LEVEL --exit-on-abort/bool=false:
+    return Ui --level=level --printer=PlainPrinter --exit-on-abort=exit-on-abort
 
-  constructor.json --level/int=NORMAL-LEVEL:
-    return Ui --level=level --printer=JsonPrinter
+  constructor.json --level/int=NORMAL-LEVEL --exit-on-abort/bool=false:
+    return Ui --level=level --printer=JsonPrinter --exit-on-abort=exit-on-abort
 
-  constructor.from-args args/List:
-    return create-ui-from-args_ args
+  constructor.from-args args/List --exit-on-abort/bool=false:
+    return create-ui-from-args_ args --exit-on-abort=exit-on-abort
 
   /**
   Returns the log-level (like $log.DEBUG-LEVEL) of this instance.
@@ -720,21 +722,27 @@ class Ui:
     method should never return.
   */
   abort -> none:
+    if exit-on-abort_: exit 1
     throw ABORT-EXCEPTION_
 
   /**
-  Returns a new Ui object with the given $level and $printer.
+  Returns a new Ui object with the given $level, $printer, and abort behavior.
 
   If $level is not provided, the level of the new Ui object is the same as
     this object.
 
   If $printer is not provided, the printer of the new Ui object
     is the same as this object.
+
+  If $exit-on-abort is not provided, the abort behavior of the new Ui object
+    is the same as this object.
   */
-  with --level/int?=null --printer/Printer?=null -> Ui:
+  with --level/int?=null --printer/Printer?=null --exit-on-abort/bool?=null -> Ui:
+    if exit-on-abort == null: exit-on-abort = exit-on-abort_
     return Ui
         --level=level or this.level
         --printer=printer or this.printer_
+        --exit-on-abort=exit-on-abort
 
 class HumanPrinter extends HumanPrinterBase:
   print_ str/string:

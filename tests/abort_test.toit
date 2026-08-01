@@ -4,12 +4,20 @@
 
 import cli
 import expect show *
+import fs
+import host.pipe
+import system
 
-main:
+main args:
+  if args == ["exit-on-abort"]:
+    test-immediate-exit-child
+    return
+
   test-success
   test-abort
   test-parser-abort
   test-other-exception
+  test-immediate-exit
 
 test-success:
   command := cli.Command "app" --run=:: null
@@ -40,3 +48,22 @@ test-other-exception:
   command := cli.Command "app" --run=:: throw "OTHER"
   exception := catch: command.run-for-exit-code []
   expect-equals "OTHER" exception
+
+test-immediate-exit:
+  test-dir := fs.dirname system.program-path
+  exit-code := pipe.run-program [
+    "toit",
+    "run",
+    "--project-root=$test-dir",
+    system.program-path,
+    "--",
+    "exit-on-abort",
+  ]
+  expect-equals 1 exit-code
+
+test-immediate-exit-child:
+  ui := (cli.Ui.human --level=cli.Ui.SILENT-LEVEL).with --exit-on-abort
+  try:
+    ui.abort "Stop immediately."
+  finally:
+    print "Immediate abort unexpectedly unwound."
