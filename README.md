@@ -142,6 +142,13 @@ Applications that need to perform work after an abort can use
 `Command.run-for-exit-code`. It returns 1 after an abort instead of terminating
 the process. Other exceptions continue unwinding.
 
+To retain the legacy behavior of exiting immediately without unwinding, create
+or copy a UI with `--exit-on-abort`, for example:
+
+``` toit
+ui := existing-ui.with --exit-on-abort
+```
+
 ### Cache
 
 The cache is a simple key-value store that persists between runs. Cached data may
